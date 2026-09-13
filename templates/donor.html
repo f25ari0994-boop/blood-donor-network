@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Become a Donor - Blood Donor Network</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+
+<div class="page-wrapper">
+
+    <div class="form-container">
+
+        <div class="page-header">
+            <div class="blood-icon">🩸</div>
+            <h1>Become a Blood Donor</h1>
+            <p>Register yourself and help save lives in emergencies.</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="success">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="/donor" method="POST">
+
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Enter your full name"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="age">Age</label>
+                <input
+                    type="number"
+                    id="age"
+                    name="age"
+                    min="18"
+                    max="65"
+                    placeholder="Enter your age"
+                    required
+                >
+                <small>Donors must be between 18 and 65 years old.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="contact">Contact</label>
+                <input
+                    type="text"
+                    id="contact"
+                    name="contact"
+                    placeholder="Enter your phone number"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="blood_type">Blood Type</label>
+                <select id="blood_type" name="blood_type">
+                    <option>O+</option>
+                    <option>O-</option>
+                    <option>A+</option>
+                    <option>A-</option>
+                    <option>B+</option>
+                    <option>B-</option>
+                    <option>AB+</option>
+                    <option>AB-</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="location">City / Area</label>
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="e.g. Sukkur, Rohri"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+
+                <label>Donation History</label>
+
+                <div class="radio-group">
+
+                    <label class="radio-option">
+                        <input
+                            type="radio"
+                            name="donation_history"
+                            value="first_time"
+                            id="first_time"
+                            checked
+                            onchange="toggleDonationDate()"
+                        >
+                        <span>First time donating</span>
+                    </label>
+
+                    <label class="radio-option">
+                        <input
+                            type="radio"
+                            name="donation_history"
+                            value="previous"
+                            id="previous"
+                            onchange="toggleDonationDate()"
+                        >
+                        <span>I have donated blood before</span>
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div class="form-group">
+                <label for="last_donation">Last Donation Date</label>
+                <input
+                    type="date"
+                    name="last_donation"
+                    id="last_donation"
+                    disabled
+                >
+                <small>Select your last donation date if you have donated before.</small>
+            </div>
+
+            <button type="submit" class="primary-btn">
+                🩸 Register as Donor
+            </button>
+
+        </form>
+
+        <div class="back-link">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    function toggleDonationDate() {
+
+        const firstTime = document.getElementById("first_time");
+        const previous = document.getElementById("previous");
+        const dateField = document.getElementById("last_donation");
+
+        if (previous.checked) {
+
+            dateField.disabled = false;
+            dateField.required = true;
+
+        } else {
+
+            dateField.disabled = true;
+            dateField.required = false;
+            dateField.value = "";
+
+        }
+    }
+</script>
+
+
+</body>
+</html>

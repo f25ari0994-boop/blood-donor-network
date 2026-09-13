@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Emergency Blood Request</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="emergency-page">
+
+    <div class="emergency-container">
+
+
+        <!-- ==============================
+             EMERGENCY REQUEST FORM
+             ============================== -->
+
+        <div class="emergency-form-card">
+
+            <div class="emergency-header">
+
+                <div class="emergency-icon">
+                    🚨
+                </div>
+
+                <div>
+                    <h1>Emergency Blood Request</h1>
+
+                    <p>
+                        Post an urgent blood request and connect with eligible donors.
+                    </p>
+                </div>
+
+            </div>
+
+
+            <!-- Flash Messages -->
+
+            {% with messages = get_flashed_messages() %}
+
+                {% if messages %}
+
+                    {% for message in messages %}
+
+                        <div class="emergency-message">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <form action="/request" method="POST">
+
+
+                <!-- Blood Type -->
+
+                <div class="emergency-form-group">
+
+                    <label for="blood_type">
+                        Blood Type
+                    </label>
+
+                    <select
+                        id="blood_type"
+                        name="blood_type"
+                        required
+                    >
+
+                        <option value="O-">O-</option>
+                        <option value="O+">O+</option>
+                        <option value="A-">A-</option>
+                        <option value="A+">A+</option>
+                        <option value="B-">B-</option>
+                        <option value="B+">B+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="AB+">AB+</option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Urgency -->
+
+                <div class="emergency-form-group">
+
+                    <label for="urgency">
+                        Urgency Level
+                    </label>
+
+                    <select
+                        id="urgency"
+                        name="urgency"
+                        required
+                    >
+
+                        <option value="Emergency">
+                            🚨 Emergency
+                        </option>
+
+                        <option value="Urgent">
+                            ⚠️ Urgent
+                        </option>
+
+                        <option value="Normal">
+                            Normal
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- Location -->
+
+                <div class="emergency-form-group">
+
+                    <label for="location">
+                        City / Area
+                    </label>
+
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        placeholder="e.g. Sukkur, Rohri"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Hospital -->
+
+                <div class="emergency-form-group">
+
+                    <label for="hospital">
+                        Hospital
+                    </label>
+
+                    <input
+                        type="text"
+                        id="hospital"
+                        name="hospital"
+                        placeholder="Enter hospital name"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Contact -->
+
+                <div class="emergency-form-group">
+
+                    <label for="contact">
+                        Contact Number
+                    </label>
+
+                    <input
+                        type="text"
+                        id="contact"
+                        name="contact"
+                        placeholder="Enter contact number"
+                        required
+                    >
+
+                </div>
+
+
+                <!-- Submit -->
+
+                <button
+                    type="submit"
+                    class="emergency-submit-btn"
+                >
+                    🚨 Post Blood Request
+                </button>
+
+            </form>
+
+        </div>
+
+
+
+        <!-- ==============================
+             PENDING REQUESTS
+             ============================== -->
+
+        <div class="pending-section">
+
+            <div class="pending-header">
+
+                <div>
+
+                    <h2>
+                        Pending Emergency Requests
+                    </h2>
+
+                    <p>
+                        Current blood requests waiting to be fulfilled.
+                    </p>
+
+                </div>
+
+                <div class="pending-badge">
+                    🩸 Requests
+                </div>
+
+            </div>
+
+
+            {% if requests %}
+
+                <div class="request-grid">
+
+                    {% for req in requests %}
+
+                        <div class="request-card">
+
+
+                            <!-- Request Header -->
+
+                            <div class="request-card-header">
+
+                                <div class="request-blood">
+
+                                    <span class="blood-drop">
+                                        🩸
+                                    </span>
+
+                                    <div>
+
+                                        <h3>
+                                            {{ req[1] }} Blood Needed
+                                        </h3>
+
+                                        <span class="request-location">
+                                            📍 {{ req[3] }}
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+
+                                {% if req[2] == "Emergency" %}
+
+                                    <span class="urgency emergency-badge">
+                                        🚨 Emergency
+                                    </span>
+
+                                {% elif req[2] == "Urgent" %}
+
+                                    <span class="urgency urgent-badge">
+                                        ⚠️ Urgent
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="urgency normal-badge">
+                                        Normal
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- Request Details -->
+
+                            <div class="request-details">
+
+                                <div class="request-detail-row">
+
+                                    <span>
+                                        🏥 Hospital
+                                    </span>
+
+                                    <strong>
+                                        {{ req[4] }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="request-detail-row">
+
+                                    <span>
+                                        📞 Contact
+                                    </span>
+
+                                    <strong>
+                                        {{ req[5] }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="request-detail-row">
+
+                                    <span>
+                                        📍 Location
+                                    </span>
+
+                                    <strong>
+                                        {{ req[3] }}
+                                    </strong>
+
+                                </div>
+
+
+                                <div class="request-detail-row">
+
+                                    <span>
+                                        Status
+                                    </span>
+
+                                    <span class="status status-pending">
+                                        {{ req[6] }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Fulfill -->
+
+                            <form
+                                action="/fulfill/{{ req[0] }}"
+                                method="POST"
+                            >
+
+                                <button
+                                    type="submit"
+                                    class="fulfill-btn"
+                                >
+                                    ✓ Mark as Fulfilled
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+
+            {% else %}
+
+                <div class="empty-state">
+
+                    <div class="empty-icon">
+                        🩸
+                    </div>
+
+                    <h3>
+                        No Pending Blood Requests
+                    </h3>
+
+                    <p>
+                        There are currently no pending emergency blood requests.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- Back -->
+
+            <div class="back-link">
+
+                <a href="/dashboard">
+                    ← Back to Dashboard
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

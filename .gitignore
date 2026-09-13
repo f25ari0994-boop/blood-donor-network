@@ -1,0 +1,7 @@
+
+venv/
+__pycache__/
+*.pyc
+.env
+database/blood_network.db
+database/

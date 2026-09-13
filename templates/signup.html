@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sign Up - Blood Donor Network</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="auth-page">
+
+    <div class="auth-container">
+
+        <!-- Logo -->
+        <div class="auth-icon">
+            🩸
+        </div>
+
+        <h1>Create Account</h1>
+
+        <p class="auth-subtitle">
+            Join the Blood Donor Network
+        </p>
+
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="auth-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+
+        <!-- Signup Form -->
+        <form action="/signup" method="POST">
+
+            <div class="auth-form-group">
+
+                <label>Name</label>
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter your full name"
+                    required
+                >
+
+            </div>
+
+
+            <div class="auth-form-group">
+
+                <label>Email</label>
+
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email"
+                >
+
+            </div>
+
+
+            <div class="auth-form-group">
+
+                <label>Phone Number</label>
+
+                <input
+                    type="text"
+                    name="phone"
+                    placeholder="Enter your phone number"
+                >
+
+            </div>
+
+
+            <div class="auth-form-group">
+
+                <label>Password</label>
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Create a password"
+                    required
+                >
+
+            </div>
+
+
+            <button type="submit" class="auth-btn">
+                Create Account
+            </button>
+
+        </form>
+
+
+        <!-- Login Link -->
+        <div class="auth-footer">
+
+            <span>Already have an account?</span>
+
+            <a href="/login">
+                Login
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

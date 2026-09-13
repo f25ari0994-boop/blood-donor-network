@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Blood Donor Network</title>
+
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+
+</head>
+
+<body>
+
+
+<div class="dashboard-page">
+
+    <div class="dashboard-container">
+
+        <!-- Header -->
+        <div class="dashboard-header">
+
+            <div class="dashboard-blood-icon">
+                🩸
+            </div>
+
+            <h1>Blood Donor Network</h1>
+
+            <h2>Welcome, {{ user_name }}!</h2>
+
+            <p>
+                What would you like to do today?
+            </p>
+
+        </div>
+
+
+        <!-- Dashboard Actions -->
+        <div class="dashboard-actions">
+
+            <button
+                class="dashboard-btn donor-btn"
+                onclick="window.location.href='/donor'"
+            >
+                <span class="dashboard-btn-icon">🩸</span>
+
+                <span>
+                    <strong>Become a Donor</strong>
+                    <small>Register as a blood donor</small>
+                </span>
+            </button>
+
+
+            <button
+                class="dashboard-btn search-btn"
+                onclick="window.location.href='/search'"
+            >
+                <span class="dashboard-btn-icon">🔎</span>
+
+                <span>
+                    <strong>Find Blood Donor</strong>
+                    <small>Search available donors</small>
+                </span>
+            </button>
+
+
+            <a
+                href="/notifications"
+                class="dashboard-btn notification-btn"
+            >
+                <span class="dashboard-btn-icon">🔔</span>
+
+                <span>
+                    <strong>Notifications</strong>
+                    <small>View your notifications</small>
+                </span>
+            </a>
+
+
+            <button
+                class="dashboard-btn emergency-btn"
+                onclick="window.location.href='/request'"
+            >
+                <span class="dashboard-btn-icon">🚨</span>
+
+                <span>
+                    <strong>Emergency Blood Request</strong>
+                    <small>Request blood urgently</small>
+                </span>
+            </button>
+
+
+            <button
+                class="dashboard-btn list-btn"
+                onclick="window.location.href='/donor-list'"
+            >
+                <span class="dashboard-btn-icon">👥</span>
+
+                <span>
+                    <strong>Donor List</strong>
+                    <small>View registered donors</small>
+                </span>
+            </button>
+
+
+            <button
+                class="dashboard-btn logout-btn"
+                onclick="window.location.href='/logout'"
+            >
+                <span class="dashboard-btn-icon">🚪</span>
+
+                <span>
+                    <strong>Logout</strong>
+                    <small>Sign out of your account</small>
+                </span>
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</body>
+</html>

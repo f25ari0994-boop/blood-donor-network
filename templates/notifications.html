@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Blood Donor Network</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+```
+<div class="page-wrapper">
+
+    <div class="notifications-container">
+
+        <div class="page-header">
+            <div class="blood-icon">🔔</div>
+            <h1>Notifications</h1>
+            <p>Stay updated about your blood donation activity.</p>
+        </div>
+
+        {% if notifications %}
+
+            <div class="notification-list">
+
+                {% for notification in notifications %}
+
+                    <div class="notification-card">
+
+                        <div class="notification-icon">
+                            🔔
+                        </div>
+
+                        <div class="notification-content">
+
+                            <h3>
+                                {{ notification[1] }}
+                            </h3>
+
+                            <p>
+                                <strong>Type:</strong>
+                                {{ notification[2] }}
+                            </p>
+
+                            <p class="notification-date">
+                                📅 {{ notification[3] }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <div class="empty-icon">🔔</div>
+
+                <h3>No Notifications Yet</h3>
+
+                <p>
+                    You don't have any notifications at the moment.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+        <div class="back-link">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+    </div>
+
+</div>
+```
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Report Blood Donation</title>
+</head>
+
+<body>
+
+    <h1>Report Blood Donation</h1>
+
+    <h2>{{ donor[1] }}</h2>
+
+    <p>
+        <strong>Blood Type:</strong>
+        {{ donor[2] }}
+    </p>
+
+    <form action="/report-donation/{{ donor[0] }}" method="POST">
+
+        <label>Donation Date:</label>
+        <br>
+
+        <input
+            type="date"
+            name="donation_date"
+            required
+        >
+
+        <br><br>
+
+        <label>Hospital / Blood Bank:</label>
+        <br>
+
+        <input
+            type="text"
+            name="hospital"
+            required
+        >
+
+        <br><br>
+
+        <label>City / Location:</label>
+        <br>
+
+        <input
+            type="text"
+            name="location"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">
+            Submit Donation Report
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="/donor-list">
+        Back to Donor List
+    </a>
+
+</body>
+
+</html>

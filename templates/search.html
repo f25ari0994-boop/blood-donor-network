@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Blood Donor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+```
+<div class="page-wrapper">
+
+    <div class="search-container">
+
+        <div class="page-header">
+            <div class="blood-icon">🔎</div>
+            <h1>Find Blood Donor</h1>
+            <p>Search for eligible blood donors in your area.</p>
+        </div>
+
+        <div class="search-box">
+
+            <form action="/search" method="POST">
+
+                <div class="form-group">
+
+                    <label for="blood_type">Blood Type</label>
+
+                    <select id="blood_type" name="blood_type">
+                        <option>O-</option>
+                        <option>O+</option>
+                        <option>A-</option>
+                        <option>A+</option>
+                        <option>B-</option>
+                        <option>B+</option>
+                        <option>AB-</option>
+                        <option>AB+</option>
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label for="location">City / Area</label>
+
+                    <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        placeholder="e.g. Sukkur, Rohri"
+                        required
+                    >
+
+                </div>
+
+                <button type="submit" class="primary-btn">
+                    🔎 Search Donors
+                </button>
+
+            </form>
+
+        </div>
+
+
+        {% if donors %}
+
+            <div class="section-header">
+                <h2>Available Donors</h2>
+                <p>Eligible donors matching your blood requirement.</p>
+            </div>
+
+            <div class="donor-grid">
+
+                {% for donor in donors %}
+
+                    <div class="donor-card">
+
+                        <div class="donor-icon">
+                            🩸
+                        </div>
+
+                        <div class="donor-info">
+
+                            <h3>{{ donor[0] }}</h3>
+
+                            <p>
+                                <strong>Contact:</strong>
+                                {{ donor[1] }}
+                            </p>
+
+                            <p>
+                                <strong>Blood Type:</strong>
+                                <span class="blood-badge">
+                                    {{ donor[2] }}
+                                </span>
+                            </p>
+
+                            <p>
+                                <strong>Location:</strong>
+                                {{ donor[3] }}
+                            </p>
+
+                        </div>
+
+                        <span class="status status-available">
+                            Available
+                        </span>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% elif request.method == "POST" %}
+
+            <div class="empty-state">
+
+                <div class="empty-icon">🔍</div>
+
+                <h3>No Eligible Donor Found</h3>
+
+                <p>
+                    We could not find an eligible donor matching
+                    your blood type and location.
+                </p>
+
+                <p>
+                    Try searching another nearby area.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+        <div class="back-link">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+    </div>
+
+</div>
+```
+
+</body>
+</html>

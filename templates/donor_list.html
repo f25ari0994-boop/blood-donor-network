@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor List - Blood Donor Network</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+```
+<div class="page-wrapper">
+
+    <div class="content-container">
+
+        <div class="page-header">
+            <div class="blood-icon">🩸</div>
+            <h1>Blood Donor List</h1>
+            <p>Manage registered blood donors and their availability.</p>
+        </div>
+
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="success">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+
+        {% if donors %}
+
+            <div class="donor-list-grid">
+
+                {% for donor in donors %}
+
+                    <div class="donor-list-card">
+
+                        <!-- donor[0] = ID -->
+                        <!-- donor[1] = Name -->
+                        <!-- donor[2] = Age -->
+                        <!-- donor[3] = Contact -->
+                        <!-- donor[4] = Blood Type -->
+                        <!-- donor[5] = Location -->
+                        <!-- donor[6] = Availability -->
+                        <!-- donor[7] = Eligibility -->
+
+
+                        <div class="donor-list-header">
+
+                            <div class="donor-avatar">
+                                🩸
+                            </div>
+
+                            <div>
+                                <h2>{{ donor[1] }}</h2>
+
+                                <span class="blood-badge">
+                                    {{ donor[4] }}
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="donor-list-details">
+
+                            <div class="donor-detail">
+                                <span class="detail-label">Age</span>
+                                <strong>{{ donor[2] }}</strong>
+                            </div>
+
+                            <div class="donor-detail">
+                                <span class="detail-label">Contact</span>
+                                <strong>{{ donor[3] }}</strong>
+                            </div>
+
+                            <div class="donor-detail">
+                                <span class="detail-label">Location</span>
+                                <strong>{{ donor[5] }}</strong>
+                            </div>
+
+                            <div class="donor-detail">
+                                <span class="detail-label">Availability</span>
+
+                                {% if donor[6] == "Available" %}
+
+                                    <span class="status status-available">
+                                        Available
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="status status-unavailable">
+                                        Not Available
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="donor-detail">
+                                <span class="detail-label">Eligibility</span>
+
+                                {% if donor[7] == 1 %}
+
+                                    <span class="status status-available">
+                                        Eligible
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="status status-unavailable">
+                                        Not Eligible
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="donor-actions">
+
+                            <form
+                                action="/toggle-availability/{{ donor[0] }}"
+                                method="POST"
+                            >
+
+                                <button type="submit" class="secondary-btn">
+
+                                    {% if donor[6] == "Available" %}
+                                        Make Not Available
+                                    {% else %}
+                                        Make Available
+                                    {% endif %}
+
+                                </button>
+
+                            </form>
+
+
+                            <form
+                                action="/report-donation/{{ donor[0] }}"
+                                method="GET"
+                            >
+
+                                <button type="submit" class="primary-btn">
+                                    🩸 Report Donation
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <div class="empty-icon">🩸</div>
+
+                <h3>No Donors Registered Yet</h3>
+
+                <p>
+                    There are currently no registered blood donors.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+        <div class="back-link">
+            <a href="/dashboard">← Back to Dashboard</a>
+        </div>
+
+    </div>
+
+</div>
+```
+
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+```html
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Blood Donor Network</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="blood-icon">🩸</div>
+
+        <h1>Blood Donor & Emergency Request Network</h1>
+
+        <p>
+            Find blood donors faster when every minute matters.
+        </p>
+
+        <button onclick="window.location.href='/signup'">
+            Sign Up
+        </button>
+
+        <button onclick="window.location.href='/login'">
+            Login
+        </button>
+
+        <br>
+
+        <button onclick="window.location.href='/donor'">
+            Become a Donor
+        </button>
+
+        <button onclick="window.location.href='/search'">
+            Find Blood Donor
+        </button>
+
+        <button onclick="window.location.href='/request'">
+            Emergency Blood Request
+        </button>
+
+    </div>
+
+</body>
+
+</html>
+```
