@@ -1,19 +1,60 @@
 import os
 import sqlite3
 
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
+
+
+class PostgreSQLCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def execute(self, query, params=None):
+        # Convert SQLite-style ? placeholders to PostgreSQL %s
+        query = query.replace("?", "%s")
+
+        if params is None:
+            return self.cursor.execute(query)
+
+        return self.cursor.execute(query, params)
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+
+class PostgreSQLConnectionWrapper:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def cursor(self):
+        return PostgreSQLCursorWrapper(self.connection.cursor())
+
+    def commit(self):
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
 
 
 def get_db_connection():
     """
-    Use PostgreSQL when DATABASE_URL is available.
+    Use Neon PostgreSQL when DATABASE_URL is available.
     Otherwise use the local SQLite database.
     """
 
     if DATABASE_URL:
         import psycopg
+        from psycopg.rows import dict_row
 
-        return psycopg.connect(DATABASE_URL)
+        connection = psycopg.connect(
+            DATABASE_URL,
+            row_factory=dict_row
+        )
+
+        return PostgreSQLConnectionWrapper(connection)
 
     os.makedirs("database", exist_ok=True)
 
