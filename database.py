@@ -1,10 +1,10 @@
 import os
 import sqlite3
+from dotenv import load_dotenv
 
+load_dotenv()
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-
-
 class PostgreSQLCursorWrapper:
     def __init__(self, cursor):
         self.cursor = cursor
