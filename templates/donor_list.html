@@ -1,69 +1,638 @@
-<!DOCTYPE html>
 
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donor List - Blood Donor Network</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="theme-color" content="#a71930">
+
+    <title>Donor Directory | Blood Donor Network</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        :root {
+            --red: #b4233b;
+            --red-dark: #90182e;
+            --red-light: #fff0f2;
+            --text: #222633;
+            --muted: #737b8c;
+            --border: #e6e9ef;
+            --white: #ffffff;
+            --background: #f5f7fb;
+            --green: #16794b;
+            --green-bg: #eaf8f0;
+            --orange: #9a5b08;
+            --orange-bg: #fff4df;
+            --shadow: 0 6px 24px rgba(30, 40, 60, 0.055);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--text);
+            background: var(--background);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .page-wrapper {
+            min-height: 100vh;
+            padding: 34px 20px 50px;
+        }
+
+        .content-container {
+            width: 100%;
+            max-width: 1150px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 17px;
+            margin-bottom: 28px;
+            padding: 28px 30px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .blood-icon {
+            width: 58px;
+            height: 58px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: var(--red-light);
+            border-radius: 15px;
+            font-size: 28px;
+        }
+
+        .page-header-text {
+            min-width: 0;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: clamp(23px, 3vw, 31px);
+            line-height: 1.3;
+            letter-spacing: -0.7px;
+        }
+
+        .page-header p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .header-label {
+            display: inline-block;
+            margin-bottom: 7px;
+            color: var(--red);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.3px;
+            text-transform: uppercase;
+        }
+
+        /* Flash messages */
+.flash-message.error,
+.alert.error,
+.flash.error {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+        /* Search */
+
+        .directory-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .directory-heading h2 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: -0.4px;
+        }
+
+        .directory-heading p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .directory-search {
+            position: relative;
+            width: 310px;
+            max-width: 100%;
+        }
+
+        .directory-search input {
+            width: 100%;
+            height: 45px;
+            padding: 0 15px 0 42px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: var(--white);
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .directory-search input:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(180, 35, 59, 0.09);
+        }
+
+        .search-icon {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+        }
+
+        .filter-status {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* Donor cards */
+
+        .donor-list-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .donor-list-card {
+            min-width: 0;
+            padding: 23px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 17px;
+            box-shadow: var(--shadow);
+            transition: border-color 0.2s, box-shadow 0.2s,
+                        transform 0.2s;
+        }
+
+        .donor-list-card:hover {
+            transform: translateY(-2px);
+            border-color: #e6b1bb;
+            box-shadow: 0 12px 30px rgba(30, 40, 60, 0.08);
+        }
+
+        .donor-list-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .donor-avatar {
+            width: 55px;
+            height: 55px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: var(--red-light);
+            border-radius: 15px;
+            font-size: 25px;
+        }
+
+        .donor-identity {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .donor-list-header h2 {
+            margin: 0 0 8px;
+            font-size: 17px;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .blood-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 43px;
+            padding: 6px 10px;
+            background: var(--red-light);
+            border: 1px solid #f6d5db;
+            border-radius: 7px;
+            color: var(--red);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .donor-list-details {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 17px 15px;
+            padding: 21px 0;
+        }
+
+        .donor-detail {
+            min-width: 0;
+        }
+
+        .detail-label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .donor-detail strong {
+            display: block;
+            font-size: 12px;
+            line-height: 1.7;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            padding: 6px 9px;
+            border-radius: 7px;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.4;
+        }
+
+        .status::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-available {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+
+        .status-unavailable {
+            background: var(--orange-bg);
+            color: var(--orange);
+        }
+
+        /* Card actions */
+
+        .donor-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding-top: 17px;
+            border-top: 1px solid var(--border);
+        }
+
+        .donor-actions form {
+            display: flex;
+            min-width: 0;
+            margin: 0;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            width: 100%;
+            min-height: 43px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 12px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.5;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .primary-btn {
+            background: var(--red);
+            color: var(--white);
+        }
+
+        .primary-btn:hover {
+            background: var(--red-dark);
+        }
+
+        .secondary-btn {
+            background: #f5f6f9;
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .secondary-btn:hover {
+            background: var(--red-light);
+            color: var(--red);
+            border-color: #efc2cb;
+        }
+
+        .primary-btn:focus-visible,
+        .secondary-btn:focus-visible,
+        .back-link a:focus-visible {
+            outline: 3px solid rgba(180, 35, 59, 0.25);
+            outline-offset: 3px;
+        }
+
+        /* Empty and search states */
+
+        .empty-state {
+            padding: 55px 20px;
+            background: var(--white);
+            border: 1px dashed #d9dee7;
+            border-radius: 17px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 17px;
+            border-radius: 18px;
+            background: var(--red-light);
+            font-size: 30px;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 9px;
+            font-size: 19px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .no-search-results {
+            display: none;
+            padding: 30px 20px;
+            margin-top: 10px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        /* Back navigation */
+
+        .back-link {
+            margin-top: 30px;
+        }
+
+        .back-link a {
+            min-height: 43px;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 0 16px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .back-link a:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        @media (max-width: 850px) {
+            .donor-list-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .donor-list-card {
+                padding: 21px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .page-wrapper {
+                padding: 19px 12px 35px;
+            }
+
+            .page-header {
+                align-items: flex-start;
+                gap: 13px;
+                padding: 21px 16px;
+                margin-bottom: 23px;
+                border-radius: 14px;
+            }
+
+            .blood-icon {
+                width: 45px;
+                height: 45px;
+                border-radius: 12px;
+                font-size: 23px;
+            }
+
+            .page-header h1 {
+                font-size: 22px;
+            }
+
+            .page-header p {
+                font-size: 12px;
+            }
+
+            .directory-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .directory-heading h2 {
+                font-size: 19px;
+            }
+
+            .directory-search {
+                width: 100%;
+            }
+
+            .donor-list-card {
+                padding: 17px;
+                border-radius: 14px;
+            }
+
+            .donor-list-header {
+                gap: 11px;
+                padding-bottom: 17px;
+            }
+
+            .donor-avatar {
+                width: 48px;
+                height: 48px;
+                font-size: 22px;
+            }
+
+            .donor-list-header h2 {
+                font-size: 15px;
+            }
+
+            .donor-list-details {
+                gap: 15px 10px;
+                padding: 18px 0;
+            }
+
+            .donor-actions {
+                grid-template-columns: 1fr;
+                gap: 9px;
+            }
+
+            .primary-btn,
+            .secondary-btn {
+                min-height: 44px;
+                font-size: 12px;
+            }
+
+            .back-link {
+                margin-top: 22px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                transition: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-```
 <div class="page-wrapper">
 
-    <div class="content-container">
+    <main class="content-container">
 
-        <div class="page-header">
-            <div class="blood-icon">🩸</div>
-            <h1>Blood Donor List</h1>
-            <p>Manage registered blood donors and their availability.</p>
-        </div>
+        <!-- PAGE HEADER -->
+        <header class="page-header">
+
+            <div class="blood-icon" aria-hidden="true">🩸</div>
+
+            <div class="page-header-text">
+                <span class="header-label">Donor Management</span>
+                <h1>Blood Donor Directory</h1>
+                <p>
+                    Browse registered donors and review their availability
+                    and donation eligibility.
+                </p>
+            </div>
+
+        </header>
 
 
-        {% with messages = get_flashed_messages() %}
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for message in messages %}
-                    <div class="success">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+                <div class="flash-messages" aria-live="polite">
+                    {% for category, message in messages %}
+                        <div class="flash-message">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
 
 
         {% if donors %}
 
-            <div class="donor-list-grid">
+            <!-- SEARCH TOOLBAR -->
+            <section class="directory-toolbar">
+
+                <div class="directory-heading">
+                    <h2>Registered Donors</h2>
+                    <p>Search the directory by name, blood group, or location.</p>
+                </div>
+
+                <div class="directory-search">
+                    <span class="search-icon" aria-hidden="true">🔎</span>
+                    <input
+                        type="search"
+                        id="donorSearch"
+                        placeholder="Search donors..."
+                        aria-label="Search donors by name, blood group, or location"
+                        autocomplete="off"
+                    >
+                </div>
+
+            </section>
+
+            <p class="filter-status" id="filterStatus" aria-live="polite">
+                Showing {{ donors|length }} donor(s)
+            </p>
+
+
+            <!-- DONOR CARDS -->
+            <section class="donor-list-grid" id="donorGrid"
+                     aria-label="Registered blood donors">
 
                 {% for donor in donors %}
 
-                    <div class="donor-list-card">
-
-                        <!-- donor[0] = ID -->
-                        <!-- donor[1] = Name -->
-                        <!-- donor[2] = Age -->
-                        <!-- donor[3] = Contact -->
-                        <!-- donor[4] = Blood Type -->
-                        <!-- donor[5] = Location -->
-                        <!-- donor[6] = Availability -->
-                        <!-- donor[7] = Eligibility -->
-
+                    <article class="donor-list-card"
+                             data-search="{{ donor[1] }} {{ donor[4] }} {{ donor[5] }}">
 
                         <div class="donor-list-header">
 
-                            <div class="donor-avatar">
-                                🩸
-                            </div>
+                            <div class="donor-avatar" aria-hidden="true">🩸</div>
 
-                            <div>
+                            <div class="donor-identity">
                                 <h2>{{ donor[1] }}</h2>
-
-                                <span class="blood-badge">
-                                    {{ donor[4] }}
-                                </span>
+                                <span class="blood-badge">{{ donor[4] }}</span>
                             </div>
 
                         </div>
@@ -73,67 +642,68 @@
 
                             <div class="donor-detail">
                                 <span class="detail-label">Age</span>
-                                <strong>{{ donor[2] }}</strong>
+                                <strong>{{ donor[2] if donor[2] is not none else 'Not provided' }}</strong>
                             </div>
 
                             <div class="donor-detail">
                                 <span class="detail-label">Contact</span>
-                                <strong>{{ donor[3] }}</strong>
+
+                                {% if donor[3] %}
+                                    <strong>{{ donor[3] }}</strong>
+                                {% else %}
+                                    <strong>Not provided</strong>
+                                {% endif %}
                             </div>
 
                             <div class="donor-detail">
                                 <span class="detail-label">Location</span>
-                                <strong>{{ donor[5] }}</strong>
+                                <strong>{{ donor[5] if donor[5] else 'Not provided' }}</strong>
                             </div>
 
                             <div class="donor-detail">
                                 <span class="detail-label">Availability</span>
 
                                 {% if donor[6] == "Available" %}
-
                                     <span class="status status-available">
                                         Available
                                     </span>
-
                                 {% else %}
-
                                     <span class="status status-unavailable">
                                         Not Available
                                     </span>
-
                                 {% endif %}
-
                             </div>
-
 
                             <div class="donor-detail">
                                 <span class="detail-label">Eligibility</span>
 
                                 {% if donor[7] == 1 %}
-
                                     <span class="status status-available">
                                         Eligible
                                     </span>
-
                                 {% else %}
-
                                     <span class="status status-unavailable">
                                         Not Eligible
                                     </span>
-
                                 {% endif %}
-
                             </div>
 
                         </div>
 
 
+                        <!-- EXISTING ACTIONS -->
                         <div class="donor-actions">
 
                             <form
-                                action="/toggle-availability/{{ donor[0] }}"
+                                action="{{ url_for('toggle_availability', donor_id=donor[0]) }}"
                                 method="POST"
                             >
+
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
 
                                 <button type="submit" class="secondary-btn">
 
@@ -148,51 +718,96 @@
                             </form>
 
 
-                            <form
-                                action="/report-donation/{{ donor[0] }}"
-                                method="GET"
+                            <a
+                                href="{{ url_for('report_donation', donor_id=donor[0]) }}"
+                                class="primary-btn"
                             >
-
-                                <button type="submit" class="primary-btn">
-                                    🩸 Report Donation
-                                </button>
-
-                            </form>
+                                🩸 Report Donation
+                            </a>
 
                         </div>
 
-                    </div>
+                    </article>
 
                 {% endfor %}
 
+            </section>
+
+
+            <div class="no-search-results" id="noSearchResults">
+                <strong>No matching donors found.</strong>
+                <p>Try a different name, blood group, or location.</p>
             </div>
 
         {% else %}
 
-            <div class="empty-state">
+            <section class="empty-state">
 
-                <div class="empty-icon">🩸</div>
+                <div class="empty-icon" aria-hidden="true">🩸</div>
 
                 <h3>No Donors Registered Yet</h3>
 
                 <p>
                     There are currently no registered blood donors.
+                    Registered donors will appear here.
                 </p>
 
-            </div>
+            </section>
 
         {% endif %}
 
 
+        <!-- BACK TO DASHBOARD -->
         <div class="back-link">
-            <a href="/dashboard">← Back to Dashboard</a>
+            <a href="{{ url_for('dashboard') }}">
+                <span aria-hidden="true">←</span>
+                Back to Dashboard
+            </a>
         </div>
 
-    </div>
+    </main>
 
 </div>
-```
+
+
+<script>
+    // Front-end search only. This does not change or delete database records.
+    const donorSearch = document.getElementById("donorSearch");
+
+    if (donorSearch) {
+        const donorCards = Array.from(
+            document.querySelectorAll(".donor-list-card")
+        );
+
+        const filterStatus = document.getElementById("filterStatus");
+        const noResults = document.getElementById("noSearchResults");
+
+        donorSearch.addEventListener("input", function () {
+            const query = this.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            donorCards.forEach(function (card) {
+                const searchableText =
+                    (card.dataset.search || "").toLowerCase();
+
+                const matches = searchableText.includes(query);
+
+                card.style.display = matches ? "" : "none";
+
+                if (matches) {
+                    visibleCount++;
+                }
+            });
+
+            filterStatus.textContent =
+                "Showing " + visibleCount + " of " +
+                donorCards.length + " donor(s)";
+
+            noResults.style.display =
+                visibleCount === 0 ? "block" : "none";
+        });
+    }
+</script>
 
 </body>
-
 </html>

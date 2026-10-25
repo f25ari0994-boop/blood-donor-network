@@ -1,68 +1,124 @@
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Report Blood Donation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Report Blood Donation - Blood Donor Network</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
-    <h1>Report Blood Donation</h1>
+<div class="page-wrapper">
 
-    <h2>{{ donor[1] }}</h2>
+    <div class="content-container">
 
-    <p>
-        <strong>Blood Type:</strong>
-        {{ donor[2] }}
-    </p>
+        <div class="page-header">
+            <div class="blood-icon">🩸</div>
+            <h1>Report Blood Donation</h1>
+            <p>Record a completed blood donation.</p>
+        </div>
 
-    <form action="/report-donation/{{ donor[0] }}" method="POST">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="success">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-        <label>Donation Date:</label>
-        <br>
+        <section class="dashboard-info-card">
 
-        <input
-            type="date"
-            name="donation_date"
-            required
+            <h2>{{ donor[1] }}</h2>
+
+            <p>
+                <strong>Blood Type:</strong>
+                {{ donor[2] }}
+            </p>
+
+        </section>
+
+        <form
+            action="{{ url_for('report_donation', donor_id=donor[0]) }}"
+            method="POST"
         >
 
-        <br><br>
+            <!-- CSRF protection -->
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
 
-        <label>Hospital / Blood Bank:</label>
-        <br>
+            <label for="donation_date">
+                Donation Date
+            </label>
 
-        <input
-            type="text"
-            name="hospital"
-            required
-        >
+            <input
+                type="date"
+                id="donation_date"
+                name="donation_date"
+                max="{{ today }}"
+                required
+            >
 
-        <br><br>
+            <br><br>
 
-        <label>City / Location:</label>
-        <br>
+            <label for="hospital">
+                Hospital / Blood Bank
+            </label>
 
-        <input
-            type="text"
-            name="location"
-            required
-        >
+            <input
+                type="text"
+                id="hospital"
+                name="hospital"
+                minlength="2"
+                maxlength="120"
+                autocomplete="organization"
+                required
+            >
 
-        <br><br>
+            <br><br>
 
-        <button type="submit">
-            Submit Donation Report
-        </button>
+            <label for="location">
+                City / Location
+            </label>
 
-    </form>
+            <input
+                type="text"
+                id="location"
+                name="location"
+                minlength="2"
+                maxlength="120"
+                autocomplete="address-level2"
+                required
+            >
 
-    <br>
+            <br><br>
 
-    <a href="/donor-list">
-        Back to Donor List
-    </a>
+            <button type="submit" class="primary-btn">
+                Submit Donation Report
+            </button>
+
+        </form>
+
+        <div class="back-link">
+            <a href="{{ url_for('donor_list') }}">
+                ← Back to Donor List
+            </a>
+        </div>
+
+    </div>
+
+</div>
 
 </body>
-
 </html>
+```

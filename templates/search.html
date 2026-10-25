@@ -1,150 +1,666 @@
-<!DOCTYPE html>
 
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Blood Donor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="theme-color" content="#a71930">
+
+    <title>Find Blood Donors | Blood Donor Network</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        :root {
+            --red: #b4233b;
+            --red-dark: #90182e;
+            --red-light: #fff0f2;
+            --white: #ffffff;
+            --background: #f5f7fb;
+            --text: #20242c;
+            --muted: #737b8c;
+            --border: #e8eaf0;
+            --green: #15803d;
+            --shadow: 0 8px 28px rgba(25, 35, 55, .055);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 16px 5%;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: var(--white);
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            max-width: 46px;
+            max-height: 46px;
+            object-fit: contain;
+        }
+
+        .header-link {
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .header-link:hover {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 30px 24px 45px;
+        }
+
+        /* Dashboard-matching red banner */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 36px 35px;
+            border-radius: 22px;
+            background: linear-gradient(
+                115deg,
+                #a71930 0%,
+                #c42d47 60%,
+                #e04b60 100%
+            );
+            color: #ffffff;
+            box-shadow: 0 12px 30px rgba(167, 25, 48, .16);
+        }
+
+        .hero::after {
+            content: "❤";
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, .10);
+            font-size: 120px;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            position: relative;
+            z-index: 1;
+            margin: 0 0 12px;
+            color: #ffffff;
+            font-size: clamp(26px, 3vw, 36px);
+            line-height: 1.25;
+        }
+
+        .hero p {
+            position: relative;
+            z-index: 1;
+            max-width: 620px;
+            margin: 0;
+            color: rgba(255, 255, 255, .88);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .search-box {
+            margin-top: 25px;
+            padding: 25px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box h2 {
+            margin: 0 0 8px;
+            font-size: 21px;
+            letter-spacing: -.3px;
+        }
+
+        .search-description {
+            margin: 0 0 22px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .search-form {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr auto;
+            align-items: end;
+            gap: 15px;
+        }
+
+        .form-group {
+            min-width: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            min-height: 46px;
+            padding: 11px 12px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(180, 35, 59, .09);
+        }
+
+        /* Dashboard-matching button colors */
+        .primary-btn {
+            min-height: 46px;
+            padding: 0 20px;
+            border: none;
+            border-radius: 9px;
+            background: var(--red);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .primary-btn:hover {
+            background: var(--red-dark);
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 30px 0 16px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: -.4px;
+        }
+
+        .result-count {
+            padding: 7px 11px;
+            border-radius: 8px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .donor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .donor-card {
+            min-width: 0;
+            padding: 22px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            transition: border-color .2s, transform .2s;
+        }
+
+        .donor-card:hover {
+            transform: translateY(-2px);
+            border-color: #e9aab4;
+        }
+
+        .donor-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 17px;
+        }
+
+        .donor-name {
+            overflow-wrap: anywhere;
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.5;
+        }
+
+        .blood-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 48px;
+            min-height: 42px;
+            padding: 8px;
+            flex-shrink: 0;
+            border-radius: 11px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .availability-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 7px;
+            padding: 6px 9px;
+            border-radius: 7px;
+            background: #edf8f1;
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .donor-detail {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .donor-detail strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .empty-state {
+            padding: 38px 22px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .empty-state-icon {
+            margin-bottom: 12px;
+            font-size: 38px;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 9px;
+            font-size: 19px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .tips-box {
+            margin-top: 24px;
+            padding: 22px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--red);
+            border-radius: 13px;
+        }
+
+        .tips-box h3 {
+            margin: 0 0 9px;
+            font-size: 15px;
+        }
+
+        .tips-box p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .page-footer {
+            padding: 20px;
+            color: var(--muted);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        @media (max-width: 760px) {
+            .page-header {
+                padding: 13px 17px;
+            }
+
+            .brand {
+                gap: 9px;
+                font-size: 12px;
+            }
+
+            .brand-icon {
+                width: 39px;
+                height: 39px;
+            }
+
+            .header-link {
+                padding: 9px 10px;
+                font-size: 12px;
+            }
+
+            .container {
+                padding: 23px 17px 35px;
+            }
+
+            .hero {
+                padding: 29px 23px;
+                border-radius: 18px;
+            }
+
+            .hero::after {
+                right: 8px;
+                font-size: 85px;
+            }
+
+            .hero h1 {
+                max-width: 440px;
+                font-size: 29px;
+            }
+
+            .hero p {
+                font-size: 13px;
+            }
+
+            .search-box {
+                padding: 20px 17px;
+            }
+
+            .search-form {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .primary-btn {
+                width: 100%;
+            }
+
+            .donor-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .donor-card {
+                padding: 18px;
+            }
+
+            .section-heading h2 {
+                font-size: 19px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .page-header {
+                padding: 11px 12px;
+            }
+
+            .brand {
+                font-size: 11px;
+                gap: 7px;
+            }
+
+            .header-link {
+                font-size: 11px;
+                padding: 8px;
+            }
+
+            .container {
+                padding: 19px 12px 30px;
+            }
+
+            .hero {
+                padding: 24px 18px;
+            }
+
+            .hero h1 {
+                font-size: 26px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                transition: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-```
-<div class="page-wrapper">
-
-    <div class="search-container">
-
-        <div class="page-header">
-            <div class="blood-icon">🔎</div>
-            <h1>Find Blood Donor</h1>
-            <p>Search for eligible blood donors in your area.</p>
+<header class="page-header">
+    <a href="{{ url_for('dashboard') }}" class="brand">
+        <div class="brand-icon">
+            <img
+                src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                alt="Blood Donor Network Logo"
+            >
         </div>
+        <span>Blood Donor Network</span>
+    </a>
 
-        <div class="search-box">
+    <a href="{{ url_for('dashboard') }}" class="header-link">
+        ← Dashboard
+    </a>
+</header>
 
-            <form action="/search" method="POST">
+<main class="container">
 
-                <div class="form-group">
+    <section class="hero">
+        <h1>Find Blood Donors</h1>
+        <p>
+            Search for registered donors by blood group and location.
+            Your search may help connect someone with a person willing
+            to donate blood.
+        </p>
+    </section>
 
-                    <label for="blood_type">Blood Type</label>
+    <section class="search-box">
+        <h2>Search Donors</h2>
+        <p class="search-description">
+            Select the required blood group and enter a location.
+        </p>
 
-                    <select id="blood_type" name="blood_type">
-                        <option>O-</option>
-                        <option>O+</option>
-                        <option>A-</option>
-                        <option>A+</option>
-                        <option>B-</option>
-                        <option>B+</option>
-                        <option>AB-</option>
-                        <option>AB+</option>
-                    </select>
+        <form action="{{ url_for('search') }}" method="POST"
+              class="search-form">
 
-                </div>
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
 
-                <div class="form-group">
-
-                    <label for="location">City / Area</label>
-
-                    <input
-                        type="text"
-                        id="location"
-                        name="location"
-                        placeholder="e.g. Sukkur, Rohri"
-                        required
-                    >
-
-                </div>
-
-                <button type="submit" class="primary-btn">
-                    🔎 Search Donors
-                </button>
-
-            </form>
-
-        </div>
-
-
-        {% if donors %}
-
-            <div class="section-header">
-                <h2>Available Donors</h2>
-                <p>Eligible donors matching your blood requirement.</p>
+            <div class="form-group">
+                <label for="blood_type">Blood Group</label>
+                <select id="blood_type" name="blood_type" required>
+                    <option value="">Select blood group</option>
+                    <option value="O-">O-</option>
+                    <option value="O+">O+</option>
+                    <option value="A-">A-</option>
+                    <option value="A+">A+</option>
+                    <option value="B-">B-</option>
+                    <option value="B+">B+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="AB+">AB+</option>
+                </select>
             </div>
 
-            <div class="donor-grid">
+            <div class="form-group">
+                <label for="location">Location</label>
+                <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    placeholder="Enter city or area"
+                >
+            </div>
 
-                {% for donor in donors %}
+            <button type="submit" class="primary-btn">
+                🔎 Search Donors
+            </button>
 
-                    <div class="donor-card">
+        </form>
+    </section>
 
-                        <div class="donor-icon">
-                            🩸
+    {% if donors %}
+
+        <div class="section-heading">
+            <h2>Search Results</h2>
+            <span class="result-count">
+                {{ donors|length }} donor(s) found
+            </span>
+        </div>
+
+        <section class="donor-grid" aria-label="Search results">
+
+            {% for donor in donors %}
+
+                <article class="donor-card">
+
+                    <div class="donor-card-top">
+                        <div>
+                            <h3 class="donor-name">
+                                {{ donor[0] }}
+                            </h3>
+
+                            <span class="availability-badge">
+                                ● Registered donor
+                            </span>
                         </div>
 
-                        <div class="donor-info">
-
-                            <h3>{{ donor[0] }}</h3>
-
-                            <p>
-                                <strong>Contact:</strong>
-                                {{ donor[1] }}
-                            </p>
-
-                            <p>
-                                <strong>Blood Type:</strong>
-                                <span class="blood-badge">
-                                    {{ donor[2] }}
-                                </span>
-                            </p>
-
-                            <p>
-                                <strong>Location:</strong>
-                                {{ donor[3] }}
-                            </p>
-
-                        </div>
-
-                        <span class="status status-available">
-                            Available
+                        <span class="blood-badge">
+                            {{ donor[2] }}
                         </span>
-
                     </div>
 
-                {% endfor %}
+                    <div class="donor-detail">
+                        <span aria-hidden="true">📍</span>
+                        <span>
+                            <strong>Location:</strong>
+                            {{ donor[3] or "Location not provided" }}
+                        </span>
+                    </div>
 
-            </div>
+                    <div class="donor-detail">
+                        <span aria-hidden="true">📞</span>
+                        <span>
+                            <strong>Contact:</strong>
+                            {% if donor[1] %}
+                                {{ donor[1] }}
+                            {% else %}
+                                Contact number not provided
+                            {% endif %}
+                        </span>
+                    </div>
 
-        {% elif request.method == "POST" %}
+                </article>
 
-            <div class="empty-state">
+            {% endfor %}
 
-                <div class="empty-icon">🔍</div>
+        </section>
 
-                <h3>No Eligible Donor Found</h3>
+    {% elif request.method == "POST" %}
 
-                <p>
-                    We could not find an eligible donor matching
-                    your blood type and location.
-                </p>
-
-                <p>
-                    Try searching another nearby area.
-                </p>
-
-            </div>
-
-        {% endif %}
-
-        <div class="back-link">
-            <a href="/dashboard">← Back to Dashboard</a>
+        <div class="section-heading">
+            <h2>Search Results</h2>
         </div>
 
-    </div>
+        <section class="empty-state">
+            <div class="empty-state-icon" aria-hidden="true">🔎</div>
+            <h3>No Donors Found</h3>
+            <p>
+                No matching donors were found for your search.
+                Try another blood group or location.
+            </p>
+        </section>
 
-</div>
-```
+    {% endif %}
+
+    <section class="tips-box">
+        <h3>🩸 Important Information</h3>
+        <p>
+            Please confirm a donor's availability and medical eligibility
+            before arranging a donation. Blood compatibility and donation
+            decisions should be confirmed with a qualified healthcare
+            professional.
+        </p>
+    </section>
+
+</main>
+
+<footer class="page-footer">
+    Blood Donor &amp; Emergency Request Network
+</footer>
 
 </body>
 </html>

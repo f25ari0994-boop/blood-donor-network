@@ -17,7 +17,12 @@
     <div class="form-container">
 
         <div class="page-header">
-            <div class="blood-icon">🩸</div>
+<div class="blood-icon">
+    <img
+        src="{{ url_for('static', filename='images/blood-logo.png') }}"
+        alt="Blood Donor Network"
+    >
+</div>
             <h1>Become a Blood Donor</h1>
             <p>Register yourself and help save lives in emergencies.</p>
         </div>
@@ -32,7 +37,8 @@
             {% endif %}
         {% endwith %}
 
-        <form action="/donor" method="POST">
+<form action="{{ url_for('donor') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="form-group">
                 <label for="name">Full Name</label>
@@ -139,10 +145,14 @@
                 <small>Select your last donation date if you have donated before.</small>
             </div>
 
-            <button type="submit" class="primary-btn">
-                🩸 Register as Donor
-            </button>
-
+      <button type="submit" class="primary-btn">
+    <img
+        src="{{ url_for('static', filename='images/blood-logo.png') }}"
+        alt="Blood"
+        class="button-blood-logo"
+    >
+    Register as Donor
+</button>
         </form>
 
         <div class="back-link">

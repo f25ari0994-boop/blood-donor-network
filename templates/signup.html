@@ -1,7 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -9,116 +11,323 @@
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+
+        /* =========================
+           SAME HEADER AS HOME
+        ========================= */
+
+        .site-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e7eaf0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .site-nav {
+            width: min(1180px, 92%);
+            min-height: 72px;
+            margin: auto;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 20px;
+        }
+
+        .site-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            text-decoration: none;
+            color: #b42318;
+
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .site-logo img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+        }
+
+        .site-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .site-nav-links a {
+            display: inline-block;
+
+            padding: 10px 16px;
+
+            border-radius: 8px;
+
+            text-decoration: none;
+
+            color: #344054;
+            background: transparent;
+
+            font-weight: 700;
+
+            transition: 0.2s ease;
+        }
+
+        .site-nav-links a:hover {
+            background: #f2f4f7;
+            color: #b42318;
+        }
+
+        /* Sign Up is the active page */
+
+        .site-nav-links a.active {
+            background: #b42318;
+            color: #ffffff;
+        }
+
+        .site-nav-links a.active:hover {
+            background: #991b1b;
+            color: #ffffff;
+        }
+
+        /* Mobile */
+
+        @media (max-width: 850px) {
+
+            .site-nav {
+                flex-direction: column;
+                padding: 16px 0;
+            }
+
+            .site-logo {
+                text-align: center;
+                font-size: 18px;
+            }
+
+            .site-nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+        }
+
+
+/* Keep header navigation independent from .btn styles */
+
+.site-nav-links a {
+    background: transparent !important;
+    color: #344054 !important;
+    border: none !important;
+}
+
+.site-nav-links a:hover {
+    background: #f2f4f7 !important;
+    color: #b42318 !important;
+}
+
+.site-nav-links a.active {
+    background: #b42318 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+
+    </style>
+
 </head>
+
 
 <body>
 
-<div class="auth-page">
 
-    <div class="auth-container">
+    <!-- =========================
+         HEADER
+    ========================= -->
 
-        <!-- Logo -->
-        <div class="auth-icon">
-            🩸
+    <header class="site-header">
+
+        <div class="site-nav">
+
+            <a class="site-logo" href="/">
+
+                <img
+                    src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                    alt="Blood Donor Network Logo"
+                >
+
+                <span>
+                    Blood Donor & Emergency Request Network
+                </span>
+
+            </a>
+
+
+            <nav class="site-nav-links">
+
+                <a href="/">
+                    Home
+                </a>
+
+                <a href="/login">
+                    Login
+                </a>
+
+                <a class="active" href="/signup">
+                    Sign Up
+                </a>
+
+            </nav>
+
         </div>
 
-        <h1>Create Account</h1>
-
-        <p class="auth-subtitle">
-            Join the Blood Donor Network
-        </p>
+    </header>
 
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="auth-message">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <!-- =========================
+         SIGN UP
+    ========================= -->
 
+    <div class="auth-page">
 
-        <!-- Signup Form -->
-        <form action="/signup" method="POST">
+        <div class="auth-container">
 
-            <div class="auth-form-group">
+<div class="auth-icon">
+    <img
+        src="{{ url_for('static', filename='images/blood-logo.png') }}"
+        alt="Blood Donor Network"
+    >
+</div>
 
-                <label>Name</label>
-
-                <input
-                    type="text"
-                    name="name"
-                    placeholder="Enter your full name"
-                    required
-                >
-
-            </div>
-
-
-            <div class="auth-form-group">
-
-                <label>Email</label>
-
-                <input
-                    type="email"
-                    name="email"
-                    placeholder="Enter your email"
-                >
-
-            </div>
-
-
-            <div class="auth-form-group">
-
-                <label>Phone Number</label>
-
-                <input
-                    type="text"
-                    name="phone"
-                    placeholder="Enter your phone number"
-                >
-
-            </div>
-
-
-            <div class="auth-form-group">
-
-                <label>Password</label>
-
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="Create a password"
-                    required
-                >
-
-            </div>
-
-
-            <button type="submit" class="auth-btn">
+            <h1>
                 Create Account
-            </button>
-
-        </form>
+            </h1>
 
 
-        <!-- Login Link -->
-        <div class="auth-footer">
+            <p class="auth-subtitle">
+                Join the Blood Donor Network
+            </p>
 
-            <span>Already have an account?</span>
 
-            <a href="/login">
-                Login
-            </a>
+            <!-- Flash Messages -->
+
+            {% with messages = get_flashed_messages() %}
+
+                {% if messages %}
+
+                    {% for message in messages %}
+
+                        <div class="auth-message">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <!-- Signup Form -->
+
+            <form action="{{ url_for('signup') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+                <div class="auth-form-group">
+
+                    <label>
+                        Name
+                    </label>
+
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Enter your full name"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="auth-form-group">
+
+                    <label>
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Enter your email"
+                    >
+
+                </div>
+
+
+                <div class="auth-form-group">
+
+                    <label>
+                        Phone Number
+                    </label>
+
+                    <input
+                        type="text"
+                        name="phone"
+                        placeholder="Enter your phone number"
+                    >
+
+                </div>
+
+
+                <div class="auth-form-group">
+
+                    <label>
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Create a password"
+                        required
+                    >
+
+                </div>
+
+
+                <button type="submit" class="auth-btn">
+                    Create Account
+                </button>
+
+            </form>
+
+
+            <!-- Login Link -->
+
+            <div class="auth-footer">
+
+                <span>
+                    Already have an account?
+                </span>
+
+                <a href="/login">
+                    Login
+                </a>
+
+            </div>
+
 
         </div>
 
     </div>
 
-</div>
 
 </body>
 </html>
+

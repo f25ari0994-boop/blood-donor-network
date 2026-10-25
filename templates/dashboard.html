@@ -1,129 +1,936 @@
-<!DOCTYPE html>
 
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Blood Donor Network</title>
+    <meta name="theme-color" content="#a71930">
 
+    <title>Dashboard | Blood Donor Network</title>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 
+    <style>
+        :root {
+            --red: #b4233b;
+            --red-dark: #90182e;
+            --red-light: #fff0f2;
+            --ink: #20242c;
+            --muted: #737b8c;
+            --border: #e8eaf0;
+            --surface: #ffffff;
+            --page: #f5f7fb;
+            --shadow: 0 8px 28px rgba(25, 35, 55, .055);
+        }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--page);
+            color: var(--ink);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button {
+            font: inherit;
+        }
+
+        .mobile-dashboard {
+            min-height: 100vh;
+            padding-bottom: 35px;
+        }
+
+        /* Header */
+        .mobile-dashboard-header {
+            min-height: 78px;
+            padding: 14px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .mobile-brand img {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .mobile-brand strong {
+            display: block;
+            font-size: 15px;
+            line-height: 1.45;
+            font-weight: 800;
+        }
+
+        .mobile-brand span {
+            display: block;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .mobile-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-notification-btn,
+        .mobile-menu summary {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            background: #f7f8fa;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 19px;
+            cursor: pointer;
+            list-style: none;
+            flex-shrink: 0;
+        }
+
+        .mobile-menu summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .mobile-menu {
+            position: relative;
+        }
+
+        .mobile-menu-panel {
+            position: absolute;
+            top: 52px;
+            right: 0;
+            width: 225px;
+            padding: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 12px 35px rgba(25, 35, 55, .14);
+        }
+
+        .mobile-menu-panel > a,
+        .mobile-menu-logout {
+            width: 100%;
+            min-height: 43px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--ink);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .mobile-menu-panel > a:hover,
+        .mobile-menu-logout:hover {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        .mobile-menu-panel form {
+            margin: 0;
+            border-top: 1px solid var(--border);
+            margin-top: 5px;
+            padding-top: 5px;
+        }
+
+        .mobile-menu-logout {
+            color: var(--red);
+        }
+
+        /* Content */
+        .mobile-dashboard-content {
+            width: 100%;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 35px 30px;
+        }
+
+        /* Welcome banner */
+        .dashboard-welcome {
+            position: relative;
+            overflow: hidden;
+            padding: 38px 40px;
+            border-radius: 22px;
+            background: linear-gradient(115deg, #a71930 0%, #c42d47 60%, #e04b60 100%);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(167, 25, 48, .16);
+        }
+
+        .dashboard-welcome::after {
+            content: "❤";
+            position: absolute;
+            right: 38px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 145px;
+            line-height: 1;
+            color: rgba(255, 255, 255, .10);
+            pointer-events: none;
+        }
+
+        .dashboard-welcome-label {
+            margin: 0 0 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, .85);
+            letter-spacing: .5px;
+        }
+
+        .dashboard-welcome h1 {
+            position: relative;
+            z-index: 1;
+            max-width: 630px;
+            margin: 0 0 13px;
+            font-size: clamp(27px, 3.2vw, 39px);
+            line-height: 1.2;
+            letter-spacing: -.9px;
+        }
+        
+
+        .dashboard-welcome-text {
+            position: relative;
+            z-index: 1;
+            max-width: 560px;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, .88);
+        }
+
+        .welcome-tag {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 22px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, .15);
+            border: 1px solid rgba(255, 255, 255, .23);
+            border-radius: 9px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Section headings */
+        .quick-actions-section {
+            margin-top: 38px;
+        }
+
+        .section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 22px;
+            letter-spacing: -.4px;
+        }
+
+        .section-heading p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* Action cards */
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 17px;
+        }
+
+        .quick-action-card {
+            min-width: 0;
+            min-height: 130px;
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            transition: transform .2s, border-color .2s, box-shadow .2s;
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-3px);
+            border-color: #e9aab4;
+            box-shadow: 0 12px 30px rgba(25, 35, 55, .09);
+        }
+
+        .quick-action-icon {
+            width: 54px;
+            height: 54px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            border-radius: 14px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 25px;
+        }
+
+        .quick-action-icon img {
+            width: 35px;
+            height: 35px;
+            object-fit: contain;
+        }
+
+        .search-action .quick-action-icon {
+            background: #edf4ff;
+        }
+
+        .emergency-action .quick-action-icon {
+            background: #fff3e8;
+        }
+
+        .list-action .quick-action-icon {
+            background: #edf8f1;
+        }
+
+        .quick-action-content {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .quick-action-content strong {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 15px;
+            line-height: 1.45;
+        }
+
+        .quick-action-content span {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .quick-action-arrow {
+            color: var(--red);
+            font-size: 23px;
+            flex-shrink: 0;
+        }
+
+        /* Emergency card */
+        .emergency-info-card {
+            margin-top: 30px;
+            padding: 26px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: #fff;
+            border: 1px solid #f2d3d8;
+            border-left: 5px solid var(--red);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .emergency-info-icon {
+            width: 55px;
+            height: 55px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: var(--red-light);
+            border-radius: 14px;
+            font-size: 26px;
+        }
+
+        .emergency-info-content {
+            flex: 1;
+        }
+
+        .emergency-info-content h3 {
+            margin: 0 0 8px;
+            font-size: 17px;
+        }
+
+        .emergency-info-content p {
+            max-width: 650px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .emergency-info-content a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            margin-top: 14px;
+            padding: 0 17px;
+            background: var(--red);
+            border-radius: 9px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            transition: background .2s;
+        }
+
+        .emergency-info-content a:hover {
+            background: var(--red-dark);
+        }
+
+        /* Information card */
+        .dashboard-info-card {
+            margin-top: 18px;
+            padding: 23px 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+        }
+
+        .dashboard-info-icon {
+            width: 45px;
+            height: 45px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: #fff4e9;
+            border-radius: 12px;
+            font-size: 22px;
+        }
+
+        .dashboard-info-card h3 {
+            margin: 2px 0 8px;
+            font-size: 15px;
+        }
+
+        .dashboard-info-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        /* Bottom navigation */
+        .mobile-bottom-nav {
+            display: none;
+        }
+
+        /* Tablet and mobile */
+        @media (max-width: 760px) {
+            .mobile-dashboard {
+                padding-bottom: 90px;
+            }
+
+            .mobile-dashboard-header {
+                min-height: 68px;
+                padding: 11px 17px;
+            }
+
+            .mobile-brand img {
+                width: 39px;
+                height: 39px;
+            }
+
+            .mobile-brand strong {
+                font-size: 12px;
+                max-width: 235px;
+            }
+
+            .mobile-brand span {
+                font-size: 10px;
+            }
+
+            .mobile-dashboard-content {
+                padding: 24px 17px;
+            }
+
+            .dashboard-welcome {
+                padding: 29px 23px;
+                border-radius: 18px;
+            }
+
+            .dashboard-welcome::after {
+                right: 8px;
+                font-size: 100px;
+            }
+
+            .dashboard-welcome h1 {
+                max-width: 440px;
+                font-size: 29px;
+            }
+
+            .dashboard-welcome-text {
+                font-size: 13px;
+            }
+
+            .quick-actions-section {
+                margin-top: 29px;
+            }
+
+            .section-heading h2 {
+                font-size: 20px;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .quick-action-card {
+                min-height: 98px;
+                padding: 17px;
+                gap: 13px;
+                border-radius: 13px;
+            }
+
+            .quick-action-icon {
+                width: 47px;
+                height: 47px;
+                border-radius: 12px;
+                font-size: 22px;
+            }
+
+            .quick-action-icon img {
+                width: 30px;
+                height: 30px;
+            }
+
+            .quick-action-content strong {
+                font-size: 14px;
+            }
+
+            .quick-action-content span {
+                font-size: 11px;
+            }
+
+            .emergency-info-card {
+                margin-top: 24px;
+                padding: 20px 17px;
+                align-items: flex-start;
+                gap: 13px;
+            }
+
+            .emergency-info-icon {
+                width: 43px;
+                height: 43px;
+                font-size: 22px;
+                border-radius: 11px;
+            }
+
+            .emergency-info-content h3 {
+                font-size: 15px;
+            }
+
+            .emergency-info-content p {
+                font-size: 12px;
+            }
+
+            .dashboard-info-card {
+                padding: 19px 17px;
+            }
+
+            .dashboard-info-card h3 {
+                font-size: 14px;
+            }
+
+            .dashboard-info-card p {
+                font-size: 12px;
+            }
+
+            .mobile-bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 30;
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                padding: 9px 7px calc(9px + env(safe-area-inset-bottom));
+                background: rgba(255, 255, 255, .97);
+                border-top: 1px solid var(--border);
+                box-shadow: 0 -5px 20px rgba(25, 35, 55, .05);
+            }
+
+            .bottom-nav-item {
+                min-height: 52px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+                color: var(--muted);
+                border-radius: 10px;
+            }
+
+            .bottom-nav-item span {
+                font-size: 19px;
+                line-height: 1;
+            }
+
+            .bottom-nav-item small {
+                font-size: 10px;
+                font-weight: 600;
+            }
+
+            .bottom-nav-item.active {
+                color: var(--red);
+                background: var(--red-light);
+            }
+        }
+
+        @media (max-width: 380px) {
+            .mobile-dashboard-header {
+                padding: 10px 12px;
+            }
+
+            .mobile-brand {
+                gap: 8px;
+            }
+
+            .mobile-brand strong {
+                max-width: 165px;
+                font-size: 11px;
+            }
+
+            .mobile-header-actions {
+                gap: 6px;
+            }
+
+            .mobile-notification-btn,
+            .mobile-menu summary {
+                width: 37px;
+                height: 37px;
+            }
+
+            .mobile-dashboard-content {
+                padding: 19px 12px;
+            }
+
+            .dashboard-welcome {
+                padding: 24px 18px;
+            }
+
+            .dashboard-welcome h1 {
+                font-size: 26px;
+            }
+
+            .emergency-info-card {
+                gap: 10px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
+<div class="mobile-dashboard">
 
-<div class="dashboard-page">
+    <!-- HEADER -->
+    <header class="mobile-dashboard-header">
 
-    <div class="dashboard-container">
+        <div class="mobile-brand">
+            <img
+                src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                alt="Blood Donor Network logo"
+            >
 
-        <!-- Header -->
-        <div class="dashboard-header">
+            <div>
+                <strong>Blood Donor &amp; Emergency Request Network</strong>
+                <span>Connecting donors. Supporting lives.</span>
+            </div>
+        </div>
 
-            <div class="dashboard-blood-icon">
+        <div class="mobile-header-actions">
+
+            <a href="{{ url_for('notifications') }}"
+               class="mobile-notification-btn"
+               aria-label="Notifications"
+               title="Notifications">
+                🔔
+            </a>
+
+            <details class="mobile-menu">
+                <summary aria-label="Open menu">☰</summary>
+
+                <div class="mobile-menu-panel">
+
+                    <a href="{{ url_for('donor') }}">
+                        🩸 Register Donor
+                    </a>
+
+                    <a href="{{ url_for('donor_list') }}">
+                        👥 Donor List
+                    </a>
+
+                    <a href="{{ url_for('search') }}">
+                        🔎 Find Donor
+                    </a>
+
+                    <a href="{{ url_for('request_blood') }}">
+                        🚨 Blood Request
+                    </a>
+
+                    <form action="{{ url_for('logout') }}" method="POST">
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <button type="submit" class="mobile-menu-logout">
+                            🚪 Logout
+                        </button>
+                    </form>
+
+                </div>
+            </details>
+
+        </div>
+    </header>
+
+
+    <!-- DASHBOARD CONTENT -->
+    <main class="mobile-dashboard-content">
+
+        <!-- WELCOME BANNER -->
+        <section class="dashboard-welcome">
+
+            <p class="dashboard-welcome-label">
+                YOUR BLOOD DONOR NETWORK
+            </p>
+
+<h1 style="color: #FFFFFF;">Blood Donor Network</h1>
+
+
+            <p class="dashboard-welcome-text">
+                Every donation can give someone another chance at life.
+                Find donors, manage your donor profile, or help someone
+                who urgently needs blood.
+            </p>
+
+            <div class="welcome-tag">
+                <span>❤</span>
+                Together, we can make a difference
+            </div>
+
+        </section>
+
+
+        <!-- QUICK ACTIONS -->
+        <section class="quick-actions-section">
+
+            <div class="section-heading">
+                <div>
+                    <h2>Quick Actions</h2>
+                    <p>Choose what you want to do today.</p>
+                </div>
+            </div>
+
+            <div class="quick-actions-grid">
+
+                <a href="{{ url_for('donor') }}"
+                   class="quick-action-card donor-action">
+
+                    <div class="quick-action-icon">
+                        <img
+                            src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                            alt=""
+                        >
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>Become a Donor</strong>
+                        <span>Register or manage your donor profile</span>
+                    </div>
+
+                    <span class="quick-action-arrow" aria-hidden="true">→</span>
+                </a>
+
+
+                <a href="{{ url_for('search') }}"
+                   class="quick-action-card search-action">
+
+                    <div class="quick-action-icon" aria-hidden="true">
+                        🔎
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>Find a Donor</strong>
+                        <span>Search by blood group and location</span>
+                    </div>
+
+                    <span class="quick-action-arrow" aria-hidden="true">→</span>
+                </a>
+
+
+                <a href="{{ url_for('request_blood') }}"
+                   class="quick-action-card emergency-action">
+
+                    <div class="quick-action-icon" aria-hidden="true">
+                        🚨
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>Request Blood</strong>
+                        <span>Create a blood or emergency request</span>
+                    </div>
+
+                    <span class="quick-action-arrow" aria-hidden="true">→</span>
+                </a>
+
+
+                <a href="{{ url_for('donor_list') }}"
+                   class="quick-action-card list-action">
+
+                    <div class="quick-action-icon" aria-hidden="true">
+                        👥
+                    </div>
+
+                    <div class="quick-action-content">
+                        <strong>Donor Directory</strong>
+                        <span>Browse registered blood donors</span>
+                    </div>
+
+                    <span class="quick-action-arrow" aria-hidden="true">→</span>
+                </a>
+
+            </div>
+        </section>
+
+
+        <!-- EMERGENCY SECTION -->
+        <section class="emergency-info-card">
+
+            <div class="emergency-info-icon" aria-hidden="true">
+                🚨
+            </div>
+
+            <div class="emergency-info-content">
+
+                <h3>Need blood urgently?</h3>
+
+                <p>
+                    Create a blood request with the required details.
+                    Matching donors can help you connect with someone
+                    who may be able to donate.
+                </p>
+
+                <a href="{{ url_for('request_blood') }}">
+                    Create Blood Request &nbsp; →
+                </a>
+
+            </div>
+        </section>
+
+
+        <!-- DONATION INFORMATION -->
+        <section class="dashboard-info-card">
+
+            <div class="dashboard-info-icon" aria-hidden="true">
                 🩸
             </div>
 
-            <h1>Blood Donor Network</h1>
+            <div>
+                <h3>Every donor can make a difference</h3>
 
-            <h2>Welcome, {{ user_name }}!</h2>
+                <p>
+                    Keep your donor information updated and follow
+                    medical eligibility guidance before donating.
+                    A qualified healthcare professional can advise
+                    you about safe donation timing.
+                </p>
+            </div>
 
-            <p>
-                What would you like to do today?
-            </p>
+        </section>
 
-        </div>
-
-
-        <!-- Dashboard Actions -->
-        <div class="dashboard-actions">
-
-            <button
-                class="dashboard-btn donor-btn"
-                onclick="window.location.href='/donor'"
-            >
-                <span class="dashboard-btn-icon">🩸</span>
-
-                <span>
-                    <strong>Become a Donor</strong>
-                    <small>Register as a blood donor</small>
-                </span>
-            </button>
+    </main>
 
 
-            <button
-                class="dashboard-btn search-btn"
-                onclick="window.location.href='/search'"
-            >
-                <span class="dashboard-btn-icon">🔎</span>
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="mobile-bottom-nav" aria-label="Main navigation">
 
-                <span>
-                    <strong>Find Blood Donor</strong>
-                    <small>Search available donors</small>
-                </span>
-            </button>
+        <a href="{{ url_for('dashboard') }}"
+           class="bottom-nav-item active"
+           aria-current="page">
+            <span aria-hidden="true">🏠</span>
+            <small>Dashboard</small>
+        </a>
 
+        <a href="{{ url_for('search') }}"
+           class="bottom-nav-item">
+            <span aria-hidden="true">🔎</span>
+            <small>Search</small>
+        </a>
 
-            <a
-                href="/notifications"
-                class="dashboard-btn notification-btn"
-            >
-                <span class="dashboard-btn-icon">🔔</span>
+        <a href="{{ url_for('notifications') }}"
+           class="bottom-nav-item">
+            <span aria-hidden="true">🔔</span>
+            <small>Alerts</small>
+        </a>
 
-                <span>
-                    <strong>Notifications</strong>
-                    <small>View your notifications</small>
-                </span>
-            </a>
+        <a href="{{ url_for('donor') }}"
+           class="bottom-nav-item">
+            <span aria-hidden="true">🩸</span>
+            <small>Donor</small>
+        </a>
 
-
-            <button
-                class="dashboard-btn emergency-btn"
-                onclick="window.location.href='/request'"
-            >
-                <span class="dashboard-btn-icon">🚨</span>
-
-                <span>
-                    <strong>Emergency Blood Request</strong>
-                    <small>Request blood urgently</small>
-                </span>
-            </button>
-
-
-            <button
-                class="dashboard-btn list-btn"
-                onclick="window.location.href='/donor-list'"
-            >
-                <span class="dashboard-btn-icon">👥</span>
-
-                <span>
-                    <strong>Donor List</strong>
-                    <small>View registered donors</small>
-                </span>
-            </button>
-
-
-            <button
-                class="dashboard-btn logout-btn"
-                onclick="window.location.href='/logout'"
-            >
-                <span class="dashboard-btn-icon">🚪</span>
-
-                <span>
-                    <strong>Logout</strong>
-                    <small>Sign out of your account</small>
-                </span>
-            </button>
-
-        </div>
-
-    </div>
+    </nav>
 
 </div>
 
+<script>
+    // Close the menu when the user clicks outside it.
+    document.addEventListener("click", function (event) {
+        document.querySelectorAll(".mobile-menu[open]").forEach(function (menu) {
+            if (!menu.contains(event.target)) {
+                menu.removeAttribute("open");
+            }
+        });
+    });
+</script>
 
 </body>
 </html>
