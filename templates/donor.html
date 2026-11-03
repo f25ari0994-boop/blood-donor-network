@@ -530,8 +530,12 @@
                 Enter accurate information. Fields marked with
                 <span class="required">*</span> are required.
             </p> {% with messages = get_flashed_messages(with_categories=true) %}
-                        <div class="message" role="alert">
-                            {{ message }}</div> {% endfor %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endwith %}
 
             <form action="{{ url_for('donor') }}" method="POST">
 
