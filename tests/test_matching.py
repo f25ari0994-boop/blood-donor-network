@@ -1,6 +1,11 @@
 import unittest
 
-from app import donor_matches_request, get_compatible_donor_groups, locations_match
+from app import (
+    donor_matches_request,
+    get_compatible_donor_groups,
+    get_notification_recipient_user_ids,
+    locations_match,
+)
 
 
 class LocationMatchingTests(unittest.TestCase):
@@ -47,6 +52,29 @@ class DonorRequestMatchingTests(unittest.TestCase):
     def test_compatible_blood_group_in_a_different_city_does_not_match(self):
         self.assertFalse(
             donor_matches_request("A+", "Sukkur", "A+", "Rohri")
+        )
+
+
+class BloodRequestNotificationTargetTests(unittest.TestCase):
+    def test_only_compatible_donors_in_same_city_are_notified_once(self):
+        donor_rows = [
+            (11, "A+", "Sukkur"),
+            (12, "AB+", "Sukkur"),
+            (13, "O-", "Rohri"),
+            (14, "O-", "Sukkur, Sindh"),
+            (11, "O-", "Sukkur"),
+            (15, "A+", "Sukkur"),
+            (None, "O-", "Sukkur"),
+        ]
+
+        self.assertEqual(
+            get_notification_recipient_user_ids(
+                donor_rows,
+                "A+",
+                "Sukkur City",
+                excluded_user_id=15,
+            ),
+            [11, 14],
         )
 
 
