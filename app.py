@@ -183,7 +183,11 @@ def get_inserted_id(cursor, connection):
     inserted_id = getattr(cursor, "lastrowid", None)
     if inserted_id is not None:
         return inserted_id
-    row = connection.execute("SELECT last_insert_rowid()").fetchone()
+    if hasattr(connection, "connection"):
+        row = connection.execute("SELECT LASTVAL()").fetchone()
+    else:
+        row = connection.execute("SELECT last_insert_rowid()").fetchone()
+
     return row[0] if row else None
 
 
@@ -469,7 +473,7 @@ def check_donor_eligibility(user_id):
                 )
                 continue
 
-            days_since = (date.today() - donation_date).days
+            days_since = (get_pakistan_time().date() - donation_date).days
 
             if days_since < 90:
                 cursor.execute(
@@ -517,6 +521,15 @@ def check_donor_eligibility(user_id):
 # =========================================================
 # 9. MATCH AND UNIT HELPERS
 # =========================================================
+
+def begin_write_transaction(connection):
+    """
+    Serialize critical workflows on SQLite before reading and writing.
+    PostgreSQL connections already begin transactions automatically.
+    """
+    if not hasattr(connection, "connection"):
+        connection.execute("BEGIN IMMEDIATE")
+
 
 def get_reserved_units(connection, request_id, exclude_match_id=None):
     """
@@ -1225,7 +1238,7 @@ def donor():
                 flash("Please enter a valid donation date.", "error")
                 return redirect(url_for("donor"))
 
-            if donation_date > date.today():
+            if donation_date > get_pakistan_time().date():
                 flash("Last donation date cannot be in the future.", "error")
                 return redirect(url_for("donor"))
 
@@ -1282,7 +1295,7 @@ def donor():
 
         if last_donation:
             previous_date = date.fromisoformat(last_donation)
-            days_since_donation = (date.today() - previous_date).days
+            days_since_donation = (get_pakistan_time().date() - previous_date).days
 
             if days_since_donation < 90:
                 eligible = 0
@@ -1301,7 +1314,7 @@ def donor():
         # -------------------------------
 
         answers_json = json.dumps(screening_answers)
-        screening_date = date.today().isoformat()
+        screening_date = get_pakistan_time().date().isoformat()
 
         if existing_donor:
 
@@ -1420,6 +1433,8 @@ def donor():
 @app.route("/search", methods=["GET", "POST"])
 @login_required
 def search():
+    check_donor_eligibility(get_user_id())
+
     donors = []
     selected_blood_type = ""
     selected_location = ""
@@ -1449,21 +1464,29 @@ def search():
 
                 donors = connection.execute(
                     f"""
-               SELECT
-    id, name, contact, blood_type, location,
-    hospital, availability
+                    SELECT
+                        id,
+                        name,
+                        age,
+                        NULL AS contact,
+                        blood_type,
+                        location,
+                        hospital,
+                        availability,
+                        eligible,
+                        last_donation
                     FROM donors
                     WHERE LOWER(location) LIKE LOWER(?)
                       AND availability = ?
                       AND eligible = 1
-                      AND health_screening_status != ?
+                      AND health_screening_status = ?
                       AND blood_type IN ({placeholders})
                     ORDER BY id DESC
                     """,
                     (
                         f"%{selected_location}%",
                         AVAILABLE,
-                        "Needs Professional Review",
+                        "Self-Declared Clear",
                         *compatible_donor_groups,
                     ),
                 ).fetchall()
@@ -1490,6 +1513,7 @@ def search():
 @app.route("/donor-list")
 @login_required
 def donor_list():
+    check_donor_eligibility(get_user_id())
     connection = get_db_connection()
 
     try:
@@ -1500,12 +1524,7 @@ def donor_list():
                 d.name,
                 d.age,
 
-                CASE
-                    WHEN d.availability = ?
-                         AND d.eligible = 1
-                    THEN d.contact
-                    ELSE NULL
-                END AS authorized_contact,
+                NULL AS authorized_contact,
 
                 d.blood_type,
                 d.location,
@@ -1833,6 +1852,7 @@ def accept_request(request_id):
     connection = get_db_connection()
 
     try:
+        begin_write_transaction(connection)
         cursor = connection.cursor()
 
         if donor_has_active_match(connection, user_id):
@@ -2084,6 +2104,7 @@ def cancel_acceptance(match_id):
     connection = get_db_connection()
 
     try:
+        begin_write_transaction(connection)
         cursor = connection.cursor()
 
         cursor.execute(
@@ -2186,6 +2207,7 @@ def confirm_match(match_id):
     connection = get_db_connection()
 
     try:
+        begin_write_transaction(connection)
         cursor = connection.cursor()
 
         cursor.execute(
@@ -2444,13 +2466,18 @@ def report_match_donation(match_id):
 
     parsed_date = parse_date(donation_date_text)
 
-    if not 1 <= units <= 8 or parsed_date is None:
+    if (
+        not 1 <= units <= 8
+        or parsed_date is None
+        or parsed_date > get_pakistan_time().date()
+    ):
         flash("Enter a valid donation date and number of units.")
         return redirect(url_for("match_detail", match_id=match_id))
 
     connection = get_db_connection()
 
     try:
+        begin_write_transaction(connection)
         cursor = connection.cursor()
 
         cursor.execute(
@@ -2622,6 +2649,7 @@ def confirm_receipt(donation_id):
     connection = get_db_connection()
 
     try:
+        begin_write_transaction(connection)
         cursor = connection.cursor()
 
         cursor.execute(
@@ -2730,7 +2758,7 @@ def confirm_receipt(donation_id):
         )
 
         # Start donor cooldown only after receipt confirmation.
-        confirmed_donation_date = date.today().isoformat()
+        confirmed_donation_date = get_pakistan_time().date().isoformat()
 
         cursor.execute(
             """
