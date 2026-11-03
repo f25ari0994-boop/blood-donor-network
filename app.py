@@ -4,6 +4,7 @@ import re
 import hmac
 import secrets
 import logging
+import time
 
 from datetime import datetime, date, timedelta
 from functools import wraps
@@ -26,13 +27,62 @@ app = Flask(__name__)
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
 
-secret_key = os.getenv("SECRET_KEY")
+def load_or_create_secret_key():
+    """
+    Keep Flask sessions valid across PythonAnywhere worker restarts.
 
-if IS_PRODUCTION and not secret_key:
-    raise RuntimeError("Set SECRET_KEY before running in production.")
+    The generated key is stored outside the repository in Flask's instance
+    directory with owner-only file permissions. An explicitly configured
+    SECRET_KEY environment variable always takes precedence.
+    """
+    os.makedirs(app.instance_path, exist_ok=True)
+    key_path = os.path.join(app.instance_path, "secret_key")
+
+    try:
+        file_descriptor = os.open(
+            key_path,
+            os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+            0o600,
+        )
+    except FileExistsError:
+        secret_value = ""
+
+        # Another WSGI worker may have created the file moments ago.
+        for _ in range(50):
+            try:
+                with open(key_path, "r", encoding="utf-8") as key_file:
+                    secret_value = key_file.read().strip()
+            except FileNotFoundError:
+                secret_value = ""
+
+            if len(secret_value) >= 64:
+                break
+
+            time.sleep(0.02)
+    else:
+        secret_value = secrets.token_hex(32)
+
+        with os.fdopen(file_descriptor, "w", encoding="utf-8") as key_file:
+            key_file.write(secret_value)
+
+    if len(secret_value) < 64:
+        raise RuntimeError(
+            "Flask could not load a persistent SECRET_KEY. "
+            "Set SECRET_KEY in the server environment."
+        )
+
+    try:
+        os.chmod(key_path, 0o600)
+    except OSError:
+        app.logger.warning("Could not restrict permissions on the session key file.")
+
+    return secret_value
+
+
+secret_key = os.getenv("SECRET_KEY") or load_or_create_secret_key()
 
 app.config.update(
-    SECRET_KEY=secret_key or secrets.token_hex(32),
+    SECRET_KEY=secret_key,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SECURE=IS_PRODUCTION,
     SESSION_COOKIE_SAMESITE="Lax",
