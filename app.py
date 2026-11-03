@@ -1137,8 +1137,6 @@ def public_explore():
     connection = get_db_connection()
 
     try:
-        expire_overdue_requests(connection)
-
         donors = connection.execute(
             f"""
             SELECT name, blood_type, location
@@ -1168,14 +1166,20 @@ def public_explore():
               AND br.remaining_units > 0
               AND br.blood_type = ?
               AND br.needed_by IS NOT NULL
-              AND br.needed_by > ?
             ORDER BY br.needed_by ASC
             """,
-            (
-                blood_type,
-                get_pakistan_time().strftime("%Y-%m-%d %H:%M:%S"),
-            ),
+            (blood_type,),
         ).fetchall()
+
+        now = get_pakistan_time()
+        requests_list = [
+            item
+            for item in requests_list
+            if (
+                (deadline := parse_stored_deadline(item[4])) is not None
+                and deadline > now
+            )
+        ]
     finally:
         connection.close()
 
