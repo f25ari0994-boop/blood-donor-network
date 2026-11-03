@@ -68,7 +68,7 @@ select:focus-visible, textarea:focus-visible {
   margin-right: auto;
 }
 .dashboard-content, .profile-container { max-width: 1180px; }
-.dashboard-hero, .hero, .page-heading, .page-header { color: var(--ink); }
+.dashboard-hero, .page-heading, .page-header { color: var(--ink); }
 .section, .panel, .card, .form-card, .form-container,
 .emergency-form-card, .directory-panel, .donor-card,
 .notification-card, .stat-card, .action-card, .info-card,
