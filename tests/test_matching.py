@@ -15,6 +15,11 @@ class LocationMatchingTests(unittest.TestCase):
             locations_match("Gulshan-e-Iqbal, Karachi", "DHA, Karachi")
         )
 
+    def test_city_is_extracted_from_dash_separated_location(self):
+        self.assertTrue(
+            locations_match("Sukkur City - Old Town", "Sukkur, Sindh")
+        )
+
     def test_different_cities_do_not_match(self):
         self.assertFalse(locations_match("Sukkur", "Rohri"))
 
