@@ -2912,7 +2912,11 @@ def accept_request(request_id):
         )
 
         connection.commit()
-        flash("Your acceptance has been sent to the requester.")
+        flash(
+            "Request accepted. Your private chat with the requester is now available "
+            "in My Matches.",
+            "success",
+        )
 
     except Exception:
         connection.rollback()
@@ -2921,6 +2925,11 @@ def accept_request(request_id):
 
     finally:
         connection.close()
+
+    if match_id:
+        return redirect(
+            url_for("my_matches") + f"#match-chat-{match_id}"
+        )
 
     return redirect(url_for("available_requests"))
 
@@ -3424,7 +3433,7 @@ def send_match_message(match_id):
         create_notification(
             connection,
             recipient_id,
-            "You have a new private message about a confirmed blood match.",
+            "You have a new private message in your blood request match.",
             "match_message",
             related_request_id=match[0],
             related_match_id=match_id,
@@ -3881,7 +3890,26 @@ def donation_history():
 @app.route("/notifications")
 @login_required
 def notifications():
+    user_id = get_user_id()
     connection = get_db_connection()
+
+    notification_labels = {
+        "blood_request": "New blood request",
+        "match_acceptance": "Donor accepted your request",
+        "match_waiting": "Your acceptance is waiting",
+        "match_confirmed": "Match confirmed",
+        "match_message": "Private chat message",
+        "match_rejected": "Match rejected",
+        "match_cancelled": "Donor cancelled acceptance",
+        "request_cancelled": "Blood request cancelled",
+        "request_expired": "Blood request expired",
+        "request_fulfilled": "Blood request fulfilled",
+        "donation_reported": "Donation reported",
+        "receipt_confirmed": "Donation receipt confirmed",
+        "eligibility": "Donor eligibility update",
+    }
+
+    notifications_view = []
 
     try:
         notifications_list = connection.execute(
@@ -3893,15 +3921,56 @@ def notifications():
             WHERE user_id = ?
             ORDER BY id DESC
             """,
-            (get_user_id(),),
+            (user_id,),
         ).fetchall()
+
+        for row in notifications_list:
+            notification_id = row[0]
+            notification_type = row[2]
+            request_id = row[5]
+            match_id = row[6]
+
+            if match_id:
+                target_url = url_for("my_matches")
+                if notification_type == "match_message":
+                    target_url += f"#match-chat-{match_id}"
+            elif notification_type == "blood_request":
+                target_url = url_for("available_requests")
+            elif request_id:
+                target_url = url_for("my_requests")
+            elif notification_type == "eligibility":
+                target_url = url_for("donor")
+            else:
+                target_url = url_for("dashboard")
+
+            notifications_view.append({
+                "id": notification_id,
+                "message": row[1],
+                "type": notification_type,
+                "label": notification_labels.get(
+                    notification_type,
+                    (notification_type or "update").replace("_", " ").title(),
+                ),
+                "created_at": row[3],
+                "is_read": bool(row[4]),
+                "request_id": request_id,
+                "match_id": match_id,
+                "target_url": target_url,
+            })
+
+        unread_count = sum(
+            1 for notification in notifications_view
+            if not notification["is_read"]
+        )
 
     finally:
         connection.close()
 
     return render_template(
         "notifications.html",
-        notifications=notifications_list,
+        notifications=notifications_view,
+        unread_count=unread_count,
+        total_notifications=len(notifications_view),
     )
 
 
