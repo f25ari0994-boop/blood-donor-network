@@ -2663,7 +2663,7 @@ def report_match_donation(match_id):
         or parsed_date > get_pakistan_time().date()
     ):
         flash("Enter a valid donation date and number of units.")
-        return redirect(url_for("match_detail", match_id=match_id))
+        return redirect(url_for("my_matches"))
 
     connection = get_db_connection()
 
@@ -2719,11 +2719,11 @@ def report_match_donation(match_id):
 
         if units > units_pledged:
             flash("Reported units cannot exceed your pledged units.")
-            return redirect(url_for("match_detail", match_id=match_id))
+            return redirect(url_for("my_matches"))
 
         if units > remaining_units:
             flash(f"Only {remaining_units} units remain on this request.")
-            return redirect(url_for("match_detail", match_id=match_id))
+            return redirect(url_for("my_matches"))
 
         existing = connection.execute(
             "SELECT id FROM donations WHERE match_id = ?",
@@ -2732,7 +2732,7 @@ def report_match_donation(match_id):
 
         if existing:
             flash("A donation has already been reported for this match.")
-            return redirect(url_for("match_detail", match_id=match_id))
+            return redirect(url_for("my_matches"))
 
         cursor.execute(
             """
@@ -2811,7 +2811,7 @@ def report_match_donation(match_id):
     finally:
         connection.close()
 
-    return redirect(url_for("match_detail", match_id=match_id))
+    return redirect(url_for("donation_progress"))
 
 
 # =========================================================
