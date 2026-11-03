@@ -1211,6 +1211,7 @@ def dashboard():
 
     try:
         cursor = connection.cursor()
+        expire_overdue_requests(connection)
 
         cursor.execute(
             "SELECT COUNT(*) FROM donors WHERE user_id = ?",
