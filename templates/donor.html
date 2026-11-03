@@ -239,6 +239,35 @@
             font-size: 14px;
             outline: none;
             transition: border-color .2s, box-shadow .2s;
+        }.form-group .contact-sharing-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            padding: 15px;
+            margin: 0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fffafa;
+            cursor: pointer;
+        }.form-group .contact-sharing-option input {
+            width: 18px;
+            min-height: 18px;
+            height: 18px;
+            margin: 2px 0 0;
+            padding: 0;
+            flex: 0 0 auto;
+            accent-color: var(--red);
+        }.contact-sharing-option strong {
+            display: block;
+            color: var(--ink);
+            font-size: 13px;
+        }.contact-sharing-option small {
+            display: block;
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.6;
+            font-weight: 400;
         }.form-group textarea {
             min-height: 90px;
             resize: vertical;
@@ -501,6 +530,10 @@
             Donor Directory
         </a>
 
+        <a href="{{ url_for('my_matches') }}">
+            My Matching
+        </a>
+
         <a href="{{ url_for('profile') }}">
             Profile
         </a>
@@ -598,6 +631,25 @@
                             placeholder="e.g. 03XXXXXXXXX"
                             required
                         >
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="contact-sharing-option">
+                            <input
+                                type="checkbox"
+                                name="share_contact"
+                                value="1"
+                                {% if share_contact_enabled %}checked{% endif %}
+                            >
+                            <span>
+                                <strong>Allow other registered users to contact me directly</strong>
+                                <small>
+                                    When enabled, other users can see my phone and WhatsApp buttons
+                                    in Find Donors and Donor Directory. Your own profile will not
+                                    show contact buttons to you. You can change this setting later.
+                                </small>
+                            </span>
+                        </label>
                     </div>
 
                     <div class="form-group">
