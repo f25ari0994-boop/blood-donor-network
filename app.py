@@ -1414,7 +1414,10 @@ def donor():
     try:
         existing_donor = connection.execute(
             """
-            SELECT *
+            SELECT
+                id, name, age, contact, blood_type, location,
+                hospital, last_donation, health_screening_answers,
+                share_contact
             FROM donors
             WHERE user_id = ?
             ORDER BY id DESC
@@ -1424,24 +1427,34 @@ def donor():
         ).fetchone()
 
         if request.method == "GET":
-            share_contact_row = connection.execute(
-                """
-                SELECT share_contact
-                FROM donors
-                WHERE user_id = ?
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-                (user_id,),
-            ).fetchone()
+            donor_columns = (
+                "id", "name", "age", "contact", "blood_type",
+                "location", "hospital", "last_donation",
+                "health_screening_answers", "share_contact",
+            )
+
+            donor_form = (
+                dict(zip(donor_columns, tuple(existing_donor)))
+                if existing_donor
+                else None
+            )
+
+            try:
+                existing_screening_answers = json.loads(
+                    (donor_form or {}).get("health_screening_answers") or "{}"
+                )
+            except (TypeError, ValueError):
+                existing_screening_answers = {}
 
             share_contact_enabled = bool(
-                share_contact_row[0]
-            ) if share_contact_row else False
+                (donor_form or {}).get("share_contact", 0)
+            )
 
             return render_template(
                 "donor.html",
                 donor=existing_donor,
+                donor_form=donor_form,
+                screening_answers=existing_screening_answers,
                 share_contact_enabled=share_contact_enabled,
             )
 
