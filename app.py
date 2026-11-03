@@ -1008,6 +1008,63 @@ def home():
     )
 
 
+@app.route("/explore")
+def public_explore():
+    """Public, contact-safe donor and blood-request exploration."""
+    blood_type = clean_text(request.args.get("blood_type", "")).upper()
+
+    if blood_type not in BLOOD_TYPES:
+        flash("Please select a valid blood group.", "error")
+        return redirect(url_for("home"))
+
+    compatible_groups = get_compatible_donor_groups(blood_type)
+    placeholders = ", ".join("?" for _ in compatible_groups)
+    connection = get_db_connection()
+
+    try:
+        donors = connection.execute(
+            f"""
+            SELECT name, blood_type, location
+            FROM donors
+            WHERE availability = ?
+              AND eligible = 1
+              AND health_screening_status = ?
+              AND blood_type IN ({placeholders})
+            ORDER BY location, name
+            """,
+            (AVAILABLE, "Self-Declared Clear", *compatible_groups),
+        ).fetchall()
+
+        requests_list = connection.execute(
+            """
+            SELECT br.blood_type, br.location, br.urgency,
+                   br.remaining_units, br.needed_by, u.name
+            FROM blood_requests AS br
+            LEFT JOIN users AS u ON u.id = br.user_id
+            WHERE br.status = 'Pending'
+              AND br.remaining_units > 0
+              AND br.blood_type = ?
+              AND br.needed_by IS NOT NULL
+              AND br.needed_by > ?
+            ORDER BY br.needed_by ASC
+            """,
+            (
+                blood_type,
+                get_pakistan_time().strftime("%Y-%m-%d %H:%M:%S"),
+            ),
+        ).fetchall()
+    finally:
+        connection.close()
+
+    return render_template(
+        "public_explore.html",
+        blood_type=blood_type,
+        compatible_groups=compatible_groups,
+        donors=donors,
+        requests_list=requests_list,
+    )
+
+
 @app.route("/about")
 def about():
     return render_template("about.html")
