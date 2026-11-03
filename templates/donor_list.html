@@ -745,6 +745,10 @@
                 Donor Directory
             </a>
 
+            <a href="{{ url_for('my_matches') }}">
+                My Matching
+            </a>
+
             <a href="{{ url_for('profile') }}">
                 Profile
             </a>
@@ -882,8 +886,14 @@
 
                             <div class="detail">
                                 <span class="detail-label">Contact</span>
-                                <strong class="private-text">
-                                    Private until match confirmation
+                                <strong>
+                                    {% if donor[9] == current_user_id %}
+                                        Your contact is hidden from your own directory card
+                                    {% elif donor[3] %}
+                                        {{ donor[3] }}
+                                    {% else %}
+                                        Private — donor has not opted in
+                                    {% endif %}
                                 </strong>
                             </div>
 
@@ -917,29 +927,58 @@
                         </div>
 
 
-                        <!-- OWNER AVAILABILITY CONTROL --> {% if donor[9] == current_user_id %}
+                        <!-- OWNER CONTROLS OR CONTACT ACTIONS -->
+                        {% if donor[9] == current_user_id %}
 
                             <div class="donor-actions">
-
                                 <form
                                     action="{{ url_for('toggle_availability', donor_id=donor[0]) }}"
                                     method="POST"
                                 >
-
                                     <input
                                         type="hidden"
                                         name="csrf_token"
                                         value="{{ csrf_token() }}"
                                     >
-
-                                    <button type="submit" class="btn btn-secondary"> {% if donor[6] == "Available" %}Make Not Available {% else %}Make Available {% endif %}</button>
-
+                                    <button type="submit" class="btn btn-secondary">
+                                        {% if donor[6] == "Available" %}
+                                            Make Not Available
+                                        {% else %}
+                                            Make Available
+                                        {% endif %}
+                                    </button>
                                 </form>
+                            </div>
 
-                            </div> {% else %}<div class="owner-note">
-                                Contact details are shared only with matched parties
-                                after the requester confirms the match.
-                            </div> {% endif %}</article> {% endfor %}</section>
+                            <div class="owner-note">
+                                This is your donor profile. Your contact buttons are hidden from your own account.
+                            </div>
+
+                        {% elif donor[3] and donor[6] == "Available" and donor[7] == 1 %}
+
+                            <div class="donor-actions">
+                                <a class="donor-action-btn call-btn"
+                                   href="tel:{{ donor[3] }}">
+                                    Phone Call
+                                </a>
+                                {% if donor[11] %}
+                                    <a class="donor-action-btn whatsapp-btn"
+                                       href="https://wa.me/{{ donor[11] }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        WhatsApp
+                                    </a>
+                                {% endif %}
+                            </div>
+
+                        {% else %}
+
+                            <div class="owner-note">
+                                Direct contact is not enabled or this donor is currently unavailable.
+                                You can connect through My Matching when a compatible request is available.
+                            </div>
+
+                        {% endif %}</article> {% endfor %}</section>
 
 
             <!-- SEARCH EMPTY RESULT -->
