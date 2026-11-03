@@ -255,18 +255,19 @@ def parse_needed_by(value):
 
 def parse_stored_deadline(value):
     """
-    Read a deadline stored in the database as Pakistan local time.
+    Read old and current ISO-formatted deadlines using Pakistan time.
     """
 
     if not value:
         return None
 
     try:
-        parsed = datetime.strptime(
-            str(value),
-            "%Y-%m-%d %H:%M:%S",
-        )
-        return parsed.replace(tzinfo=PAKISTAN_TZ)
+        parsed = datetime.fromisoformat(str(value).strip())
+
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=PAKISTAN_TZ)
+
+        return parsed.astimezone(PAKISTAN_TZ)
 
     except (ValueError, TypeError):
         return None
