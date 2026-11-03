@@ -123,7 +123,7 @@ def clean_text(value):
     """Normalize user-supplied text without accepting non-string values."""
     if value is None:
         return ""
-    return re.sub(r"\\s+", " ", str(value)).strip()
+    return re.sub(r"\${p}+", " ", str(value)).strip()
 
 
 def form_text(field_name, max_length=250):
