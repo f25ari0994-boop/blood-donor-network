@@ -589,7 +589,7 @@
         <a href="{{ url_for('search') }}" class="active">Find Donors</a>
         <a href="{{ url_for('request_blood') }}">Emergency Request</a>
         <a href="{{ url_for('donor_list') }}">Donor Directory</a>
-        <a href="{{ url_for('my_matches') }}">My Matching</a>
+        
         <a href="{{ url_for('profile') }}">Profile</a>
     </nav>
 
@@ -614,7 +614,7 @@
         <a href="{{ url_for('search') }}" class="active">Find Donors</a>
         <a href="{{ url_for('request_blood') }}">Emergency Request</a>
         <a href="{{ url_for('donor_list') }}">Donor Directory</a>
-        <a href="{{ url_for('my_matches') }}">My Matching</a>
+        
         <a href="{{ url_for('profile') }}">Profile</a>
     </nav>
 
@@ -839,7 +839,7 @@
                             </div>
                         {% else %}
                             <div class="privacy-note">
-                                This donor has not enabled direct contact. You can connect through My Matching after creating a compatible request.
+                                This donor has not enabled direct contact. Open Emergency Request to review compatible requests and manage your matches.
                             </div>
                         {% endif %}
 
@@ -856,7 +856,7 @@
     <div class="privacy-note">
         Direct call and WhatsApp details are shown only when a donor has opted in.
         Otherwise, contact becomes available to both parties after a match is confirmed.
-        Private in-app chat is available in My Matching for confirmed matches.
+        Private in-app chat is available from the My Matches section in Emergency Request after a donor accepts a request.
     </div>
 
     <section class="tips-box">
