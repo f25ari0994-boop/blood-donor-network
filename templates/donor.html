@@ -28,28 +28,16 @@
 
             --header-height: 82px;
             --content-width: 1180px;
-        }
-
-        * { box-sizing: border-box; }
-
-        html { scroll-behavior: smooth; }
-
-        body {
+        }* { box-sizing: border-box; }html { scroll-behavior: smooth; }body {
             margin: 0;
             background: var(--page);
             color: var(--ink);
             font-family: Arial, Helvetica, sans-serif;
             line-height: 1.6;
-        }
-
-        a {
+        }a {
             color: inherit;
             text-decoration: none;
-        }
-
-        button { font: inherit; }
-
-        /* HEADER — MATCHING DASHBOARD */
+        }button { font: inherit; }/* HEADER — MATCHING DASHBOARD */
 
         .dashboard-header {
             width: 100%;
@@ -66,37 +54,27 @@
             border-bottom: 1px solid var(--border);
             box-shadow: 0 2px 10px rgba(25,35,55,.025);
             backdrop-filter: blur(12px);
-        }
-
-        .brand {
+        }.brand {
             display: flex;
             align-items: center;
             gap: 11px;
             min-width: 0;
-        }
-
-        .brand img {
+        }.brand img {
             width: 46px;
             height: 46px;
             object-fit: contain;
             flex-shrink: 0;
-        }
-
-        .brand strong {
+        }.brand strong {
             display: block;
             max-width: 270px;
             font-size: 13px;
             line-height: 1.4;
-        }
-
-        .brand span {
+        }.brand span {
             display: block;
             margin-top: 3px;
             color: var(--muted);
             font-size: 10px;
-        }
-
-        /* DESKTOP NAVIGATION */
+        }/* DESKTOP NAVIGATION */
 
         .desktop-nav {
             display: flex;
@@ -104,9 +82,7 @@
             justify-content: flex-end;
             gap: 5px;
             min-width: 0;
-        }
-
-        .desktop-nav a {
+        }.desktop-nav a {
             min-height: 40px;
             padding: 0 11px;
             display: inline-flex;
@@ -120,33 +96,14 @@
             font-weight: 700;
             white-space: nowrap;
             transition: background .2s, color .2s, border-color .2s;
-        }
-
-        .desktop-nav a:hover {
+        }.desktop-nav a:hover {
             color: var(--red);
             background: var(--red-light);
-        }
-
-        .desktop-nav a.active {
+        }.desktop-nav a.active {
             color: var(--red);
             background: var(--red-light);
             border-color: #f2d3d8;
-        }
-
-        .desktop-nav .nav-emergency {
-            padding: 0 11px;
-            background: transparent;
-            color: #555d6b;
-        }
-
-        .desktop-nav .nav-emergency:hover,
-        .desktop-nav .nav-emergency.active {
-            background: var(--red-light);
-            color: var(--red);
-            border-color: #f2d3d8;
-        }
-
-        /* HAMBURGER BUTTON */
+        }/* HAMBURGER BUTTON */
 
         .menu-toggle {
             display: none;
@@ -162,43 +119,29 @@
             flex-direction: column;
             gap: 5px;
             transition: background .2s, border-color .2s;
-        }
-
-        .menu-toggle:hover {
+        }.menu-toggle:hover {
             background: var(--red-light);
             border-color: #f2d3d8;
-        }
-
-        .menu-toggle span {
+        }.menu-toggle span {
             display: block;
             width: 20px;
             height: 2px;
             border-radius: 2px;
             background: var(--red);
             transition: transform .2s, opacity .2s;
-        }
-
-        .menu-toggle[aria-expanded="true"] span:nth-child(1) {
+        }.menu-toggle[aria-expanded="true"] span:nth-child(1) {
             transform: translateY(7px) rotate(45deg);
-        }
-
-        .menu-toggle[aria-expanded="true"] span:nth-child(2) {
+        }.menu-toggle[aria-expanded="true"] span:nth-child(2) {
             opacity: 0;
-        }
-
-        .menu-toggle[aria-expanded="true"] span:nth-child(3) {
+        }.menu-toggle[aria-expanded="true"] span:nth-child(3) {
             transform: translateY(-7px) rotate(-45deg);
-        }
-
-        /* MAIN CONTENT */
+        }/* MAIN CONTENT */
 
         .container {
             width: min(var(--content-width), 94%);
             margin: 0 auto;
             padding: 32px 0 45px;
-        }
-
-        /* HERO */
+        }/* HERO */
 
         .hero {
             position: relative;
@@ -214,9 +157,7 @@
             color: white;
             box-shadow: 0 12px 30px rgba(128,0,32,.13);
             text-align: center;
-        }
-
-        .hero::after {
+        }.hero::after {
             content: "";
             position: absolute;
             width: 200px;
@@ -226,9 +167,7 @@
             border: 28px solid rgba(255,255,255,.10);
             border-radius: 50%;
             pointer-events: none;
-        }
-
-        .hero h1 {
+        }.hero h1 {
             position: relative;
             z-index: 1;
             margin: 0 0 14px;
@@ -236,9 +175,7 @@
             font-size: clamp(28px, 4vw, 38px);
             font-weight: 750;
             line-height: 1.25;
-        }
-
-        .hero p {
+        }.hero p {
             position: relative;
             z-index: 1;
             max-width: 650px;
@@ -246,9 +183,7 @@
             color: #fff3f5;
             font-size: 15px;
             line-height: 1.8;
-        }
-
-        /* CONTENT GRID */
+        }/* CONTENT GRID */
 
         .content-grid {
             display: grid;
@@ -256,31 +191,21 @@
             gap: 22px;
             align-items: start;
             margin-top: 24px;
-        }
-
-        .form-card,
-        .info-card {
+        }.form-card, .info-card {
             min-width: 0;
             padding: 25px;
             background: white;
             border: 1px solid var(--border);
             border-radius: 16px;
             box-shadow: var(--shadow);
-        }
-
-        .form-card h2,
-        .info-card h2 {
+        }.form-card h2, .info-card h2 {
             margin: 0 0 7px;
             font-size: 21px;
-        }
-
-        .section-description {
+        }.section-description {
             margin: 0 0 23px;
             color: var(--muted);
             font-size: 13px;
-        }
-
-        /* FLASH MESSAGES */
+        }/* FLASH MESSAGES */
 
         .message {
             margin-bottom: 18px;
@@ -290,32 +215,18 @@
             background: var(--red-light);
             color: var(--red-dark);
             font-size: 13px;
-        }
-
-        /* FORM */
+        }/* FORM */
 
         .form-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 19px 16px;
-        }
-
-        .form-group { min-width: 0; }
-
-        .full-width { grid-column: 1 / -1; }
-
-        .form-group label {
+        }.form-group { min-width: 0; }.full-width { grid-column: 1 / -1; }.form-group label {
             display: block;
             margin-bottom: 7px;
             font-size: 13px;
             font-weight: 700;
-        }
-
-        .required { color: var(--red); }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
+        }.required { color: var(--red); }.form-group input, .form-group select, .form-group textarea {
             display: block;
             width: 100%;
             min-height: 46px;
@@ -328,38 +239,26 @@
             font-size: 14px;
             outline: none;
             transition: border-color .2s, box-shadow .2s;
-        }
-
-        .form-group textarea {
+        }.form-group textarea {
             min-height: 90px;
             resize: vertical;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        }.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             border-color: var(--red);
             box-shadow: 0 0 0 3px rgba(128,0,32,.09);
-        }
-
-        .help-text {
+        }.help-text {
             display: block;
             margin-top: 6px;
             color: var(--muted);
             font-size: 12px;
             line-height: 1.6;
-        }
-
-        .form-section-title {
+        }.form-section-title {
             grid-column: 1 / -1;
             margin: 7px 0 -7px;
             padding-top: 17px;
             border-top: 1px solid var(--border);
             font-size: 15px;
             font-weight: 800;
-        }
-
-        /* HEALTH SCREENING */
+        }/* HEALTH SCREENING */
 
         .screening-box {
             grid-column: 1 / -1;
@@ -367,42 +266,30 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             background: #fafbfc;
-        }
-
-        .screening-box h3 {
+        }.screening-box h3 {
             margin: 0 0 6px;
             font-size: 14px;
-        }
-
-        .screening-box > p {
+        }.screening-box > p {
             margin: 0 0 15px;
             color: var(--muted);
             font-size: 12px;
-        }
-
-        .screening-question {
+        }.screening-question {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 125px;
             gap: 12px;
             align-items: center;
             padding: 11px 0;
             border-top: 1px solid var(--border);
-        }
-
-        .screening-question label {
+        }.screening-question label {
             margin: 0;
             font-size: 12px;
             font-weight: 600;
-        }
-
-        .screening-question select {
+        }.screening-question select {
             width: 100%;
             min-height: 39px;
             padding: 7px 9px;
             font-size: 12px;
-        }
-
-        /* SUBMIT BUTTON */
+        }/* SUBMIT BUTTON */
 
         .primary-btn {
             display: flex;
@@ -421,31 +308,19 @@
             font-weight: 800;
             cursor: pointer;
             transition: background .2s, transform .2s;
-        }
-
-        .primary-btn:hover { background: var(--red-dark); }
-
-        .primary-btn:active { transform: scale(.99); }
-
-        .primary-btn svg {
+        }.primary-btn:hover { background: var(--red-dark); }.primary-btn:active { transform: scale(.99); }.primary-btn svg {
             width: 19px;
             height: 19px;
-        }
-
-        /* INFORMATION CARD */
+        }/* INFORMATION CARD */
 
         .info-card {
             border-top: 4px solid var(--red);
-        }
-
-        .info-item {
+        }.info-item {
             display: flex;
             align-items: flex-start;
             gap: 12px;
             margin-top: 19px;
-        }
-
-        .info-icon {
+        }.info-icon {
             display: grid;
             place-items: center;
             width: 40px;
@@ -454,9 +329,7 @@
             border-radius: 10px;
             background: var(--red-light);
             color: var(--red);
-        }
-
-        .info-icon svg {
+        }.info-icon svg {
             width: 21px;
             height: 21px;
             stroke: currentColor;
@@ -464,21 +337,15 @@
             stroke-width: 1.8;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-
-        .info-item h3 {
+        }.info-item h3 {
             margin: 0 0 4px;
             font-size: 13px;
-        }
-
-        .info-item p {
+        }.info-item p {
             margin: 0;
             color: var(--muted);
             font-size: 12px;
             line-height: 1.7;
-        }
-
-        .eligibility-note {
+        }.eligibility-note {
             margin-top: 22px;
             padding: 14px;
             border: 1px solid #dcebe1;
@@ -487,41 +354,29 @@
             color: #315f48;
             font-size: 12px;
             line-height: 1.8;
-        }
-
-        .page-footer {
+        }.page-footer {
             padding: 20px;
             color: var(--muted);
             font-size: 12px;
             text-align: center;
-        }
-
-        [hidden] { display: none !important; }
+        }[hidden] { display: none !important; }
 
         /* RESPONSIVE NAVIGATION — SAME DASHBOARD BREAKPOINT */
 
-        @media (max-width: 1150px) {
-
-            .dashboard-header {
+        @media (max-width: 1150px) {.dashboard-header {
                 grid-template-columns: minmax(0, 1fr) auto;
                 grid-template-rows: auto auto;
                 gap: 8px 12px;
                 padding: 10px 3%;
-            }
-
-            .brand {
+            }.brand {
                 grid-column: 1;
                 grid-row: 1;
-            }
-
-            .menu-toggle {
+            }.menu-toggle {
                 display: flex;
                 grid-column: 2;
                 grid-row: 1;
                 justify-self: end;
-            }
-
-            .desktop-nav {
+            }.desktop-nav {
                 display: none;
                 grid-column: 1 / -1;
                 grid-row: 2;
@@ -533,14 +388,9 @@
                 min-width: 0;
                 padding: 8px 0 4px;
                 border-top: 1px solid var(--border);
-            }
-
-            .desktop-nav.open {
+            }.desktop-nav.open {
                 display: flex;
-            }
-
-            .desktop-nav a,
-            .desktop-nav .nav-emergency {
+            }.desktop-nav a {
                 width: 100%;
                 min-height: 43px;
                 display: flex;
@@ -553,73 +403,40 @@
                 border-radius: 8px;
                 font-size: 12px;
                 font-weight: 700;
-            }
-
-            .desktop-nav a:hover,
-            .desktop-nav .nav-emergency:hover,
-            .desktop-nav a.active,
-            .desktop-nav .nav-emergency.active {
+            }.desktop-nav a:hover, .desktop-nav a.active {
                 background: var(--red-light);
                 color: var(--red);
                 border-color: #f2d3d8;
             }
         }
 
-        @media (max-width: 650px) {
-
-            .dashboard-header {
+        @media (max-width: 650px) {.dashboard-header {
                 padding: 9px 4%;
                 gap: 7px 10px;
-            }
-
-            .brand img {
+            }.brand img {
                 width: 41px;
                 height: 41px;
-            }
-
-            .brand strong {
+            }.brand strong {
                 max-width: 250px;
                 font-size: 12px;
-            }
-
-            .container {
+            }.container {
                 width: 92%;
                 padding: 23px 0 35px;
-            }
-
-            .hero {
+            }.hero {
                 padding: 28px 23px;
                 border-radius: 16px;
-            }
-
-            .hero h1 { font-size: 28px; }
-
-            .hero p { font-size: 12px; }
-
-            .content-grid { grid-template-columns: 1fr; }
-
-            .form-card,
-            .info-card {
+            }.hero h1 { font-size: 28px; }.hero p { font-size: 12px; }.content-grid { grid-template-columns: 1fr; }.form-card, .info-card {
                 padding: 21px 17px;
             }
         }
 
-        @media (max-width: 450px) {
-
-            .form-grid { grid-template-columns: 1fr; }
-
-            .full-width { grid-column: auto; }
-
-            .hero h1 { font-size: 27px; }
-
-            .screening-question {
+        @media (max-width: 450px) {.form-grid { grid-template-columns: 1fr; }.full-width { grid-column: auto; }.hero h1 { font-size: 27px; }.screening-question {
                 grid-template-columns: 1fr;
                 gap: 7px;
             }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
+        @media (prefers-reduced-motion: reduce) {*, *::before, *::after {
                 transition: none !important;
                 animation: none !important;
             }
@@ -676,7 +493,7 @@
             Find Donors
         </a>
 
-        <a href="{{ url_for('request_blood') }}" class="nav-emergency">
+        <a href="{{ url_for('request_blood') }}">
             Emergency Request
         </a>
 
@@ -712,17 +529,9 @@
             <p class="section-description">
                 Enter accurate information. Fields marked with
                 <span class="required">*</span> are required.
-            </p>
-
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
+            </p> {% with messages = get_flashed_messages(with_categories=true) %}
                         <div class="message" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+                            {{ message }}</div> {% endfor %}
 
             <form action="{{ url_for('donor') }}" method="POST">
 
@@ -1123,8 +932,7 @@
                 <strong>Important:</strong> Registration does not mean you
                 are medically approved to donate. A qualified healthcare
                 professional must assess your suitability before donation.
-                The system's 90-day rule is an administrative screening rule,
-                not a complete medical eligibility assessment.
+                The system's 90-day rule is an administrative screening rule, not a complete medical eligibility assessment.
             </div>
 
         </aside>
@@ -1147,21 +955,18 @@
         mainNavigation.classList.remove("open");
         menuToggle.setAttribute("aria-expanded", "false");
         menuToggle.setAttribute("aria-label", "Open navigation menu");
-    }
-
-    function openMenu() {
+    }function openMenu() {
         mainNavigation.classList.add("open");
         menuToggle.setAttribute("aria-expanded", "true");
         menuToggle.setAttribute("aria-label", "Close navigation menu");
     }
 
-    menuToggle.addEventListener("click", function () {
-        const isExpanded =
+    menuToggle.addEventListener("click", function () {const isExpanded =
             menuToggle.getAttribute("aria-expanded") === "true";
 
         if (isExpanded) {
             closeMenu();
-        } else {
+        }else {
             openMenu();
         }
     });
@@ -1174,24 +979,21 @@
 
     // Close menu with Escape.
 
-    document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape") {
+    document.addEventListener("keydown", function (event) {if (event.key === "Escape") {
             closeMenu();
         }
     });
 
     // Close mobile menu when returning to desktop width.
 
-    window.addEventListener("resize", function () {
-        if (window.innerWidth > 1150) {
+    window.addEventListener("resize", function () {if (window.innerWidth > 1150) {
             closeMenu();
         }
     });
 
     // Donation date visibility
 
-    function toggleLastDonationDate() {
-        const donatedBefore =
+    function toggleLastDonationDate() {const donatedBefore =
             document.getElementById("donated_before").value === "yes";
 
         const dateGroup =
@@ -1245,8 +1047,7 @@
             "blood_condition"
         ];
 
-        for (const fieldId of screeningFields) {
-            const field = document.getElementById(fieldId);
+        for (const fieldId of screeningFields) {const field = document.getElementById(fieldId);
 
             if (field.value !== "yes" && field.value !== "no") {
                 event.preventDefault();
@@ -1258,9 +1059,7 @@
 
                 return;
             }
-        }
-
-        const donatedBefore = donatedBeforeSelect.value;
+        }const donatedBefore = donatedBeforeSelect.value;
         const lastDonation = lastDonationInput.value;
 
         if (donatedBefore === "yes" && !lastDonation) {
@@ -1269,17 +1068,13 @@
 
             alert("Please enter your last blood donation date.");
             return;
-        }
-
-        if (donatedBefore === "yes" && lastDonation > localToday) {
+        }if (donatedBefore === "yes" && lastDonation > localToday) {
             event.preventDefault();
             lastDonationInput.focus();
 
             alert("Last donation date cannot be in the future.");
             return;
-        }
-
-        const consent =
+        }const consent =
             document.getElementById("health_screening_consent");
 
         if (consent.value !== "confirmed") {
