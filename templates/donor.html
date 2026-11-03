@@ -592,6 +592,7 @@
                             maxlength="100"
                             autocomplete="name"
                             placeholder="Enter your full name"
+                            value="{{ donor_form.name if donor_form else '' }}"
                             required
                         >
                     </div>
@@ -609,6 +610,7 @@
                             max="100"
                             step="1"
                             placeholder="18–100"
+                            value="{{ donor_form.age if donor_form else '' }}"
                             required
                         >
 
@@ -629,6 +631,7 @@
                             maxlength="30"
                             autocomplete="tel"
                             placeholder="e.g. 03XXXXXXXXX"
+                            value="{{ donor_form.contact if donor_form else '' }}"
                             required
                         >
                     </div>
@@ -659,14 +662,14 @@
 
                         <select id="blood_type" name="blood_type" required>
                             <option value="">Select blood group</option>
-                            <option value="O-">O−</option>
-                            <option value="O+">O+</option>
-                            <option value="A-">A−</option>
-                            <option value="A+">A+</option>
-                            <option value="B-">B−</option>
-                            <option value="B+">B+</option>
-                            <option value="AB-">AB−</option>
-                            <option value="AB+">AB+</option>
+                            <option value="O-" {% if donor_form and donor_form.blood_type == 'O-' %}selected{% endif %}>O−</option>
+                            <option value="O+" {% if donor_form and donor_form.blood_type == 'O+' %}selected{% endif %}>O+</option>
+                            <option value="A-" {% if donor_form and donor_form.blood_type == 'A-' %}selected{% endif %}>A−</option>
+                            <option value="A+" {% if donor_form and donor_form.blood_type == 'A+' %}selected{% endif %}>A+</option>
+                            <option value="B-" {% if donor_form and donor_form.blood_type == 'B-' %}selected{% endif %}>B−</option>
+                            <option value="B+" {% if donor_form and donor_form.blood_type == 'B+' %}selected{% endif %}>B+</option>
+                            <option value="AB-" {% if donor_form and donor_form.blood_type == 'AB-' %}selected{% endif %}>AB−</option>
+                            <option value="AB+" {% if donor_form and donor_form.blood_type == 'AB+' %}selected{% endif %}>AB+</option>
                         </select>
                     </div>
 
@@ -682,6 +685,7 @@
                             maxlength="150"
                             autocomplete="address-level2"
                             placeholder="e.g. Sukkur, Sindh"
+                            value="{{ donor_form.location if donor_form else '' }}"
                             required
                         >
 
@@ -701,6 +705,7 @@
                             name="hospital"
                             maxlength="150"
                             placeholder="Enter a preferred hospital, if any"
+                            value="{{ donor_form.hospital if donor_form else '' }}"
                         >
 
                         <small class="help-text">
@@ -724,10 +729,10 @@
                             name="donated_before"
                             required
                         >
-                            <option value="no" selected>
+                            <option value="no" {% if not donor_form or not donor_form.last_donation %}selected{% endif %}>
                                 No, this is my first time
                             </option>
-                            <option value="yes">
+                            <option value="yes" {% if donor_form and donor_form.last_donation %}selected{% endif %}>
                                 Yes, I have donated before
                             </option>
                         </select>
@@ -747,6 +752,7 @@
                             type="date"
                             id="last_donation"
                             name="last_donation"
+                            value="{{ donor_form.last_donation if donor_form and donor_form.last_donation else '' }}"
                         >
 
                         <small class="help-text">
@@ -776,8 +782,8 @@
 
                             <select id="fever" name="fever" required>
                                 <option value="">Choose an answer</option>
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
+                                <option value="no" {% if screening_answers.get('fever') == 'no' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if screening_answers.get('fever') == 'yes' %}selected{% endif %}>Yes</option>
                             </select>
                         </div>
 
@@ -792,8 +798,8 @@
                                 required
                             >
                                 <option value="">Choose an answer</option>
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
+                                <option value="no" {% if screening_answers.get('chronic_condition') == 'no' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if screening_answers.get('chronic_condition') == 'yes' %}selected{% endif %}>Yes</option>
                             </select>
                         </div>
 
@@ -808,8 +814,8 @@
                                 required
                             >
                                 <option value="">Choose an answer</option>
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
+                                <option value="no" {% if screening_answers.get('medication') == 'no' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if screening_answers.get('medication') == 'yes' %}selected{% endif %}>Yes</option>
                             </select>
                         </div>
 
@@ -824,8 +830,8 @@
                                 required
                             >
                                 <option value="">Choose an answer</option>
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
+                                <option value="no" {% if screening_answers.get('recent_surgery') == 'no' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if screening_answers.get('recent_surgery') == 'yes' %}selected{% endif %}>Yes</option>
                             </select>
                         </div>
 
@@ -840,8 +846,8 @@
                                 required
                             >
                                 <option value="">Choose an answer</option>
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
+                                <option value="no" {% if screening_answers.get('blood_condition') == 'no' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if screening_answers.get('blood_condition') == 'yes' %}selected{% endif %}>Yes</option>
                             </select>
                         </div>
 
@@ -864,7 +870,7 @@
                             required
                         >
                             <option value="">Choose an option</option>
-                            <option value="confirmed">
+                            <option value="confirmed" {% if donor_form %}selected{% endif %}>
                                 I confirm that my answers are accurate.
                             </option>
                         </select>
@@ -891,7 +897,7 @@
                         <path d="M12 21s-8-4.8-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.2-8 11-8 11z"></path>
                     </svg>
 
-                    Register as a Donor
+                    {% if donor_form %}Update Donor Profile{% else %}Register as a Donor{% endif %}
 
                 </button>
 
