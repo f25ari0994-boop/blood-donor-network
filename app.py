@@ -2411,6 +2411,18 @@ def blood_request():
 
         request_id = get_inserted_id(cursor, connection)
 
+        create_notification(
+            connection,
+            user_id,
+            (
+                f"Your {blood_type} blood request #{request_id} has been created. "
+                f"Urgency: {urgency}. Blood needed by: "
+                f"{deadline.strftime('%d %b %Y at %I:%M %p')} (Pakistan time)."
+            ),
+            "request_created",
+            related_request_id=request_id,
+        )
+
         deadline_display = deadline.strftime(
             "%d %b %Y at %I:%M %p"
         )
@@ -3896,6 +3908,7 @@ def notifications():
 
     notification_labels = {
         "blood_request": "New blood request",
+        "request_created": "Your blood request was created",
         "match_acceptance": "Donor accepted your request",
         "match_waiting": "Your acceptance is waiting",
         "match_confirmed": "Match confirmed",
