@@ -1535,8 +1535,7 @@ def donor_list():
 
             FROM donors AS d
             ORDER BY d.id DESC
-            """,
-            (AVAILABLE,),
+            """
         ).fetchall()
 
     except Exception:
