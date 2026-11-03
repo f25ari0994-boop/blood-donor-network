@@ -777,10 +777,16 @@
         </section>
 
 
-        <!-- FLASH MESSAGES --> {% with messages = get_flashed_messages(with_categories=true) %}<div class="flash-messages" aria-live="polite"> {% for category, message in messages %}
-
+        <!-- FLASH MESSAGES -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                <div class="flash-messages" aria-live="polite">
+                    {% for category, message in messages %}
                         <div class="flash-message {{ category }}">
-                            {{ message }}</div> {% endfor %}</div> {% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endwith %}
 
             <!-- DIRECTORY SEARCH -->
 
@@ -834,7 +840,7 @@
 
             <section class="donor-grid"
                      id="donorGrid"
-                     aria-label="Registered donors"> {% for donor in donors %}
+                     aria-label="Registered donors"> {% if donors %}{% for donor in donors %}
 
                     <article
                         class="donor-card"
@@ -854,7 +860,7 @@
                                 <h3>{{ donor[1] }}</h3>
 
                                 <span class="blood-badge">
-                                    {{ donor[4] }}</span> {% if is_owner %}<span class="owner-label">
+                                    {{ donor[4] }}</span> {% if donor[9] == current_user_id %}<span class="owner-label">
                                         Your donor profile
                                     </span> {% endif %}
 
@@ -911,7 +917,7 @@
                         </div>
 
 
-                        <!-- OWNER AVAILABILITY CONTROL --> {% if is_owner %}
+                        <!-- OWNER AVAILABILITY CONTROL --> {% if donor[9] == current_user_id %}
 
                             <div class="donor-actions">
 
