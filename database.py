@@ -371,6 +371,8 @@ def create_sqlite_tables(connection):
 
             health_screening_date TEXT,
 
+            share_contact INTEGER NOT NULL DEFAULT 0,
+
             FOREIGN KEY(user_id)
                 REFERENCES users(id)
                 ON DELETE SET NULL
@@ -440,6 +442,21 @@ location TEXT NOT NULL,
             FOREIGN KEY(donor_user_id)
                 REFERENCES users(id)
                 ON DELETE SET NULL
+        );
+
+
+        CREATE TABLE IF NOT EXISTS match_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            match_id INTEGER NOT NULL,
+            sender_user_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(match_id)
+                REFERENCES request_matches(id)
+                ON DELETE CASCADE,
+            FOREIGN KEY(sender_user_id)
+                REFERENCES users(id)
+                ON DELETE CASCADE
         );
 
 
@@ -564,7 +581,8 @@ def migrate_sqlite_database(connection):
         "user_id": "INTEGER",
         "health_screening_status": "TEXT DEFAULT 'Not Assessed'",
         "health_screening_answers": "TEXT",
-        "health_screening_date": "TEXT"
+        "health_screening_date": "TEXT",
+        "share_contact": "INTEGER NOT NULL DEFAULT 0"
     }
 
     for column, definition in donor_columns.items():
@@ -815,6 +833,9 @@ def migrate_sqlite_database(connection):
         CREATE INDEX IF NOT EXISTS idx_matches_status
         ON request_matches(status, requester_confirmed);
 
+        CREATE INDEX IF NOT EXISTS idx_match_messages_match
+        ON match_messages(match_id, id);
+
 
         CREATE INDEX IF NOT EXISTS idx_donations_donor
         ON donations(donor_id);
@@ -874,7 +895,8 @@ def create_postgresql_tables(connection):
             health_screening_status TEXT
                 DEFAULT 'Not Assessed',
             health_screening_answers TEXT,
-            health_screening_date TEXT
+            health_screening_date TEXT,
+            share_contact INTEGER NOT NULL DEFAULT 0
         )
         """,
 
@@ -918,6 +940,20 @@ def create_postgresql_tables(connection):
             completed_at TEXT,
             updated_at TEXT,
             UNIQUE(request_id, donor_id)
+        )
+        """,
+
+        """
+        CREATE TABLE IF NOT EXISTS match_messages (
+            id SERIAL PRIMARY KEY,
+            match_id INTEGER NOT NULL
+                REFERENCES request_matches(id)
+                ON DELETE CASCADE,
+            sender_user_id INTEGER NOT NULL
+                REFERENCES users(id)
+                ON DELETE CASCADE,
+            message TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """,
 
@@ -1012,7 +1048,8 @@ def migrate_postgresql_database(connection):
         "user_id": "INTEGER",
         "health_screening_status": "TEXT DEFAULT 'Not Assessed'",
         "health_screening_answers": "TEXT",
-        "health_screening_date": "TEXT"
+        "health_screening_date": "TEXT",
+        "share_contact": "INTEGER DEFAULT 0"
     }
 
     for column, definition in donor_columns.items():
@@ -1229,6 +1266,7 @@ def migrate_postgresql_database(connection):
         "CREATE INDEX IF NOT EXISTS idx_matches_donor ON request_matches(donor_id)",
         "CREATE INDEX IF NOT EXISTS idx_matches_donor_user ON request_matches(donor_user_id)",
         "CREATE INDEX IF NOT EXISTS idx_matches_status ON request_matches(status, requester_confirmed)",
+        "CREATE INDEX IF NOT EXISTS idx_match_messages_match ON match_messages(match_id, id)",
 
         "CREATE INDEX IF NOT EXISTS idx_donations_donor ON donations(donor_id)",
         "CREATE INDEX IF NOT EXISTS idx_donations_request ON donations(request_id)",
