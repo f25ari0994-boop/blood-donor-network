@@ -1800,7 +1800,11 @@ def donor_list():
                 d.name,
                 d.age,
 
-                NULL AS authorized_contact,
+                CASE
+                    WHEN d.share_contact = 1 AND d.user_id != ?
+                    THEN d.contact
+                    ELSE NULL
+                END AS authorized_contact,
 
                 d.blood_type,
                 d.location,
@@ -1823,12 +1827,14 @@ def donor_list():
                 END AS display_eligible,
 
                 d.last_donation,
-                d.user_id
+                d.user_id,
+                d.share_contact
 
             FROM donors AS d
             ORDER BY d.id DESC
             """,
             (
+                get_user_id(),
                 AVAILABLE,
                 "Self-Declared Clear",
                 cooldown_cutoff,
@@ -1838,6 +1844,18 @@ def donor_list():
                 cooldown_cutoff,
             ),
         ).fetchall()
+
+        donor_rows = donors
+        donors = []
+
+        for donor_row in donor_rows:
+            donor_values = tuple(donor_row)
+            whatsapp_number = (
+                normalize_whatsapp_number(donor_values[3])
+                if donor_values[3]
+                else ""
+            )
+            donors.append(donor_values + (whatsapp_number,))
 
     except Exception:
         app.logger.exception("Donor directory loading failed")
