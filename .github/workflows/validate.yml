@@ -1,0 +1,47 @@
+name: Validate Flask project
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python modules
+        run: python -m py_compile app.py database.py
+
+      - name: Install Jinja2
+        run: python -m pip install Jinja2
+
+      - name: Parse all HTML templates
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from jinja2 import Environment, FileSystemLoader
+
+          template_dir = Path("templates")
+          environment = Environment(
+              loader=FileSystemLoader(str(template_dir))
+          )
+
+          templates = sorted(template_dir.glob("*.html"))
+          for template_path in templates:
+              environment.get_template(template_path.name)
+
+          print(f"Successfully parsed {len(templates)} Jinja templates.")
+          PY
