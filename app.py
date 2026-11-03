@@ -871,7 +871,7 @@ def get_emergency_page_data(user_id):
         # -------------------------------------------------
 
         compatible_groups = set()
-        eligible_donor_locations = []
+        eligible_donor_matches = []
 
         for donor in donor_profiles:
             if (
@@ -879,10 +879,14 @@ def get_emergency_page_data(user_id):
                 and donor[5] == 1
                 and donor[6] == "Self-Declared Clear"
             ):
-                compatible_groups.update(
-                    BLOOD_COMPATIBILITY.get(donor[2], [])
+                donor_compatible_recipients = BLOOD_COMPATIBILITY.get(
+                    donor[2],
+                    [],
                 )
-                eligible_donor_locations.append(donor[3])
+                compatible_groups.update(donor_compatible_recipients)
+                eligible_donor_matches.append(
+                    (donor_compatible_recipients, donor[3])
+                )
 
         # -------------------------------------------------
         # Available blood requests
@@ -967,8 +971,10 @@ def get_emergency_page_data(user_id):
                 blood_request
                 for blood_request in available_requests_list
                 if any(
-                    locations_match(donor_location, blood_request[3])
-                    for donor_location in eligible_donor_locations
+                    blood_request[1] in donor_compatible_recipients
+                    and locations_match(donor_location, blood_request[3])
+                    for donor_compatible_recipients, donor_location
+                    in eligible_donor_matches
                 )
             ]
 
@@ -3060,7 +3066,8 @@ def send_match_message(match_id):
         ).fetchone()
 
         if not match:
-            abort(404)
+            flash("This match is unavailable or you do not have access.", "error")
+            return redirect(url_for("my_matches"))
 
         requester_id = match[4]
         donor_user_id = match[1]
