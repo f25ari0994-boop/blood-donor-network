@@ -1857,7 +1857,12 @@ def donor_list():
                 d.age,
 
                 CASE
-                    WHEN d.share_contact = 1 AND d.user_id != ?
+                    WHEN d.share_contact = 1
+                     AND d.user_id != ?
+                     AND d.availability = ?
+                     AND d.eligible = 1
+                     AND d.health_screening_status = ?
+                     AND (d.last_donation IS NULL OR d.last_donation <= ?)
                     THEN d.contact
                     ELSE NULL
                 END AS authorized_contact,
@@ -1891,6 +1896,9 @@ def donor_list():
             """,
             (
                 get_user_id(),
+                AVAILABLE,
+                "Self-Declared Clear",
+                cooldown_cutoff,
                 AVAILABLE,
                 "Self-Declared Clear",
                 cooldown_cutoff,
