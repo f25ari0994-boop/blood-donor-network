@@ -589,6 +589,104 @@ def donor_has_active_match(connection, donor_user_id):
     return row is not None
 
 
+def expire_overdue_requests(connection):
+    """
+    Expire pending requests whose deadline has passed or is missing.
+    Pending, unconfirmed acceptances are cancelled so donors are released.
+    Confirmed matches are left intact to finish an active donation.
+    """
+    now = get_current_time()
+
+    expired_requests = connection.execute(
+        """
+        SELECT id, user_id
+        FROM blood_requests
+        WHERE status = 'Pending'
+          AND (
+              needed_by IS NULL
+              OR TRIM(needed_by) = ''
+              OR needed_by <= ?
+          )
+        """,
+        (now,),
+    ).fetchall()
+
+    if not expired_requests:
+        return
+
+    for blood_request in expired_requests:
+        request_id = blood_request[0]
+        requester_id = blood_request[1]
+
+        pending_matches = connection.execute(
+            """
+            SELECT id, donor_user_id
+            FROM request_matches
+            WHERE request_id = ?
+              AND status = 'Accepted'
+              AND requester_confirmed = 0
+            """,
+            (request_id,),
+        ).fetchall()
+
+        connection.execute(
+            """
+            UPDATE blood_requests
+            SET status = 'Expired',
+                updated_at = ?
+            WHERE id = ?
+              AND status = 'Pending'
+            """,
+            (now, request_id),
+        )
+
+        for match in pending_matches:
+            match_id = match[0]
+            donor_user_id = match[1]
+
+            connection.execute(
+                """
+                UPDATE request_matches
+                SET status = 'Cancelled',
+                    updated_at = ?
+                WHERE id = ?
+                  AND status = 'Accepted'
+                  AND requester_confirmed = 0
+                """,
+                (now, match_id),
+            )
+
+            create_notification(
+                connection,
+                donor_user_id,
+                "The blood request deadline passed before confirmation. "
+                "Your pending acceptance was cancelled.",
+                "request_expired",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+
+        create_notification(
+            connection,
+            requester_id,
+            "Your blood request has expired because its deadline passed "
+            "or was missing. Any unconfirmed donor acceptances were cancelled.",
+            "request_expired",
+            related_request_id=request_id,
+        )
+
+        record_audit(
+            connection,
+            None,
+            "request_expired",
+            "blood_request",
+            request_id,
+            "Request expired after its deadline.",
+        )
+
+    connection.commit()
+
+
 def update_request_units(connection, request_id):
     cursor = connection.cursor()
 
@@ -613,11 +711,12 @@ def update_request_units(connection, request_id):
 
     remaining_units = max(requested_units - received_units, 0)
 
-    new_status = (
-        "Fulfilled"
-        if remaining_units == 0
-        else "Pending"
-    )
+    if remaining_units == 0:
+        new_status = "Fulfilled"
+    elif previous_status in {"Expired", "Cancelled"}:
+        new_status = previous_status
+    else:
+        new_status = "Pending"
 
     cursor.execute(
         """
@@ -665,6 +764,9 @@ def get_emergency_page_data(user_id):
 
     try:
         cursor = connection.cursor()
+
+        # Keep request deadlines and pending acceptances current.
+        expire_overdue_requests(connection)
 
         # -------------------------------------------------
         # Donor profiles belonging to this user
@@ -2219,7 +2321,8 @@ def confirm_match(match_id):
                 rm.requester_confirmed,
                 br.user_id,
                 br.remaining_units,
-                rm.units_pledged
+                rm.units_pledged,
+                br.needed_by
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             WHERE rm.id = ?
@@ -2240,6 +2343,7 @@ def confirm_match(match_id):
         requester_id = match[5]
         remaining_units = int(match[6] or 0)
         units_pledged = int(match[7] or 0)
+        needed_by = match[8]
 
         if requester_id != user_id:
             flash("Only the requester can process this match.")
@@ -2272,6 +2376,48 @@ def confirm_match(match_id):
             flash("Match acceptance rejected.")
 
         else:
+            if is_request_expired(needed_by):
+                now = get_current_time()
+
+                cursor.execute(
+                    """
+                    UPDATE request_matches
+                    SET status = 'Cancelled',
+                        updated_at = ?
+                    WHERE id = ?
+                      AND status = 'Accepted'
+                      AND requester_confirmed = 0
+                    """,
+                    (now, match_id),
+                )
+
+                create_notification(
+                    connection,
+                    donor_user_id,
+                    "The request deadline passed before confirmation. "
+                    "Your pending acceptance was cancelled.",
+                    "request_expired",
+                    related_request_id=request_id,
+                    related_match_id=match_id,
+                )
+
+                record_audit(
+                    connection,
+                    user_id,
+                    "request_expired",
+                    "request_match",
+                    match_id,
+                    "Pending match cancelled because request deadline passed.",
+                )
+
+                connection.commit()
+                flash(
+                    "This request has expired. The pending acceptance "
+                    "was cancelled and the donor is now free to accept another request.",
+                    "warning",
+                )
+                return redirect(url_for("my_matches"))
+
             reserved_units = get_reserved_units(
                 connection,
                 request_id,
