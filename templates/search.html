@@ -640,8 +640,15 @@
                   stroke="currentColor" stroke-width="5"
                   stroke-linecap="round"/>
         </svg>
-    </section> {% with messages = get_flashed_messages(with_categories=true) %}<div class="flash-messages" role="status"> {% for category, message in messages %}
-                    <div class="flash-message">{{ message }}</div> {% endfor %}</div> {% endif %}
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        <div class="flash-messages" role="status" aria-live="polite">
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endwith %}
 
     <section class="search-box" aria-labelledby="search-title">
 
@@ -739,18 +746,28 @@
 
                         </div>
 
-                        <div class="status-row"> {% if donor.availability == "Available" %}<span class="status-badge status-available">
+                        <div class="status-row">
+                            {% if donor.availability == "Available" %}
+                                <span class="status-badge status-available">
                                     <span class="status-dot"></span>
                                     Available
-                                </span> {% else %}<span class="status-badge status-unavailable">
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-unavailable">
                                     <span class="status-dot"></span>
                                     Not Available
-                                </span> {% endif %}<span class="status-badge status-eligible">
-                                    System Eligible
-                                </span> {% else %}<span class="status-badge status-ineligible">
-                                    Not Eligible
-                                </span> {% endif %}
+                                </span>
+                            {% endif %}
 
+                            {% if donor.eligible == 1 %}
+                                <span class="status-badge status-eligible">
+                                    System Eligible
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-ineligible">
+                                    Not Eligible
+                                </span>
+                            {% endif %}
                         </div>
 
                         <div class="donor-detail">
@@ -807,7 +824,10 @@
                     No matching donor was found for this blood group and
                     location. Try another nearby area. For urgent needs, contact a hospital or blood bank as well.
                 </p>
-            </section> {% endif %}<div class="privacy-note">
+            </section> {% endif %}
+    {% endif %}
+
+    <div class="privacy-note">
         Donor contact details remain private and are shared only with
         matched parties after the requester confirms the match.
     </div>
