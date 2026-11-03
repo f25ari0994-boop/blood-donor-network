@@ -1,0 +1,31 @@
+/* shared theme */
+
+/* Simple informational/history pages use the same content surface */
+.simple-page {
+  width: min(1180px, calc(100% - 48px));
+  margin: 38px auto;
+  padding: 32px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.7;
+}
+.simple-page h1 { margin: 0 0 22px; color: var(--ink); font-size: 30px; }
+.simple-page h2 { margin: 28px 0 14px; color: var(--ink); font-size: 21px; }
+.simple-page h3 { margin: 0 0 8px; color: var(--ink); font-size: 17px; }
+.simple-page p, .simple-page li { color: var(--muted); }
+.simple-page li { margin: 10px 0; }
+.simple-page .simple-link { display: inline-flex; align-items: center; min-height: 40px; margin-bottom: 18px; color: var(--red); font-weight: 700; }
+.simple-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; }
+.simple-card { padding: 20px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+.simple-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+.simple-table { width: 100%; min-width: 700px; border-collapse: collapse; background: #fff; }
+.simple-table th, .simple-table td { padding: 13px 15px; border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; }
+.simple-table th { background: var(--red-light); color: var(--red); font-weight: 800; white-space: nowrap; }
+.simple-table tr:last-child td { border-bottom: 0; }
+@media (max-width: 600px) {
+  .simple-page { width: calc(100% - 28px); margin: 20px auto; padding: 20px; }
+  .simple-page h1 { font-size: 25px; }
+}
