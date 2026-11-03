@@ -434,12 +434,43 @@ def get_csrf_token():
     return token
 
 
+def get_unread_notification_count(user_id):
+    """Return the current user's unread notification count."""
+    if not user_id:
+        return 0
+
+    connection = get_db_connection()
+
+    try:
+        row = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM notifications
+            WHERE user_id = ?
+              AND is_read = 0
+            """,
+            (user_id,),
+        ).fetchone()
+
+        return int(row[0] or 0) if row else 0
+
+    except Exception:
+        app.logger.exception("Unread notification count could not be loaded")
+        return 0
+
+    finally:
+        connection.close()
+
+
 @app.context_processor
 def inject_template_values():
+    user_id = get_user_id()
+
     return {
         "csrf_token": get_csrf_token,
-        "current_user_id": get_user_id(),
+        "current_user_id": user_id,
         "blood_types": sorted(BLOOD_TYPES),
+        "notification_unread_count": get_unread_notification_count(user_id),
     }
 
 
@@ -3985,6 +4016,17 @@ def notifications():
         notifications=notifications_view,
         unread_count=unread_count,
         total_notifications=len(notifications_view),
+    )
+
+
+@app.route("/notifications/unread-count")
+@login_required
+def unread_notification_count():
+    count = get_unread_notification_count(get_user_id())
+
+    return app.response_class(
+        json.dumps({"unread_count": count}),
+        mimetype="application/json",
     )
 
 
