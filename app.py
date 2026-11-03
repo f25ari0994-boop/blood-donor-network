@@ -1339,9 +1339,25 @@ def donor():
         ).fetchone()
 
         if request.method == "GET":
+            share_contact_row = connection.execute(
+                """
+                SELECT share_contact
+                FROM donors
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            ).fetchone()
+
+            share_contact_enabled = bool(
+                share_contact_row[0]
+            ) if share_contact_row else False
+
             return render_template(
                 "donor.html",
-                donor=existing_donor
+                donor=existing_donor,
+                share_contact_enabled=share_contact_enabled,
             )
 
         # -------------------------------
@@ -1354,6 +1370,9 @@ def donor():
         blood_type = clean_text(request.form.get("blood_type", ""))
         location = clean_text(request.form.get("location", ""))
         hospital = clean_text(request.form.get("hospital", ""))
+        share_contact_enabled = (
+            1 if request.form.get("share_contact") == "1" else 0
+        )
 
         donated_before = request.form.get("donated_before", "no")
         last_donation = request.form.get("last_donation", "").strip()
@@ -1500,6 +1519,7 @@ def donor():
                     last_donation = ?,
                     eligible = ?,
                     availability = ?,
+                    share_contact = ?,
                     health_screening_status = ?,
                     health_screening_answers = ?,
                     health_screening_date = ?
@@ -1516,6 +1536,7 @@ def donor():
                     last_donation,
                     eligible,
                     availability,
+                    share_contact_enabled,
                     health_status,
                     answers_json,
                     screening_date,
@@ -1543,9 +1564,10 @@ def donor():
                     user_id,
                     health_screening_status,
                     health_screening_answers,
-                    health_screening_date
+                    health_screening_date,
+                    share_contact
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     name,
@@ -1560,7 +1582,8 @@ def donor():
                     user_id,
                     health_status,
                     answers_json,
-                    screening_date
+                    screening_date,
+                    share_contact_enabled
                 )
             )
 
