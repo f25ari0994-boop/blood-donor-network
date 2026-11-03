@@ -1996,6 +1996,8 @@ def accept_request(request_id):
     connection = get_db_connection()
 
     try:
+        # Release pending acceptances tied to expired blood requests first.
+        expire_overdue_requests(connection)
         begin_write_transaction(connection)
         cursor = connection.cursor()
 
