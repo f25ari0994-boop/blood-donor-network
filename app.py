@@ -1091,11 +1091,48 @@ def get_emergency_page_data(user_id):
                 match_status in {
                     "Confirmed",
                     "Donation Reported",
+                    "Completed",
                 }
                 and requester_confirmed == 1
             )
 
+            match_data["chat_messages"] = []
+
             if confirmed:
+                chat_rows = connection.execute(
+                    """
+                    SELECT
+                        recent.id,
+                        recent.sender_user_id,
+                        recent.message,
+                        recent.created_at,
+                        COALESCE(sender.name, 'Network user')
+                    FROM (
+                        SELECT id, sender_user_id, message, created_at
+                        FROM match_messages
+                        WHERE match_id = ?
+                        ORDER BY id DESC
+                        LIMIT 100
+                    ) AS recent
+                    LEFT JOIN users AS sender
+                        ON sender.id = recent.sender_user_id
+                    ORDER BY recent.id ASC
+                    """,
+                    (match_id,),
+                ).fetchall()
+
+                match_data["chat_messages"] = [
+                    {
+                        "id": row[0],
+                        "sender_user_id": row[1],
+                        "message": row[2],
+                        "created_at": row[3],
+                        "sender_name": row[4],
+                        "is_mine": row[1] == user_id,
+                    }
+                    for row in chat_rows
+                ]
+
                 if my_role == "Requester":
                     contact_row = connection.execute(
                         """
@@ -2982,7 +3019,121 @@ def match_detail(match_id):
 
 
 # =========================================================
-# 23. REPORT DONATION
+# 23. MATCH CHAT
+# =========================================================
+
+@app.route(
+    "/match-chat/<int:match_id>",
+    methods=["POST"],
+)
+@login_required
+def send_match_message(match_id):
+    user_id = get_user_id()
+    message_text = form_text("message", 2000)
+
+    if not message_text:
+        flash("Write a message before sending.", "error")
+        return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
+
+    connection = get_db_connection()
+
+    try:
+        begin_write_transaction(connection)
+
+        match = connection.execute(
+            """
+            SELECT
+                rm.request_id,
+                rm.donor_user_id,
+                rm.status,
+                rm.requester_confirmed,
+                br.user_id
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ?
+              AND (
+                    br.user_id = ?
+                    OR rm.donor_user_id = ?
+              )
+            """,
+            (match_id, user_id, user_id),
+        ).fetchone()
+
+        if not match:
+            abort(404)
+
+        requester_id = match[4]
+        donor_user_id = match[1]
+        match_status = match[2]
+        requester_confirmed = match[3]
+
+        if (
+            requester_confirmed != 1
+            or match_status not in {
+                "Confirmed",
+                "Donation Reported",
+                "Completed",
+            }
+        ):
+            flash(
+                "Chat opens only after the requester confirms the match.",
+                "warning",
+            )
+            return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
+
+        recipient_id = (
+            donor_user_id
+            if user_id == requester_id
+            else requester_id
+        )
+
+        connection.execute(
+            """
+            INSERT INTO match_messages
+                (match_id, sender_user_id, message, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                match_id,
+                user_id,
+                message_text,
+                get_current_time(),
+            ),
+        )
+
+        create_notification(
+            connection,
+            recipient_id,
+            "You have a new private message about a confirmed blood match.",
+            "match_message",
+            related_request_id=match[0],
+            related_match_id=match_id,
+        )
+
+        record_audit(
+            connection,
+            user_id,
+            "match_message_sent",
+            "request_match",
+            match_id,
+            "A private message was sent in the confirmed match chat.",
+        )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Match chat message could not be sent")
+        flash("Unable to send your message. Please try again.", "error")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
+
+
+# =========================================================
+# 24. REPORT DONATION
 # =========================================================
 
 @app.route(
