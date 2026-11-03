@@ -1966,6 +1966,161 @@ def my_requests():
     return render_emergency_view("my_requests")
 
 
+@app.route(
+    "/cancel-request/<int:request_id>",
+    methods=["POST"],
+)
+@login_required
+def cancel_blood_request(request_id):
+    """Allow only the request owner to close their own open request."""
+    user_id = get_user_id()
+    connection = get_db_connection()
+
+    try:
+        begin_write_transaction(connection)
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT user_id, status
+            FROM blood_requests
+            WHERE id = ?
+            """,
+            (request_id,),
+        )
+        blood_request = cursor.fetchone()
+
+        if not blood_request:
+            flash("Blood request not found.", "error")
+            return redirect(url_for("my_requests"))
+
+        requester_id = blood_request[0]
+        request_status = blood_request[1]
+
+        if requester_id != user_id:
+            flash("You can only cancel your own blood requests.", "error")
+            return redirect(url_for("my_requests"))
+
+        if request_status != "Pending":
+            flash(
+                "Only an open request can be cancelled. "
+                "Its current status is " + str(request_status) + ".",
+                "warning",
+            )
+            return redirect(url_for("my_requests"))
+
+        now = get_current_time()
+
+        cursor.execute(
+            """
+            UPDATE blood_requests
+            SET status = 'Cancelled',
+                updated_at = ?
+            WHERE id = ?
+              AND user_id = ?
+              AND status = 'Pending'
+            """,
+            (now, request_id, user_id),
+        )
+
+        pending_matches = cursor.execute(
+            """
+            SELECT id, donor_user_id
+            FROM request_matches
+            WHERE request_id = ?
+              AND status = 'Accepted'
+              AND requester_confirmed = 0
+            """,
+            (request_id,),
+        ).fetchall()
+
+        for match in pending_matches:
+            match_id = match[0]
+            donor_user_id = match[1]
+
+            cursor.execute(
+                """
+                UPDATE request_matches
+                SET status = 'Cancelled',
+                    updated_at = ?
+                WHERE id = ?
+                  AND status = 'Accepted'
+                  AND requester_confirmed = 0
+                """,
+                (now, match_id),
+            )
+
+            create_notification(
+                connection,
+                donor_user_id,
+                (
+                    f"Blood request #{request_id} was cancelled by the requester. "
+                    "Your unconfirmed acceptance has been released."
+                ),
+                "request_cancelled",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+
+        # Keep already-confirmed donations active so their actual receipt
+        # can still be confirmed without deleting or losing donation records.
+        confirmed_matches = cursor.execute(
+            """
+            SELECT id, donor_user_id
+            FROM request_matches
+            WHERE request_id = ?
+              AND requester_confirmed = 1
+              AND status IN ('Confirmed', 'Donation Reported')
+            """,
+            (request_id,),
+        ).fetchall()
+
+        for match in confirmed_matches:
+            create_notification(
+                connection,
+                match[1],
+                (
+                    f"The requester cancelled the remaining open units for "
+                    f"blood request #{request_id}. Any already-confirmed "
+                    "donation remains active and should only be reported if "
+                    "it has actually taken place."
+                ),
+                "request_cancelled",
+                related_request_id=request_id,
+                related_match_id=match[0],
+            )
+
+        record_audit(
+            connection,
+            user_id,
+            "blood_request_cancelled",
+            "blood_request",
+            request_id,
+            (
+                "Requester cancelled the open request. Received units and "
+                "donation records were preserved; pending unconfirmed "
+                "acceptances were released."
+            ),
+        )
+
+        connection.commit()
+        flash(
+            "Your blood request was cancelled. Received units and donation "
+            "history were preserved, and pending donor acceptances were released.",
+            "success",
+        )
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Blood request cancellation failed")
+        flash("Unable to cancel this blood request right now.", "error")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("my_requests"))
+
+
 @app.route("/my-matches")
 @login_required
 def my_matches():
