@@ -1104,7 +1104,16 @@ def get_emergency_page_data(user_id):
 
             match_data["chat_messages"] = []
 
-            if confirmed:
+            # Private chat starts once a donor has accepted the request.
+            # Contact details remain hidden until requester confirmation.
+            chat_available = match_status in {
+                "Accepted",
+                "Confirmed",
+                "Donation Reported",
+                "Completed",
+            }
+
+            if chat_available:
                 chat_rows = connection.execute(
                     """
                     SELECT
@@ -1139,6 +1148,7 @@ def get_emergency_page_data(user_id):
                     for row in chat_rows
                 ]
 
+            if confirmed:
                 if my_role == "Requester":
                     contact_row = connection.execute(
                         """
@@ -3095,16 +3105,14 @@ def send_match_message(match_id):
         match_status = match[2]
         requester_confirmed = match[3]
 
-        if (
-            requester_confirmed != 1
-            or match_status not in {
-                "Confirmed",
-                "Donation Reported",
-                "Completed",
-            }
-        ):
+        if match_status not in {
+            "Accepted",
+            "Confirmed",
+            "Donation Reported",
+            "Completed",
+        }:
             flash(
-                "Chat opens only after the requester confirms the match.",
+                "Chat is available only while this match is active.",
                 "warning",
             )
             return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
