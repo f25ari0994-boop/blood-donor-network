@@ -871,6 +871,7 @@ def get_emergency_page_data(user_id):
         # -------------------------------------------------
 
         compatible_groups = set()
+        eligible_donor_locations = []
 
         for donor in donor_profiles:
             if (
@@ -881,6 +882,7 @@ def get_emergency_page_data(user_id):
                 compatible_groups.update(
                     BLOOD_COMPATIBILITY.get(donor[2], [])
                 )
+                eligible_donor_locations.append(donor[3])
 
         # -------------------------------------------------
         # Available blood requests
@@ -958,6 +960,17 @@ def get_emergency_page_data(user_id):
             )
 
             available_requests_list = cursor.fetchall()
+
+            # Do not show a donor requests that cannot pass the same
+            # city/area matching rule used by the acceptance endpoint.
+            available_requests_list = [
+                blood_request
+                for blood_request in available_requests_list
+                if any(
+                    locations_match(donor_location, blood_request[3])
+                    for donor_location in eligible_donor_locations
+                )
+            ]
 
         # -------------------------------------------------
         # My blood requests
@@ -2407,7 +2420,7 @@ def accept_request(request_id):
 
             if (
                 request_blood_type in compatible_recipients
-                and donor_location.lower() == request_location.lower()
+                and locations_match(donor_location, request_location)
                 and donor_eligible == 1
                 and donor_availability == AVAILABLE
                 and screening_status == "Self-Declared Clear"
