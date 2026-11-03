@@ -1480,6 +1480,26 @@
 
                         </div>
 
+                    
+                        {% if req[6] == "Pending" and remaining > 0 %}
+                            <div class="button-row">
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('cancel_blood_request', request_id=req[0]) }}"
+                                    onsubmit="return confirm('Cancel this blood request? New matching will stop and pending donor acceptances will be released. Already-confirmed donations remain recorded and can still be completed. This action cannot be undone.');"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+                                    <button type="submit" class="btn btn-danger">
+                                        Cancel My Request
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+
                     </article>
 
                 {% endfor %}
