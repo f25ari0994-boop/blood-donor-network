@@ -206,14 +206,6 @@ def record_audit(connection, user_id, action, entity_type, entity_id, details=No
     )
 
 
-def get_current_time():
-    PAKISTAN_TZ = ZoneInfo("Asia/Karachi")
-
-
-def get_pakistan_time():
-    return datetime.now(PAKISTAN_TZ)
-
-
 def parse_needed_by(value):
     """
     Parse a datetime-local value using Pakistan time.
