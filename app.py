@@ -2682,6 +2682,7 @@ def accept_request(request_id):
     check_donor_eligibility(user_id)
 
     connection = get_db_connection()
+    match_id = None
 
     try:
         # Release pending acceptances tied to expired blood requests first.
