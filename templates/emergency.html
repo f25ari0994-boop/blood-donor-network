@@ -1637,20 +1637,162 @@
             <div>
                 <h2>My Matches</h2>
                 <p>
-                    Manage donor acceptances, requester confirmations,
-                    and confirmed matches.
+                    View compatible donors and requests, pending responses,
+                    accepted matches, and confirmed donations.
                 </p>
             </div>
 
             <span class="section-count">
-                {{ matches|length }}
+                {{ matches|length + potential_matches|length }}
             </span>
         </div>
 
 
-        {% if matches %}
+        {% if matches or potential_matches %}
 
             <div class="item-list">
+
+                {% if potential_matches %}
+                    <div class="section-subheading">
+                        <h3>Potential Matches</h3>
+                        <p>These requests and donors match your blood group and city. They are not confirmed yet.</p>
+                    </div>
+
+                    {% for potential in potential_matches %}
+
+                        <article class="item-card">
+
+                            <div class="item-top">
+
+                                <div class="blood-heading">
+                                    <div class="blood-icon">
+                                        {{ potential.blood_type }}
+                                    </div>
+
+                                    <div>
+                                        {% if potential.my_role == "Requester" %}
+                                            <h3>Potential Donor Found</h3>
+                                            <p>
+                                                Request #{{ potential.request_id }}
+                                                · {{ potential.candidate_name or "Registered donor" }}
+                                            </p>
+                                        {% else %}
+                                            <h3>A Compatible Request Is Waiting</h3>
+                                            <p>
+                                                Request #{{ potential.request_id }}
+                                                {% if potential.requester_name %}
+                                                    · Requested by {{ potential.requester_name }}
+                                                {% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <span class="status pending">
+                                    {{ potential.status_label }}
+                                </span>
+
+                            </div>
+
+                            <div class="item-details">
+
+                                <div class="detail">
+                                    <strong>Required Blood Group</strong>
+                                    {{ potential.blood_type }}
+                                </div>
+
+                                {% if potential.my_role == "Requester" %}
+                                    <div class="detail">
+                                        <strong>Potential Donor Group</strong>
+                                        {{ potential.candidate_blood_type }}
+                                    </div>
+                                {% else %}
+                                    <div class="detail">
+                                        <strong>Your Donor Group</strong>
+                                        {{ potential.candidate_blood_type }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="detail">
+                                    <strong>Location</strong>
+                                    {{ potential.location }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Hospital</strong>
+                                    {{ potential.hospital }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Units Required</strong>
+                                    {{ potential.requested_units }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Units Remaining</strong>
+                                    {{ potential.remaining_units }}
+                                </div>
+
+                                <div class="detail deadline-detail">
+                                    <strong>Blood Needed By</strong>
+                                    {{ potential.needed_by }}
+                                </div>
+
+                            </div>
+
+                            {% if potential.my_role == "Requester" %}
+
+                                <div class="privacy-note">
+                                    A compatible, eligible donor is available in your city.
+                                    The donor has not accepted your request yet, so this is
+                                    a potential match—not a confirmed donation. You will be
+                                    asked to confirm after a donor accepts.
+                                </div>
+
+                            {% else %}
+
+                                <div class="privacy-note">
+                                    Your donor profile matches this request by blood group
+                                    and city. Accept the request to send your offer to the
+                                    requester. Contact details stay private until the
+                                    requester confirms the match.
+                                </div>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('accept_request', request_id=potential.request_id) }}"
+                                    class="button-row"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <div class="form-group">
+                                        <label for="potential-units-{{ potential.request_id }}">
+                                            Units you can donate
+                                        </label>
+
+                                        <input
+                                            id="potential-units-{{ potential.request_id }}"
+                                            type="number"
+                                            name="units_pledged"
+                                            min="1"
+                                            max="{{ [8, potential.remaining_units|int]|min }}"
+                                            value="1"
+                                            required
+                                        >
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">
+                                        Offer to Donate
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                        </article>
+
+                    {% endfor %}
+                {% endif %}
 
                 {% for match in matches %}
 
@@ -2035,7 +2177,7 @@
 
             </div>
 
-        {% else %}
+        {% elif not potential_matches %}
 
             <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2048,7 +2190,9 @@
                 <h3>No matches yet</h3>
 
                 <p>
-                    Accepted requests and confirmed matches will appear here.
+                    No eligible donor or open blood request currently matches
+                    your blood group and city. New potential matches will
+                    appear here when compatible availability is found.
                 </p>
             </div>
 
