@@ -123,7 +123,7 @@ def clean_text(value):
     """Normalize user-supplied text without accepting non-string values."""
     if value is None:
         return ""
-    return re.sub(r"\${p}+", " ", str(value)).strip()
+    return re.sub(r"\s+", " ", str(value)).strip()
 
 
 def form_text(field_name, max_length=250):
@@ -136,7 +136,7 @@ def valid_phone(value):
     """Accept common Pakistani/international phone-number formatting."""
     if not value:
         return False
-    digits = re.sub(r"\\D", "", str(value))
+    digits = re.sub(r"\D", "", str(value))
     return 10 <= len(digits) <= 15
 
 
@@ -144,18 +144,22 @@ def valid_email(value):
     """Basic email syntax validation."""
     if not value:
         return False
-    return bool(re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+", str(value).strip()))
+    email = str(value).strip()
+    if email.count('@') != 1:
+        return False
+    local, domain = email.split('@', 1)
+    return bool(local and '.' in domain and not domain.startswith('.') and not domain.endswith('.'))
 
 
 def normalize_cnic(value):
     """Return a CNIC as 13 digits, or an empty string when invalid."""
-    digits = re.sub(r"\\D", "", str(value or ""))
+    digits = re.sub(r"\D", "", str(value or ""))
     return digits if len(digits) == 13 else ""
 
 
 def normalize_whatsapp_number(value):
     """Convert a Pakistani phone number to digits-only international format."""
-    digits = re.sub(r"\\D", "", str(value or ""))
+    digits = re.sub(r"\D", "", str(value or ""))
     if digits.startswith("0092"):
         digits = digits[2:]
     if digits.startswith("0") and len(digits) == 11:
