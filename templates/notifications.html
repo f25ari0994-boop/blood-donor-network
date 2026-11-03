@@ -131,6 +131,75 @@
             border-color: #e6b1bb;
         }
 
+        .notification-card.unread {
+            border-left: 4px solid var(--red);
+            background: #fffafb;
+        }
+
+        .notification-card.read {
+            opacity: .88;
+        }
+
+        .unread-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 9px;
+            margin-left: 8px;
+            border-radius: 999px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .notification-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .notification-actions a,
+        .notification-actions button {
+            min-height: 35px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--white);
+            color: var(--text);
+            font: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notification-actions a.primary {
+            border-color: var(--red);
+            background: var(--red);
+            color: #fff;
+        }
+
+        .notification-actions button:hover,
+        .notification-actions a:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .notification-actions a.primary:hover {
+            background: var(--red-dark);
+            color: #fff;
+        }
+
+        .read-label {
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
         .notification-icon {
             width: 43px;
             height: 43px;
@@ -285,20 +354,20 @@
         </div>
     </header>
 
-    {% if notifications %}
+    <div class="section-heading">
+        <h2>Activity Centre</h2>
+        <span class="notification-count">
+            {{ unread_count }} unread · {{ total_notifications }} total
+        </span>
+    </div>
 
-        <div class="section-heading">
-            <h2>Recent Notifications</h2>
-            <span class="notification-count">
-                {{ notifications|length }} notification(s)
-            </span>
-        </div>
+    {% if notifications %}
 
         <section class="notification-list" aria-label="Your notifications">
 
             {% for notification in notifications %}
 
-                <article class="notification-card">
+                <article class="notification-card {% if notification.is_read %}read{% else %}unread{% endif %}">
 
                     <div class="notification-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none"
@@ -310,15 +379,17 @@
 
                     <div class="notification-content">
 
-                        <h3>{{ notification[1] }}</h3>
+                        <h3>
+                            {{ notification.message }}
+                            {% if not notification.is_read %}
+                                <span class="unread-badge">NEW</span>
+                            {% endif %}
+                        </h3>
 
-                        <p>
-                            <strong>Notification type:</strong>
-                            {{ notification[2] }}
-                        </p>
+                        <p>{{ notification.label }}</p>
 
                         <div class="notification-meta">
-                            <span class="type-badge">{{ notification[2] }}</span>
+                            <span class="type-badge">{{ notification.label }}</span>
 
                             <span class="notification-date">
                                 <svg viewBox="0 0 24 24" fill="none"
@@ -326,11 +397,45 @@
                                     <rect x="3" y="5" width="18" height="16" rx="2"/>
                                     <path d="M16 3v4M8 3v4M3 10h18"/>
                                 </svg>
-                                {{ notification[3] }}
+                                {{ notification.created_at }}
                             </span>
                         </div>
 
+                        <div class="notification-actions">
+
+                            <a class="primary" href="{{ notification.target_url }}">
+                                {% if notification.type == "match_message" %}
+                                    Open Private Chat
+                                {% elif notification.match_id %}
+                                    Open My Matches
+                                {% elif notification.type == "blood_request" %}
+                                    View Available Requests
+                                {% elif notification.request_id %}
+                                    View My Requests
+                                {% elif notification.type == "eligibility" %}
+                                    View Donor Profile
+                                {% else %}
+                                    Open Dashboard
+                                {% endif %}
+                            </a>
+
+                            {% if not notification.is_read %}
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('mark_notification_read', notification_id=notification.id) }}"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+                                    <button type="submit">Mark as read</button>
+                                </form>
+                            {% else %}
+                                <span class="read-label">Read</span>
+                            {% endif %}
+
+                        </div>
+
                     </div>
+
                 </article>
 
             {% endfor %}
@@ -350,8 +455,9 @@
 
             <h3>No Notifications Yet</h3>
             <p>
-                You don't have any notifications at the moment.
-                Updates about requests, matches, and donations will appear here.
+                Request updates, donor acceptances, match confirmations,
+                private chat messages, donation reports, receipt confirmations,
+                and other account activity will appear here.
             </p>
         </section>
 
@@ -359,6 +465,7 @@
 
     <div class="back-link">
         <a href="{{ url_for('dashboard') }}">&#8592; Back to Dashboard</a>
+        <a href="{{ url_for('request_blood') }}" style="margin-left: 8px;">Emergency Workspace</a>
     </div>
 
 </main>
