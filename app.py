@@ -597,19 +597,19 @@ def expire_overdue_requests(connection):
     """
     now = get_current_time()
 
-    expired_requests = connection.execute(
+    pending_requests = connection.execute(
         """
-        SELECT id, user_id
+        SELECT id, user_id, needed_by
         FROM blood_requests
         WHERE status = 'Pending'
-          AND (
-              needed_by IS NULL
-              OR TRIM(needed_by) = ''
-              OR needed_by <= ?
-          )
-        """,
-        (now,),
+        """
     ).fetchall()
+
+    expired_requests = [
+        row
+        for row in pending_requests
+        if is_request_expired(row[2])
+    ]
 
     if not expired_requests:
         return
@@ -1136,6 +1136,8 @@ def public_explore():
     connection = get_db_connection()
 
     try:
+        expire_overdue_requests(connection)
+
         donors = connection.execute(
             f"""
             SELECT name, blood_type, location
@@ -2441,7 +2443,7 @@ def confirm_match(match_id):
                 create_notification(
                     connection,
                     donor_user_id,
-                    "The request deadline passed before confirmation. "
+                    "The request is no longer open or its deadline passed. "
                     "Your pending acceptance was cancelled.",
                     "request_expired",
                     related_request_id=request_id,
@@ -2454,7 +2456,7 @@ def confirm_match(match_id):
                     "request_expired",
                     "request_match",
                     match_id,
-                    "Pending match cancelled because request deadline passed.",
+                    "Pending match cancelled because the request was closed or expired.",
                 )
 
                 connection.commit()
@@ -2574,14 +2576,29 @@ def match_detail(match_id):
                 br.blood_type,
                 br.location,
                 br.hospital,
-                br.contact,
+                CASE
+                    WHEN rm.requester_confirmed = 1
+                     AND rm.status IN ('Confirmed', 'Donation Reported')
+                    THEN br.contact
+                    ELSE NULL
+                END AS requester_contact,
                 br.remaining_units,
                 donor.name,
-                donor.contact,
+                CASE
+                    WHEN rm.requester_confirmed = 1
+                     AND rm.status IN ('Confirmed', 'Donation Reported')
+                    THEN donor.contact
+                    ELSE NULL
+                END AS donor_contact,
                 donor.blood_type,
                 donor.location,
                 requester.name,
-                requester.phone
+                CASE
+                    WHEN rm.requester_confirmed = 1
+                     AND rm.status IN ('Confirmed', 'Donation Reported')
+                    THEN requester.phone
+                    ELSE NULL
+                END AS requester_phone
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             JOIN donors AS donor ON donor.id = rm.donor_id
