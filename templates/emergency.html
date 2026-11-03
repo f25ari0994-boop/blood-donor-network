@@ -984,8 +984,7 @@
                 <circle cx="9" cy="8" r="3"/>
                 <circle cx="17" cy="8" r="3"/>
                 <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
-                <p{% if page_view == 'create' %}
-ath d="m10 17 2 2 4-4"/>
+                <path d="m10 17 2 2 4-4"/>
             </svg>
             My Matches
         </a>
@@ -1002,7 +1001,8 @@ ath d="m10 17 2 2 4-4"/>
     </nav>
 
 
-    <!-- =====================================================
+    {% if page_view == 'create' %}
+<!-- =====================================================
          1. CREATE BLOOD REQUEST
     ====================================================== -->
 
@@ -1136,10 +1136,7 @@ ath d="m10 17 2 2 4-4"/>
                             <strong>Automatic urgency:</strong>
                             If blood is needed within 24 hours, the request
                             will automatically be marked <strong>Emergency</strong>.
-                            If more than 24 hours remain, it will b{% endif %}
-
-{% if page_view == 'find' %}
-e marked
+                            If more than 24 hours remain, it will be marked
                             <strong>Normal</strong>. You cannot manually select urgency.
                             Pakistan time is used.
                         </div>
@@ -1162,7 +1159,10 @@ e marked
 
 
 
-    <!-- =====================================================
+    {% endif %}
+
+{% if page_view == 'find' %}
+<!-- =====================================================
          2. AVAILABLE BLOOD REQUESTS
     ====================================================== -->
 
@@ -1330,10 +1330,7 @@ e marked
         {% else %}
 
             <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stro{% endif %}
-
-{% if page_view == 'my_requests' %}
-ke="currentColor"
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <circle cx="11" cy="11" r="7"/>
                     <path d="m20 20-4-4"/>
@@ -1353,7 +1350,10 @@ ke="currentColor"
 
 
 
-    <!-- =====================================================
+    {% endif %}
+
+{% if page_view == 'my_requests' %}
+<!-- =====================================================
          3. MY BLOOD REQUESTS
     ====================================================== -->
 
@@ -1485,10 +1485,7 @@ ke="currentColor"
 
         {% else %}
 
-         {% endif %}
-
-{% if page_view == 'my_matches' %}
-   <div class="empty-state">
+            <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <path d="M8 4h12v16H4V8z"/>
@@ -1506,7 +1503,10 @@ ke="currentColor"
 
 
 
-    <!-- =====================================================
+    {% endif %}
+
+{% if page_view == 'my_matches' %}
+<!-- =====================================================
          4. MY MATCHES
     ====================================================== -->
 
@@ -1851,10 +1851,7 @@ ke="currentColor"
         {% else %}
 
             <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" s{% endif %}
-
-{% if page_view == 'donation_progress' %}
-troke="currentColor"
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <circle cx="9" cy="8" r="3"/>
                     <circle cx="17" cy="8" r="3"/>
@@ -1874,7 +1871,10 @@ troke="currentColor"
 
 
 
-    <!-- =====================================================
+    {% endif %}
+
+{% if page_view == 'donation_progress' %}
+<!-- =====================================================
          5. DONATION AND RECEIPT PROGRESS
     ====================================================== -->
 
@@ -2043,9 +2043,7 @@ troke="currentColor"
 
         {% else %}
 
-            <div class="empty-{% endif %}
-
-state">
+            <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <path d="M4 19V5M4 19h17"/>
@@ -2063,6 +2061,8 @@ state">
 
     </section>
 
+
+{% endif %}
 
     <div class="page-footer">
         Blood Donor &amp; Emergency Request Network
