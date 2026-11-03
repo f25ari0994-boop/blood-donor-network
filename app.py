@@ -1130,6 +1130,9 @@ def public_explore():
 
     compatible_groups = get_compatible_donor_groups(blood_type)
     placeholders = ", ".join("?" for _ in compatible_groups)
+    cooldown_cutoff = (
+        get_pakistan_time().date() - timedelta(days=90)
+    ).isoformat()
     connection = get_db_connection()
 
     try:
@@ -1140,10 +1143,16 @@ def public_explore():
             WHERE availability = ?
               AND eligible = 1
               AND health_screening_status = ?
+              AND (last_donation IS NULL OR last_donation <= ?)
               AND blood_type IN ({placeholders})
             ORDER BY location, name
             """,
-            (AVAILABLE, "Self-Declared Clear", *compatible_groups),
+            (
+                AVAILABLE,
+                "Self-Declared Clear",
+                cooldown_cutoff,
+                *compatible_groups,
+            ),
         ).fetchall()
 
         requests_list = connection.execute(
@@ -1556,6 +1565,9 @@ def search():
             compatible_donor_groups = get_compatible_donor_groups(
                 selected_blood_type
             )
+            cooldown_cutoff = (
+                get_pakistan_time().date() - timedelta(days=90)
+            ).isoformat()
 
             connection = get_db_connection()
 
@@ -1582,6 +1594,7 @@ def search():
                       AND availability = ?
                       AND eligible = 1
                       AND health_screening_status = ?
+                      AND (last_donation IS NULL OR last_donation <= ?)
                       AND blood_type IN ({placeholders})
                     ORDER BY id DESC
                     """,
@@ -1589,6 +1602,7 @@ def search():
                         f"%{selected_location}%",
                         AVAILABLE,
                         "Self-Declared Clear",
+                        cooldown_cutoff,
                         *compatible_donor_groups,
                     ),
                 ).fetchall()
@@ -1616,6 +1630,9 @@ def search():
 @login_required
 def donor_list():
     check_donor_eligibility(get_user_id())
+    cooldown_cutoff = (
+        get_pakistan_time().date() - timedelta(days=90)
+    ).isoformat()
     connection = get_db_connection()
 
     try:
@@ -1630,14 +1647,39 @@ def donor_list():
 
                 d.blood_type,
                 d.location,
-                d.availability,
-                d.eligible,
+
+                CASE
+                    WHEN d.availability = ?
+                     AND d.eligible = 1
+                     AND d.health_screening_status = ?
+                     AND (d.last_donation IS NULL OR d.last_donation <= ?)
+                    THEN ?
+                    ELSE ?
+                END AS display_availability,
+
+                CASE
+                    WHEN d.eligible = 1
+                     AND d.health_screening_status = ?
+                     AND (d.last_donation IS NULL OR d.last_donation <= ?)
+                    THEN 1
+                    ELSE 0
+                END AS display_eligible,
+
                 d.last_donation,
                 d.user_id
 
             FROM donors AS d
             ORDER BY d.id DESC
-            """
+            """,
+            (
+                AVAILABLE,
+                "Self-Declared Clear",
+                cooldown_cutoff,
+                AVAILABLE,
+                UNAVAILABLE,
+                "Self-Declared Clear",
+                cooldown_cutoff,
+            ),
         ).fetchall()
 
     except Exception:
@@ -1664,6 +1706,7 @@ def donor_list():
 def toggle_availability(donor_id):
 
     user_id = get_user_id()
+    check_donor_eligibility(user_id)
     connection = get_db_connection()
 
     try:
@@ -2322,7 +2365,8 @@ def confirm_match(match_id):
                 br.user_id,
                 br.remaining_units,
                 rm.units_pledged,
-                br.needed_by
+                br.needed_by,
+                br.status
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             WHERE rm.id = ?
@@ -2344,6 +2388,7 @@ def confirm_match(match_id):
         remaining_units = int(match[6] or 0)
         units_pledged = int(match[7] or 0)
         needed_by = match[8]
+        request_status = match[9]
 
         if requester_id != user_id:
             flash("Only the requester can process this match.")
@@ -2376,7 +2421,7 @@ def confirm_match(match_id):
             flash("Match acceptance rejected.")
 
         else:
-            if is_request_expired(needed_by):
+            if request_status != "Pending" or is_request_expired(needed_by):
                 now = get_current_time()
 
                 cursor.execute(
@@ -2412,8 +2457,9 @@ def confirm_match(match_id):
 
                 connection.commit()
                 flash(
-                    "This request has expired. The pending acceptance "
-                    "was cancelled and the donor is now free to accept another request.",
+                    "This request is no longer open or its deadline has passed. "
+                    "The pending acceptance was cancelled and the donor is now free "
+                    "to accept another request.",
                     "warning",
                 )
                 return redirect(url_for("my_matches"))
