@@ -1623,6 +1623,17 @@ def toggle_availability(donor_id):
 # 17. EMERGENCY PAGE AND CREATE REQUEST
 # =========================================================
 
+def render_emergency_view(page_view):
+    """Render one dedicated emergency workspace page with shared styling."""
+    page_data = get_emergency_page_data(get_user_id())
+
+    return render_template(
+        "emergency.html",
+        page_view=page_view,
+        **page_data,
+    )
+
+
 @app.route(
     "/request",
     methods=["GET", "POST"],
@@ -1633,12 +1644,7 @@ def blood_request():
     user_id = get_user_id()
 
     if request.method == "GET":
-        page_data = get_emergency_page_data(user_id)
-
-        return render_template(
-            "emergency.html",
-            **page_data,
-        )
+        return render_emergency_view("create")
 
     blood_type = form_text("blood_type", 3)
     location = form_text("location", 150)
@@ -1781,29 +1787,34 @@ def blood_request():
     return redirect(url_for("request_blood"))
 
 # =========================================================
-# 18. LEGACY EMERGENCY ROUTES
-# All sections now live in emergency.html.
+# 18. EMERGENCY WORKSPACE PAGES
+# Each navigation item opens its own page view while sharing the same UI.
 # =========================================================
 
 @app.route("/available-requests")
 @login_required
 def available_requests():
-    return redirect(url_for("request_blood"))
+    return render_emergency_view("find")
 
 
 @app.route("/my-requests")
 @login_required
 def my_requests():
-    return redirect(url_for("request_blood"))
+    return render_emergency_view("my_requests")
 
 
 @app.route("/my-matches")
 @login_required
 def my_matches():
-    return redirect(url_for("request_blood"))
+    return render_emergency_view("my_matches")
 
 
-# =========================================================
+@app.route("/donation-progress")
+@login_required
+def donation_progress():
+    return render_emergency_view("donation_progress")
+
+
 # 19. ACCEPT A REQUEST
 # =========================================================
 @app.route(
@@ -1823,7 +1834,7 @@ def accept_request(request_id):
 
     if not 1 <= units_pledged <= 8:
         flash("Enter a valid number of units.")
-        return redirect(url_for("request_blood"))
+        return redirect(url_for("available_requests"))
 
     check_donor_eligibility(user_id)
 
@@ -1837,7 +1848,7 @@ def accept_request(request_id):
                 "You already have an active match or pending acceptance. "
                 "Complete or cancel it before accepting another request."
             )
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         cursor.execute(
             """
@@ -1881,7 +1892,7 @@ def accept_request(request_id):
 
         if not blood_request:
             flash("This request no longer exists.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         request_blood_type = blood_request[1]
         request_location = blood_request[2]
@@ -1892,18 +1903,18 @@ def accept_request(request_id):
 
         if requester_id == user_id:
             flash("You cannot accept your own blood request.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         if request_status != "Pending" or remaining_units <= 0:
             flash("This request is no longer available.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         if is_request_expired(needed_by):
             flash(
                 "This request has expired because its required deadline "
                 "has passed. It can no longer be accepted."
             )
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         reserved_units = get_reserved_units(
             connection,
@@ -1920,7 +1931,7 @@ def accept_request(request_id):
                 f"Only {available_units} unreserved units are available "
                 "for acceptance."
             )
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         matching_donor = None
 
@@ -1952,7 +1963,7 @@ def accept_request(request_id):
                 "You do not have an available, eligible donor profile "
                 "compatible with this request and location."
             )
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("available_requests"))
 
         donor_id = matching_donor[0]
 
@@ -1973,7 +1984,7 @@ def accept_request(request_id):
 
             if old_status not in {"Rejected", "Cancelled"}:
                 flash("You have already processed this donor/request match.")
-                return redirect(url_for("request_blood"))
+                return redirect(url_for("available_requests"))
 
             cursor.execute(
                 """
@@ -2065,7 +2076,7 @@ def accept_request(request_id):
     finally:
         connection.close()
 
-    return redirect(url_for("request_blood"))
+    return redirect(url_for("available_requests"))
 
 # =========================================================
 # 20. DONOR CANCELS PENDING ACCEPTANCE
@@ -2102,7 +2113,7 @@ def cancel_acceptance(match_id):
 
         if not match:
             flash("Match not found.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         request_id = match[0]
         donor_user_id = match[1]
@@ -2112,11 +2123,11 @@ def cancel_acceptance(match_id):
 
         if donor_user_id != user_id:
             flash("Only the matched donor can cancel this acceptance.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         if match_status != "Accepted" or requester_confirmed == 1:
             flash("Only a pending, unconfirmed acceptance can be cancelled.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         cursor.execute(
             """
@@ -2157,7 +2168,7 @@ def cancel_acceptance(match_id):
     finally:
         connection.close()
 
-    return redirect(url_for("request_blood"))
+    return redirect(url_for("my_matches"))
 
 
 # =========================================================
@@ -2178,7 +2189,7 @@ def confirm_match(match_id):
 
     if action not in {"confirm", "reject"}:
         flash("Invalid match action.")
-        return redirect(url_for("request_blood"))
+        return redirect(url_for("my_matches"))
 
     connection = get_db_connection()
 
@@ -2207,7 +2218,7 @@ def confirm_match(match_id):
 
         if not match:
             flash("Match not found.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         request_id = match[1]
         donor_user_id = match[2]
@@ -2219,11 +2230,11 @@ def confirm_match(match_id):
 
         if requester_id != user_id:
             flash("Only the requester can process this match.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         if match_status != "Accepted" or requester_confirmed:
             flash("This match has already been processed.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("my_matches"))
 
         if action == "reject":
             cursor.execute(
@@ -2264,7 +2275,7 @@ def confirm_match(match_id):
                     "The remaining unreserved units have changed. "
                     "This match cannot be confirmed."
                 )
-                return redirect(url_for("request_blood"))
+                return redirect(url_for("my_matches"))
 
             cursor.execute(
                 """
@@ -2324,7 +2335,7 @@ def confirm_match(match_id):
     finally:
         connection.close()
 
-    return redirect(url_for("request_blood"))
+    return redirect(url_for("my_matches"))
 
 
 # =========================================================
@@ -2475,7 +2486,7 @@ def report_match_donation(match_id):
 
         if not match:
             flash("Match not found.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         request_id = match[1]
         donor_id = match[2]
@@ -2490,11 +2501,11 @@ def report_match_donation(match_id):
 
         if donor_user_id != user_id:
             flash("Only the matched donor can report this donation.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if match_status != "Confirmed" or requester_confirmed != 1:
             flash("The requester must confirm the match first.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if units > units_pledged:
             flash("Reported units cannot exceed your pledged units.")
@@ -2614,7 +2625,7 @@ def confirm_receipt(donation_id):
 
     if not 1 <= received_units <= 8:
         flash("Enter the actual number of units received.")
-        return redirect(url_for("request_blood"))
+        return redirect(url_for("donation_progress"))
 
     connection = get_db_connection()
 
@@ -2648,7 +2659,7 @@ def confirm_receipt(donation_id):
 
         if not donation:
             flash("Donation record not found.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         request_id = donation[1]
         match_id = donation[2]
@@ -2664,27 +2675,27 @@ def confirm_receipt(donation_id):
 
         if requester_id != user_id:
             flash("Only the requester can confirm receipt.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if already_confirmed or donation_status == "Confirmed":
             flash("This donation has already been confirmed.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if match_status != "Donation Reported":
             flash("This match is not awaiting receipt confirmation.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if received_units > reported_units:
             flash("You cannot confirm more units than the donor reported.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if received_units > remaining_units:
             flash(f"Only {remaining_units} units remain on this request.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         if received_units <= 0:
             flash("The confirmed quantity must be greater than zero.")
-            return redirect(url_for("request_blood"))
+            return redirect(url_for("donation_progress"))
 
         cursor.execute(
             """
@@ -2783,7 +2794,7 @@ def confirm_receipt(donation_id):
     finally:
         connection.close()
 
-    return redirect(url_for("request_blood"))
+    return redirect(url_for("donation_progress"))
 
 
 # =========================================================
