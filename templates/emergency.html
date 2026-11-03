@@ -1886,8 +1886,7 @@
                         {% endif %}
 
 
-                        {% if match.requester_confirmed == 1
-                              and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
+                        {% if match.status in ["Accepted", "Confirmed", "Donation Reported", "Completed"] %}
 
                             <section class="match-chat" id="match-chat-{{ match.id }}">
                                 <h4>Private Match Chat</h4>
@@ -1895,6 +1894,10 @@
                                     Only you and the matched
                                     {% if match.my_role == "Requester" %}donor{% else %}requester{% endif %}
                                     can read this conversation.
+                                    {% if match.status == "Accepted" %}
+                                        Discuss the request here while confirmation is pending.
+                                        Phone and WhatsApp details remain private until confirmation.
+                                    {% endif %}
                                 </p>
 
                                 {% if match.chat_messages %}
