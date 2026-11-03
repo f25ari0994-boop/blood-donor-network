@@ -22,20 +22,14 @@
             --blue: #2864b4;
             --orange: #986000;
             --white: #ffffff;
-        }
-
-        * {
+        }* {
             box-sizing: border-box;
-        }
-
-        body {
+        }body {
             margin: 0;
             background: var(--page);
             color: var(--ink);
             font-family: Arial, sans-serif;
-        }
-
-        /* =================================
+        }/* =================================
            HEADER - SAME AS DASHBOARD
         ================================= */
 
@@ -54,47 +48,35 @@
             border-bottom: 1px solid var(--border);
             box-shadow: 0 3px 14px rgba(20, 25, 40, 0.04);
             backdrop-filter: blur(12px);
-        }
-
-        .brand {
+        }.brand {
             display: flex;
             align-items: center;
             gap: 11px;
             min-width: 0;
             text-decoration: none;
             color: var(--ink);
-        }
-
-        .brand img {
+        }.brand img {
             width: 46px;
             height: 46px;
             object-fit: contain;
             flex-shrink: 0;
-        }
-
-        .brand strong {
+        }.brand strong {
             display: block;
             max-width: 270px;
             font-size: 13px;
             line-height: 1.4;
             font-weight: 700;
-        }
-
-        .brand span {
+        }.brand span {
             display: block;
             margin-top: 3px;
             color: var(--muted);
             font-size: 10px;
-        }
-
-        .desktop-nav {
+        }.desktop-nav {
             display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 5px;
-        }
-
-        .desktop-nav a {
+        }.desktop-nav a {
             min-height: 40px;
             padding: 0 11px;
             display: inline-flex;
@@ -108,25 +90,14 @@
             font-weight: 700;
             white-space: nowrap;
             transition: 0.2s ease;
-        }
-
-        .desktop-nav a:hover {
+        }.desktop-nav a:hover {
             color: var(--red);
             background: var(--red-light);
-        }
-
-        .desktop-nav a.active {
+        }.desktop-nav a.active {
             color: var(--red);
             background: var(--red-light);
             border-color: #f2d3d8;
-        }
-
-        .desktop-nav .nav-emergency {
-            background: transparent;
-            color: #555d6b;
-        }
-
-        /* =================================
+        }/* =================================
            MAIN PROFILE LAYOUT
         ================================= */
 
@@ -134,51 +105,37 @@
             width: min(1180px, 94%);
             margin: 0 auto;
             padding: 32px 0 55px;
-        }
-
-        .page-heading {
+        }.page-heading {
             margin-bottom: 25px;
-        }
-
-        .page-heading h1 {
+        }.page-heading h1 {
             margin: 0 0 8px;
             font-size: 28px;
             font-weight: 700;
             color: var(--ink);
-        }
-
-        .page-heading p {
+        }.page-heading p {
             margin: 0;
             color: var(--muted);
             font-size: 14px;
             line-height: 1.6;
-        }
-
-        .profile-layout {
+        }.profile-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
             align-items: stretch;
             gap: 22px;
             margin-bottom: 22px;
-        }
-
-        .panel {
+        }.panel {
             min-width: 0;
             padding: 24px;
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: 13px;
             box-shadow: 0 3px 12px rgba(20, 25, 40, 0.035);
-        }
-
-        .panel h2 {
+        }.panel h2 {
             margin: 0 0 20px;
             font-size: 18px;
             font-weight: 700;
             color: var(--ink);
-        }
-
-        /* =================================
+        }/* =================================
            ACCOUNT INFORMATION
         ================================= */
 
@@ -187,42 +144,30 @@
             font-size: 22px;
             font-weight: 700;
             overflow-wrap: anywhere;
-        }
-
-        .profile-subtitle {
+        }.profile-subtitle {
             margin-bottom: 22px;
             color: var(--muted);
             font-size: 13px;
-        }
-
-        .detail-row {
+        }.detail-row {
             display: flex;
             align-items: center;
             gap: 15px;
             padding: 13px 0;
             border-bottom: 1px solid #eef0f4;
-        }
-
-        .detail-row:last-of-type {
+        }.detail-row:last-of-type {
             border-bottom: 0;
-        }
-
-        .detail-label {
+        }.detail-label {
             flex: 0 0 100px;
             color: var(--muted);
             font-size: 13px;
-        }
-
-        .detail-value {
+        }.detail-value {
             flex: 1;
             min-width: 0;
             color: var(--ink);
             font-size: 13px;
             font-weight: 600;
             overflow-wrap: anywhere;
-        }
-
-        .edit-button {
+        }.edit-button {
             margin-top: 18px;
             padding: 10px 16px;
             border: 1px solid var(--red);
@@ -233,13 +178,9 @@
             font-weight: 700;
             cursor: pointer;
             transition: 0.2s ease;
-        }
-
-        .edit-button:hover {
+        }.edit-button:hover {
             background: var(--red-light);
-        }
-
-        /* =================================
+        }/* =================================
            EDIT PROFILE FORM
         ================================= */
 
@@ -248,30 +189,20 @@
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid var(--border);
-        }
-
-        .edit-form.visible {
+        }.edit-form.visible {
             display: block;
-        }
-
-        .form-grid {
+        }.form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-        }
-
-        .form-group {
+        }.form-group {
             min-width: 0;
-        }
-
-        .form-group label {
+        }.form-group label {
             display: block;
             margin-bottom: 7px;
             font-size: 13px;
             font-weight: 700;
-        }
-
-        .form-group input {
+        }.form-group input {
             width: 100%;
             min-height: 42px;
             padding: 10px 12px;
@@ -281,22 +212,15 @@
             color: var(--ink);
             font-size: 14px;
             outline: none;
-        }
-
-        .form-group input:focus {
+        }.form-group input:focus {
             border-color: var(--red);
             box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.08);
-        }
-
-        .form-actions {
+        }.form-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 18px;
-        }
-
-        .primary-btn,
-        .secondary-btn {
+        }.primary-btn, .secondary-btn {
             min-height: 40px;
             padding: 10px 17px;
             border: 0;
@@ -304,23 +228,15 @@
             font-size: 13px;
             font-weight: 700;
             cursor: pointer;
-        }
-
-        .primary-btn {
+        }.primary-btn {
             background: var(--red);
             color: white;
-        }
-
-        .primary-btn:hover {
+        }.primary-btn:hover {
             background: var(--red-dark);
-        }
-
-        .secondary-btn {
+        }.secondary-btn {
             background: #f0f1f4;
             color: var(--ink);
-        }
-
-        /* =================================
+        }/* =================================
            ACTIVITY STATISTICS
         ================================= */
 
@@ -328,9 +244,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-        }
-
-        .stat-card {
+        }.stat-card {
             width: 100%;
             min-width: 0;
             min-height: 150px;
@@ -341,76 +255,54 @@
             text-align: left;
             cursor: pointer;
             transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-        }
-
-        .stat-card:hover {
+        }.stat-card:hover {
             border-color: var(--red);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(128, 0, 32, 0.07);
-        }
-
-        .stat-card:focus-visible {
+        }.stat-card:focus-visible {
             outline: 3px solid #d7a2b0;
             outline-offset: 3px;
-        }
-
-        .stat-label {
+        }.stat-label {
             display: block;
             margin-bottom: 13px;
             color: var(--muted);
             font-size: 12px;
             line-height: 1.5;
-        }
-
-        .stat-number {
+        }.stat-number {
             display: block;
             margin-bottom: 10px;
             color: var(--red);
             font-size: 34px;
             font-weight: 700;
-        }
-
-        .stat-action {
+        }.stat-action {
             color: var(--red);
             font-size: 12px;
             font-weight: 700;
-        }
-
-        /* =================================
+        }/* =================================
            DONOR PROFILE
         ================================= */
 
         .donor-panel {
             margin-bottom: 22px;
-        }
-
-        .donor-grid {
+        }.donor-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 22px 18px;
-        }
-
-        .donor-item {
+        }.donor-item {
             min-width: 0;
             padding-bottom: 12px;
             border-bottom: 1px solid #eef0f4;
-        }
-
-        .donor-item small {
+        }.donor-item small {
             display: block;
             margin-bottom: 7px;
             color: var(--muted);
             font-size: 12px;
-        }
-
-        .donor-item strong {
+        }.donor-item strong {
             display: block;
             color: var(--ink);
             font-size: 14px;
             overflow-wrap: anywhere;
-        }
-
-        /* =================================
+        }/* =================================
            HISTORY SECTIONS
         ================================= */
 
@@ -418,25 +310,17 @@
             display: none;
             margin-bottom: 22px;
             scroll-margin-top: 105px;
-        }
-
-        .history-panel.visible {
+        }.history-panel.visible {
             display: block;
-        }
-
-        .history-heading {
+        }.history-heading {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
             margin-bottom: 18px;
-        }
-
-        .history-heading h2 {
+        }.history-heading h2 {
             margin: 0;
-        }
-
-        .close-history {
+        }.close-history {
             flex-shrink: 0;
             padding: 8px 13px;
             border: 1px solid var(--border);
@@ -446,49 +330,35 @@
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-        }
-
-        .close-history:hover {
+        }.close-history:hover {
             border-color: var(--red);
             color: var(--red);
-        }
-
-        .history-list {
+        }.history-list {
             display: grid;
             gap: 12px;
-        }
-
-        .history-item {
+        }.history-item {
             min-width: 0;
             padding: 17px;
             border: 1px solid var(--border);
             border-radius: 10px;
             background: white;
-        }
-
-        .history-item-top {
+        }.history-item-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
             margin-bottom: 13px;
-        }
-
-        .history-item strong {
+        }.history-item strong {
             font-size: 14px;
             overflow-wrap: anywhere;
-        }
-
-        .history-meta {
+        }.history-meta {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 11px 16px;
             color: var(--muted);
             font-size: 12px;
             line-height: 1.5;
-        }
-
-        .status {
+        }.status {
             display: inline-block;
             flex-shrink: 0;
             padding: 5px 10px;
@@ -498,22 +368,13 @@
             font-size: 11px;
             font-weight: 700;
             text-transform: capitalize;
-        }
-
-        .status.confirmed,
-        .status.fulfilled,
-        .status.completed {
+        }.status.confirmed, .status.fulfilled, .status.completed {
             background: #e8f6ef;
             color: var(--green);
-        }
-
-        .status.pending,
-        .status.reported {
+        }.status.pending, .status.reported {
             background: #fff4df;
             color: var(--orange);
-        }
-
-        .empty-state {
+        }.empty-state {
             padding: 25px 18px;
             border: 1px dashed var(--border);
             border-radius: 10px;
@@ -522,15 +383,11 @@
             color: var(--muted);
             font-size: 13px;
             line-height: 1.7;
-        }
-
-        .empty-state a {
+        }.empty-state a {
             color: var(--red);
             font-weight: 700;
             text-decoration: none;
-        }
-
-        .empty-state a:hover {
+        }.empty-state a:hover {
             text-decoration: underline;
         }
 
@@ -538,21 +395,16 @@
            RESPONSIVE HEADER
         ================================= */
 
-        @media (max-width: 1150px) {
-            .dashboard-header {
+        @media (max-width: 1150px) {.dashboard-header {
                 grid-template-columns: 1fr;
                 gap: 8px;
                 padding: 10px 3%;
-            }
-
-            .desktop-nav {
+            }.desktop-nav {
                 justify-content: flex-start;
                 overflow-x: auto;
                 scrollbar-width: thin;
                 padding-bottom: 2px;
-            }
-
-            .desktop-nav a {
+            }.desktop-nav a {
                 flex-shrink: 0;
             }
         }
@@ -561,12 +413,9 @@
            TABLET
         ================================= */
 
-        @media (max-width: 850px) {
-            .profile-layout {
+        @media (max-width: 850px) {.profile-layout {
                 grid-template-columns: 1fr;
-            }
-
-            .donor-grid {
+            }.donor-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
@@ -575,117 +424,70 @@
            MOBILE
         ================================= */
 
-        @media (max-width: 650px) {
-            .dashboard-header {
+        @media (max-width: 650px) {.dashboard-header {
                 padding: 9px 4%;
-            }
-
-            .brand img {
+            }.brand img {
                 width: 41px;
                 height: 41px;
-            }
-
-            .brand strong {
+            }.brand strong {
                 max-width: 250px;
                 font-size: 12px;
-            }
-
-            .brand span {
+            }.brand span {
                 font-size: 10px;
-            }
-
-            .desktop-nav {
+            }.desktop-nav {
                 gap: 5px;
-            }
-
-            .desktop-nav a {
+            }.desktop-nav a {
                 min-height: 38px;
                 padding: 0 11px;
                 border-radius: 7px;
                 background: #f8f9fb;
                 font-size: 11px;
-            }
-
-            .profile-container {
+            }.profile-container {
                 width: 92%;
                 padding: 23px 0 40px;
-            }
-
-            .page-heading h1 {
+            }.page-heading h1 {
                 font-size: 24px;
-            }
-
-            .panel {
+            }.panel {
                 padding: 20px;
             }
         }
 
-        @media (max-width: 480px) {
-            .profile-container {
+        @media (max-width: 480px) {.profile-container {
                 width: 94%;
-            }
-
-            .panel {
+            }.panel {
                 padding: 17px;
-            }
-
-            .stats-grid {
+            }.stats-grid {
                 gap: 10px;
-            }
-
-            .stat-card {
+            }.stat-card {
                 min-height: 130px;
                 padding: 13px;
-            }
-
-            .stat-number {
+            }.stat-number {
                 font-size: 29px;
-            }
-
-            .stat-label {
+            }.stat-label {
                 font-size: 11px;
-            }
-
-            .donor-grid,
-            .form-grid,
-            .history-meta {
+            }.donor-grid, .form-grid, .history-meta {
                 grid-template-columns: 1fr;
-            }
-
-            .history-item-top {
+            }.history-item-top {
                 align-items: flex-start;
                 flex-direction: column;
-            }
-
-            .detail-row {
+            }.detail-row {
                 align-items: flex-start;
                 gap: 8px;
-            }
-
-            .detail-label {
+            }.detail-label {
                 flex-basis: 80px;
-            }
-
-            .form-actions button {
+            }.form-actions button {
                 flex: 1;
             }
         }
 
-        @media (max-width: 380px) {
-            .dashboard-header {
+        @media (max-width: 380px) {.dashboard-header {
                 padding: 9px 10px;
-            }
-
-            .brand strong {
+            }.brand strong {
                 max-width: 205px;
                 font-size: 11px;
-            }
-
-            .brand span {
+            }.brand span {
                 font-size: 9px;
-            }
-
-            .stat-card {
+            }.stat-card {
                 padding: 11px;
             }
         }
@@ -730,7 +532,7 @@
                 Find Donors
             </a>
 
-            <a href="{{ url_for('request_blood') }}" class="nav-emergency">
+            <a href="{{ url_for('request_blood') }}">
                 Emergency Request
             </a>
 
@@ -796,20 +598,15 @@
                     <span class="detail-label">Phone</span>
 
                     <span class="detail-value">
-                        {{ user[3] or 'Not provided' }}
-                    </span>
+                        {{ user[3] or 'Not provided' }}</span>
                 </div>
 
 
                 <div class="detail-row">
                     <span class="detail-label">CNIC</span>
 
-                    <span class="detail-value">
-                        {% if user[4] %}
-                            {{ user[4][:5] }}*******
-                        {% else %}
-                            Not provided
-                        {% endif %}
+                    <span class="detail-value"> {% if user[4] %}
+                            {{ user[4][:5] }}******* {% else %}Not provided {% endif %}
                     </span>
                 </div>
 
@@ -962,8 +759,7 @@
                         </span>
 
                         <span class="stat-number">
-                            {{ request_count }}
-                        </span>
+                            {{ request_count }}</span>
 
                         <span class="stat-action">
                             View request history →
@@ -985,9 +781,7 @@
 
         <section class="panel donor-panel">
 
-            <h2>My Donor Profile</h2>
-
-            {% if donor %}
+            <h2>My Donor Profile</h2> {% if donor %}
 
                 <div class="donor-grid">
 
@@ -1038,14 +832,11 @@
                         <small>Health Screening</small>
 
                         <strong>
-                            {{ donor[8] or 'Not Assessed' }}
-                        </strong>
+                            {{ donor[8] or 'Not Assessed' }}</strong>
                     </div>
 
 
-                </div>
-
-            {% else %}
+                </div> {% else %}
 
                 <div class="empty-state">
 
@@ -1057,11 +848,7 @@
                         Create your donor profile
                     </a>
 
-                </div>
-
-            {% endif %}
-
-        </section>
+                </div> {% endif %}</section>
 
 
 
@@ -1086,14 +873,7 @@
                     Close
                 </button>
 
-            </div>
-
-
-            {% if donations %}
-
-                <div class="history-list">
-
-                    {% for donation in donations %}
+            </div> {% if donations %}<div class="history-list"> {% for donation in donations %}
 
                         <article class="history-item">
 
@@ -1134,26 +914,13 @@
 
                                 <span>
                                     Receipt:
-                                    {{ 'Confirmed' if donation[6] == 1 else 'Awaiting confirmation' }}
-                                </span>
+                                    {{ 'Confirmed' if donation[6] == 1 else 'Awaiting confirmation' }}</span>
 
                             </div>
 
-                        </article>
-
-                    {% endfor %}
-
-                </div>
-
-            {% else %}
-
-                <div class="empty-state">
+                        </article> {% endfor %}</div> {% else %}<div class="empty-state">
                     You have no donation records yet.
-                </div>
-
-            {% endif %}
-
-        </section>
+                </div> {% endif %}</section>
 
 
 
@@ -1178,14 +945,7 @@
                     Close
                 </button>
 
-            </div>
-
-
-            {% if my_requests %}
-
-                <div class="history-list">
-
-                    {% for item in my_requests %}
+            </div> {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
 
                         <article class="history-item">
 
@@ -1229,24 +989,13 @@
                                 </span>
 
                                 <span>
-                                    Created: {{ item[9] }}
-                                </span>
+                                    Created: {{ item[9] }}</span>
 
                             </div>
 
-                        </article>
-
-                    {% endfor %}
-
-                </div>
-
-            {% else %}
-
-                <div class="empty-state">
+                        </article> {% endfor %}</div> {% else %}<div class="empty-state">
                     You have not created any blood requests yet.
-                </div>
-
-            {% endif %}
+                </div> {% endif %}
 
         </section>
 
@@ -1260,19 +1009,15 @@
 
     <script>
 
-        function showHistory(sectionId) {
-
-            document.querySelectorAll(".history-panel").forEach(section => {
+        function showHistory(sectionId) {document.querySelectorAll(".history-panel").forEach(section => {
                 section.classList.remove("visible");
             });
 
             const section = document.getElementById(sectionId);
 
-            if (section) {
+            if (section) {section.classList.add("visible");
 
-                section.classList.add("visible");
-
-                section.scrollIntoView({
+                section.scrollIntoView( {
                     behavior: "smooth",
                     block: "start"
                 });
@@ -1282,9 +1027,7 @@
         }
 
 
-        function hideHistory(sectionId) {
-
-            const section = document.getElementById(sectionId);
+        function hideHistory(sectionId) {const section = document.getElementById(sectionId);
 
             if (section) {
                 section.classList.remove("visible");
@@ -1293,9 +1036,7 @@
         }
 
 
-        function toggleEditForm() {
-
-            const form = document.getElementById("editProfileForm");
+        function toggleEditForm() {const form = document.getElementById("editProfileForm");
 
             if (form) {
                 form.classList.toggle("visible");
