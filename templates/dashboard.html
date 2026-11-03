@@ -138,17 +138,20 @@
         border-color: #f2d3d8;
     }
 
-    .desktop-nav .nav-emergency {
-        padding: 0 11px;
-        background: transparent;
-        color: #555d6b;
+    /* Highlight Emergency Request consistently across authenticated pages. */
+    .desktop-nav .nav-emergency,
+    .desktop-nav .nav-emergency:visited {
+        padding: 0 13px;
+        background: var(--red);
+        color: #ffffff;
+        border-color: var(--red);
     }
 
     .desktop-nav .nav-emergency:hover,
     .desktop-nav .nav-emergency.active {
-        background: var(--red-light);
-        color: var(--red);
-        border-color: #f2d3d8;
+        background: var(--red-dark);
+        color: #ffffff;
+        border-color: var(--red-dark);
     }
 
     /* MOBILE HAMBURGER BUTTON */
@@ -491,12 +494,19 @@
         /* Active and hover state */
 
         .desktop-nav a:hover,
-        .desktop-nav .nav-emergency:hover,
-        .desktop-nav a.active,
-        .desktop-nav .nav-emergency.active {
+        .desktop-nav a.active {
             background: var(--red-light);
             color: var(--red);
             border-color: #f2d3d8;
+        }
+
+        .desktop-nav .nav-emergency,
+        .desktop-nav .nav-emergency:visited,
+        .desktop-nav .nav-emergency:hover,
+        .desktop-nav .nav-emergency.active {
+            background: var(--red);
+            color: #ffffff;
+            border-color: var(--red);
         }
     }
 
