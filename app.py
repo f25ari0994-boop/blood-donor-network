@@ -3241,7 +3241,7 @@ def login():
 
     if not user:
         flash(
-            "Invalid username. This account isn't registered. "
+            "Invalid user name. This account isn't registered. "
             "Please create an account.",
             "error",
         )
