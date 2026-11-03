@@ -3241,8 +3241,7 @@ def login():
 
     if not user:
         flash(
-            "Invalid user name. This account isn't registered. "
-            "Please create an account.",
+            "Invalid user name.",
             "error",
         )
         return redirect(url_for("login"))
