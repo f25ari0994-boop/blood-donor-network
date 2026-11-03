@@ -3210,7 +3210,10 @@ def login():
     password = request.form.get("password") or ""
 
     if not login_input or not password:
-        flash("Enter your email/phone and password.")
+        flash(
+            "Enter your email/phone and password.",
+            "error",
+        )
         return redirect(url_for("login"))
 
     connection = get_db_connection()
@@ -3225,21 +3228,37 @@ def login():
             (login_input.lower(), login_input),
         ).fetchone()
 
+    except Exception:
+        app.logger.exception("Login account lookup failed")
+        flash(
+            "Unable to sign in right now. Please try again.",
+            "error",
+        )
+        return redirect(url_for("login"))
+
     finally:
         connection.close()
 
-    if user and check_password_hash(user[2], password):
-        session.clear()
-        session["user_id"] = user[0]
-        session["user_name"] = user[1]
-        session.permanent = True
-        session["_csrf_token"] = secrets.token_urlsafe(32)
+    if not user:
+        flash(
+            "Invalid username. This account isn't registered. "
+            "Please create an account.",
+            "error",
+        )
+        return redirect(url_for("login"))
 
-        flash("Login successful.")
-        return redirect(url_for("dashboard"))
+    if not check_password_hash(user[2], password):
+        flash("Invalid password.", "error")
+        return redirect(url_for("login"))
 
-    flash("Invalid email/phone or password.")
-    return redirect(url_for("login"))
+    session.clear()
+    session["user_id"] = user[0]
+    session["user_name"] = user[1]
+    session.permanent = True
+    session["_csrf_token"] = secrets.token_urlsafe(32)
+
+    flash("Login successful.", "success")
+    return redirect(url_for("dashboard"))
 
 
 # =========================================================
