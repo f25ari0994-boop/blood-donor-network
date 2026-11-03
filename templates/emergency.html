@@ -258,6 +258,11 @@
             color: var(--primary);
         }
 
+        .section-nav a.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
         .section-nav svg {
             width: 17px;
             height: 17px;
@@ -947,7 +952,7 @@
 
     <nav class="section-nav" aria-label="Emergency request sections">
 
-        <a href="#create-request">
+        <a href="{{ url_for('request_blood') }}" class="{% if page_view == 'create' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
                 <path d="M12 5v14M5 12h14"/>
@@ -955,7 +960,7 @@
             Create Request
         </a>
 
-        <a href="#available-requests">
+        <a href="{{ url_for('available_requests') }}" class="{% if page_view == 'find' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
                 <circle cx="11" cy="11" r="7"/>
@@ -964,7 +969,7 @@
             Find Requests
         </a>
 
-        <a href="#my-requests">
+        <a href="{{ url_for('my_requests') }}" class="{% if page_view == 'my_requests' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
                 <path d="M8 4h12v16H4V8z"/>
@@ -973,18 +978,19 @@
             My Requests
         </a>
 
-        <a href="#my-matches">
+        <a href="{{ url_for('my_matches') }}" class="{% if page_view == 'my_matches' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
                 <circle cx="9" cy="8" r="3"/>
                 <circle cx="17" cy="8" r="3"/>
                 <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
-                <path d="m10 17 2 2 4-4"/>
+                <p{% if page_view == 'create' %}
+ath d="m10 17 2 2 4-4"/>
             </svg>
             My Matches
         </a>
 
-        <a href="#donation-progress">
+        <a href="{{ url_for('donation_progress') }}" class="{% if page_view == 'donation_progress' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
                 <path d="M4 19V5M4 19h17"/>
@@ -1130,7 +1136,10 @@
                             <strong>Automatic urgency:</strong>
                             If blood is needed within 24 hours, the request
                             will automatically be marked <strong>Emergency</strong>.
-                            If more than 24 hours remain, it will be marked
+                            If more than 24 hours remain, it will b{% endif %}
+
+{% if page_view == 'find' %}
+e marked
                             <strong>Normal</strong>. You cannot manually select urgency.
                             Pakistan time is used.
                         </div>
@@ -1321,7 +1330,10 @@
         {% else %}
 
             <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                <svg viewBox="0 0 24 24" fill="none" stro{% endif %}
+
+{% if page_view == 'my_requests' %}
+ke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <circle cx="11" cy="11" r="7"/>
                     <path d="m20 20-4-4"/>
@@ -1473,7 +1485,10 @@
 
         {% else %}
 
-            <div class="empty-state">
+         {% endif %}
+
+{% if page_view == 'my_matches' %}
+   <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <path d="M8 4h12v16H4V8z"/>
@@ -1836,7 +1851,10 @@
         {% else %}
 
             <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                <svg viewBox="0 0 24 24" fill="none" s{% endif %}
+
+{% if page_view == 'donation_progress' %}
+troke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <circle cx="9" cy="8" r="3"/>
                     <circle cx="17" cy="8" r="3"/>
@@ -2025,7 +2043,9 @@
 
         {% else %}
 
-            <div class="empty-state">
+            <div class="empty-{% endif %}
+
+state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="1.6" stroke-linecap="round">
                     <path d="M4 19V5M4 19h17"/>
