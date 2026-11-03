@@ -589,7 +589,7 @@
         <a href="{{ url_for('search') }}" class="active">Find Donors</a>
         <a href="{{ url_for('request_blood') }}">Emergency Request</a>
         <a href="{{ url_for('donor_list') }}">Donor Directory</a>
-        <a href="{{ url_for('request_blood') }}">My Matching</a>
+        <a href="{{ url_for('my_matches') }}">My Matching</a>
         <a href="{{ url_for('profile') }}">Profile</a>
     </nav>
 
@@ -614,7 +614,7 @@
         <a href="{{ url_for('search') }}" class="active">Find Donors</a>
         <a href="{{ url_for('request_blood') }}">Emergency Request</a>
         <a href="{{ url_for('donor_list') }}">Donor Directory</a>
-        <a href="{{ url_for('request_blood') }}">My Matching</a>
+        <a href="{{ url_for('my_matches') }}">My Matching</a>
         <a href="{{ url_for('profile') }}">Profile</a>
     </nav>
 
@@ -815,7 +815,33 @@
                                 {{ donor.last_donation or "Not provided" }}</span>
                         </div>
 
-                        
+                        {% if donor.is_owner %}
+                            <div class="privacy-note">
+                                This is your donor profile. Contact buttons are hidden for your own account.
+                            </div>
+                        {% elif donor.contact %}
+                            <div class="donor-actions">
+                                <div class="donor-contact-number">
+                                    Contact: {{ donor.contact }}
+                                </div>
+                                <a class="donor-action-btn call-btn"
+                                   href="tel:{{ donor.contact }}">
+                                    Phone Call
+                                </a>
+                                {% if donor.whatsapp %}
+                                    <a class="donor-action-btn whatsapp-btn"
+                                       href="https://wa.me/{{ donor.whatsapp }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        WhatsApp
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="privacy-note">
+                                This donor has not enabled direct contact. You can connect through My Matching after creating a compatible request.
+                            </div>
+                        {% endif %}
 
                     </article> {% endfor %}</section> {% else %}<section class="empty-state" aria-live="polite">
                 <h3>No Matching Donors Found</h3>
@@ -828,8 +854,9 @@
     {% endif %}
 
     <div class="privacy-note">
-        Donor contact details remain private and are shared only with
-        matched parties after the requester confirms the match.
+        Direct call and WhatsApp details are shown only when a donor has opted in.
+        Otherwise, contact becomes available to both parties after a match is confirmed.
+        Private in-app chat is available in My Matching for confirmed matches.
     </div>
 
     <section class="tips-box">
