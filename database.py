@@ -284,6 +284,41 @@ def create_unique_donation_match_index(connection):
         )
 
 
+def create_unique_active_match_index(connection):
+
+    duplicate = connection.execute(
+        """
+        SELECT donor_user_id
+        FROM request_matches
+        WHERE donor_user_id IS NOT NULL
+          AND status IN ('Accepted', 'Confirmed', 'Donation Reported')
+        GROUP BY donor_user_id
+        HAVING COUNT(*) > 1
+        LIMIT 1
+        """
+    ).fetchone()
+
+    if duplicate is None:
+
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_one_active_match_per_donor
+            ON request_matches(donor_user_id)
+            WHERE donor_user_id IS NOT NULL
+              AND status IN ('Accepted', 'Confirmed', 'Donation Reported')
+            """
+        )
+
+    else:
+
+        logger.warning(
+            "A donor has multiple active matches. "
+            "The one-active-match unique index was skipped; "
+            "existing records were left unchanged."
+        )
+
+
 # =========================================================
 # 4. SQLITE TABLE CREATION
 # =========================================================
@@ -729,6 +764,7 @@ def migrate_sqlite_database(connection):
 
     create_unique_cnic_index_sqlite(connection)
     create_unique_donation_match_index(connection)
+    create_unique_active_match_index(connection)
 
     # -----------------------------------------------------
     # PERFORMANCE INDEXES
@@ -1172,6 +1208,7 @@ def migrate_postgresql_database(connection):
 
     create_unique_cnic_index_postgresql(connection)
     create_unique_donation_match_index(connection)
+    create_unique_active_match_index(connection)
 
     # -----------------------------------------------------
     # PERFORMANCE INDEXES
