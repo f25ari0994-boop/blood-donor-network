@@ -5,3 +5,6 @@ __pycache__/
 .env
 database/blood_network.db
 database/*.db
+
+# Flask instance data (including the private session signing key)
+instance/
