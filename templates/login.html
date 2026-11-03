@@ -384,8 +384,25 @@
         }
 
         .signup-button {
-            margin-top: 12px;
             text-decoration: none;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 15px 0;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
         }
 
         .login-button:focus-visible,
@@ -723,6 +740,8 @@
                 </button>
 
             </form>
+
+            <div class="auth-divider" aria-label="Or">OR</div>
 
             <a class="login-button signup-button" href="{{ url_for('signup') }}">
                 Sign Up <span aria-hidden="true">→</span>
