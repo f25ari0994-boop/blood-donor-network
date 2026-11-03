@@ -260,7 +260,7 @@ def locations_match(first_location, second_location):
             return set()
 
         # Commas/slashes commonly separate the locality and city.
-        parts = re.split(r"[,/|;]|\\s+-\\s+", raw)
+        parts = re.split(r"[,/|;]|\s+-\s+", raw)
         candidates = {
             normalize_component(part)
             for part in parts
