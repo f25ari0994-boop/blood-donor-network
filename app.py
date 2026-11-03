@@ -230,31 +230,58 @@ def get_compatible_donor_groups(recipient_blood_type):
 
 def locations_match(first_location, second_location):
     """
-    Match city/area strings without requiring identical punctuation or suffixes.
-    Examples: 'Sukkur' matches 'Sukkur, Sindh'; 'Rohri' does not match 'Sukkur'.
-    """
-    def normalize(value):
-        return re.sub(r"[^a-z0-9]+", " ", clean_text(value).lower()).strip()
+    Compare donor and requester locations at city level.
 
-    first = normalize(first_location)
-    second = normalize(second_location)
+    Accepts equivalent entries such as:
+    - "Sukkur" and "Sukkur, Sindh"
+    - "Sukkur, Sindh" and "Sukkur City"
+    - "Gulshan-e-Iqbal, Karachi" and "DHA, Karachi"
+
+    It deliberately compares complete location components instead of
+    matching any shared word, which could create false positives.
+    """
+    administrative_terms = {
+        "city", "district", "tehsil", "taluka", "division",
+        "province", "sindh", "punjab", "balochistan",
+        "khyber", "pakhtunkhwa", "kpk", "pakistan",
+    }
+
+    def normalize_component(value):
+        tokens = re.findall(r"[a-z0-9]+", clean_text(value).lower())
+        meaningful_tokens = [
+            token for token in tokens
+            if token not in administrative_terms
+        ]
+        return " ".join(meaningful_tokens).strip()
+
+    def location_components(value):
+        raw = clean_text(value)
+        if not raw:
+            return set()
+
+        # Commas/slashes commonly separate the locality and city.
+        parts = re.split(r"[,/|;]|\\s+-\\s+", raw)
+        candidates = {
+            normalize_component(part)
+            for part in parts
+            if normalize_component(part)
+        }
+
+        # Also compare the complete normalized entry after removing
+        # province/country/administrative suffixes.
+        whole = normalize_component(raw)
+        if whole:
+            candidates.add(whole)
+
+        return candidates
+
+    first = location_components(first_location)
+    second = location_components(second_location)
 
     if not first or not second:
         return False
 
-    if first == second:
-        return True
-
-    first_in_second = re.search(
-        rf"(?<![a-z0-9]){re.escape(first)}(?![a-z0-9])",
-        second,
-    )
-    second_in_first = re.search(
-        rf"(?<![a-z0-9]){re.escape(second)}(?![a-z0-9])",
-        first,
-    )
-
-    return bool(first_in_second or second_in_first)
+    return bool(first.intersection(second))
 
 
 def get_inserted_id(cursor, connection):
@@ -532,10 +559,11 @@ def check_donor_eligibility(user_id):
                     cursor.execute(
                         """
                         UPDATE donors
-                        SET eligible = 1
+                        SET eligible = 1,
+                            availability = ?
                         WHERE id = ? AND user_id = ?
                         """,
-                        (donor_id, user_id),
+                        (AVAILABLE, donor_id, user_id),
                     )
                 continue
 
@@ -570,10 +598,11 @@ def check_donor_eligibility(user_id):
                 cursor.execute(
                     """
                     UPDATE donors
-                    SET eligible = 1
+                    SET eligible = 1,
+                        availability = ?
                     WHERE id = ? AND user_id = ?
                     """,
-                    (donor_id, user_id),
+                    (AVAILABLE, donor_id, user_id),
                 )
 
                 create_notification(
