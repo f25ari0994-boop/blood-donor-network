@@ -1,6 +1,6 @@
 import unittest
 
-from app import get_compatible_donor_groups, locations_match
+from app import donor_matches_request, get_compatible_donor_groups, locations_match
 
 
 class LocationMatchingTests(unittest.TestCase):
@@ -26,6 +26,28 @@ class LocationMatchingTests(unittest.TestCase):
     def test_empty_location_never_matches(self):
         self.assertFalse(locations_match("", "Sukkur"))
         self.assertFalse(locations_match("Sukkur", None))
+
+
+class DonorRequestMatchingTests(unittest.TestCase):
+    def test_a_positive_donor_matches_a_positive_request_in_sukkur(self):
+        self.assertTrue(
+            donor_matches_request("A+", "Sukkur", "A+", "Sukkur, Sindh")
+        )
+
+    def test_o_negative_donor_matches_a_positive_request(self):
+        self.assertTrue(
+            donor_matches_request("O-", "Sukkur", "A+", "Sukkur City")
+        )
+
+    def test_ab_positive_donor_does_not_match_a_positive_request(self):
+        self.assertFalse(
+            donor_matches_request("AB+", "Sukkur", "A+", "Sukkur")
+        )
+
+    def test_compatible_blood_group_in_a_different_city_does_not_match(self):
+        self.assertFalse(
+            donor_matches_request("A+", "Sukkur", "A+", "Rohri")
+        )
 
 
 class BloodCompatibilityTests(unittest.TestCase):
