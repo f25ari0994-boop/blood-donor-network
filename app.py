@@ -1277,6 +1277,12 @@ def get_emergency_page_data(user_id):
               AND br.remaining_units > 0
               AND br.needed_by IS NOT NULL
               AND br.needed_by > ?
+              AND br.remaining_units > COALESCE((
+                  SELECT SUM(reserved.units_pledged)
+                  FROM request_matches AS reserved
+                  WHERE reserved.request_id = br.id
+                    AND reserved.status IN (?, ?, ?)
+              ), 0)
               AND d.availability = ?
               AND d.eligible = 1
               AND d.health_screening_status = ?
@@ -1303,6 +1309,7 @@ def get_emergency_page_data(user_id):
             (
                 user_id,
                 current_time,
+                *ACTIVE_MATCH_STATUSES,
                 AVAILABLE,
                 "Self-Declared Clear",
                 *ACTIVE_MATCH_STATUSES,
@@ -1390,6 +1397,12 @@ def get_emergency_page_data(user_id):
               AND d.health_screening_status = ?
               AND br.needed_by IS NOT NULL
               AND br.needed_by > ?
+              AND br.remaining_units > COALESCE((
+                  SELECT SUM(reserved.units_pledged)
+                  FROM request_matches AS reserved
+                  WHERE reserved.request_id = br.id
+                    AND reserved.status IN (?, ?, ?)
+              ), 0)
               AND NOT EXISTS (
                   SELECT 1
                   FROM request_matches AS rm
@@ -1415,6 +1428,7 @@ def get_emergency_page_data(user_id):
                 AVAILABLE,
                 "Self-Declared Clear",
                 current_time,
+                *ACTIVE_MATCH_STATUSES,
                 *ACTIVE_MATCH_STATUSES,
             ),
         ).fetchall()
