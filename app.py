@@ -1,4 +1,4 @@
-
+import json
 import os
 import re
 import hmac
@@ -7,28 +7,18 @@ import logging
 
 from datetime import datetime, date, timedelta
 from functools import wraps
-
+from zoneinfo import ZoneInfo
 from flask import (
-    Flask,
-    render_template,
-    request,
-    flash,
-    redirect,
-    session,
-    abort,
-    url_for,
+    Flask, render_template, request, flash, redirect,
+    session, abort, url_for
 )
 
-from werkzeug.security import (
-    generate_password_hash,
-    check_password_hash,
-)
-
+from werkzeug.security import generate_password_hash, check_password_hash
 from database import get_db_connection, init_database
 
 
 # =========================================================
-# 1. FLASK CONFIGURATION AND SESSION SECURITY
+# 1. CONFIGURATION
 # =========================================================
 
 app = Flask(__name__)
@@ -39,10 +29,7 @@ IS_PRODUCTION = APP_ENV == "production"
 secret_key = os.getenv("SECRET_KEY")
 
 if IS_PRODUCTION and not secret_key:
-    raise RuntimeError(
-        "Set the SECRET_KEY environment variable before "
-        "running the application in production."
-    )
+    raise RuntimeError("Set SECRET_KEY before running in production.")
 
 app.config.update(
     SECRET_KEY=secret_key or secrets.token_hex(32),
@@ -62,18 +49,20 @@ logging.basicConfig(level=logging.INFO)
 # =========================================================
 
 BLOOD_TYPES = {
-    "O-", "O+", "A-", "A+",
-    "B-", "B+", "AB-", "AB+",
+    "O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"
 }
 
-URGENCY_LEVELS = {
-    "Normal", "Urgent", "Emergency",
-}
+URGENCY_LEVELS = {"Normal", "Emergency"}
 
 AVAILABLE = "Available"
 UNAVAILABLE = "Not Available"
 
-# Donor blood type -> compatible recipient blood types.
+ACTIVE_MATCH_STATUSES = (
+    "Accepted",
+    "Confirmed",
+    "Donation Reported",
+)
+
 BLOOD_COMPATIBILITY = {
     "O-": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
     "O+": ["O+", "A+", "B+", "AB+"],
@@ -85,60 +74,100 @@ BLOOD_COMPATIBILITY = {
     "AB+": ["AB+"],
 }
 
+HEALTH_QUESTIONS = {
+    "fever": "Have you had a fever or serious infection recently?",
+    "chronic_condition": "Do you have a medical condition that may affect donation?",
+    "medication": "Are you currently taking medication that may affect donation?",
+    "recent_surgery": "Have you recently had surgery or a major medical procedure?",
+    "blood_condition": "Have you been diagnosed with a blood-related condition?",
+}
+
 
 # =========================================================
-# 3. INPUT VALIDATION
+# 3. GENERAL HELPERS
 # =========================================================
 
-def clean_text(value, max_length=150):
-    if not isinstance(value, str):
-        return None
-
-    value = value.strip()
-
-    if not value or len(value) > max_length:
-        return None
-
-    if any(ord(char) < 32 for char in value):
-        return None
-
-    return value
+def get_current_time():
+    PAKISTAN_TZ = ZoneInfo("Asia/Karachi")
 
 
-def valid_phone(value):
-    return bool(
-        value
-        and re.fullmatch(r"\+?[0-9 ()-]{7,20}", value)
-        and sum(char.isdigit() for char in value) >= 7
+def get_pakistan_time():
+    return datetime.now(PAKISTAN_TZ)
+
+
+def parse_needed_by(value):
+    """
+    Parse a datetime-local value using Pakistan time.
+
+    Expected input:
+        YYYY-MM-DDTHH:MM
+
+    Returns:
+        (deadline_datetime, database_value, urgency)
+        or (None, None, None) if invalid.
+    """
+
+    if not value or not isinstance(value, str):
+        return None, None, None
+
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None, None, None
+
+    # datetime-local input must not contain a timezone or UTC offset.
+    if parsed.tzinfo is not None:
+        return None, None, None
+
+    deadline = parsed.replace(tzinfo=PAKISTAN_TZ)
+    now = get_pakistan_time()
+
+    if deadline <= now:
+        return None, None, None
+
+    time_remaining = deadline - now
+
+    urgency = (
+        "Emergency"
+        if time_remaining <= timedelta(hours=24)
+        else "Normal"
     )
 
+    database_value = deadline.strftime("%Y-%m-%d %H:%M:%S")
 
-def valid_email(value):
-    return bool(
-        value
-        and len(value) <= 254
-        and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value)
-    )
+    return deadline, database_value, urgency
 
 
-def parse_date(value):
+def parse_stored_deadline(value):
+    """
+    Read a deadline stored in the database as Pakistan local time.
+    """
+
     if not value:
         return None
 
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%d").date()
+        parsed = datetime.strptime(
+            str(value),
+            "%Y-%m-%d %H:%M:%S",
+        )
+        return parsed.replace(tzinfo=PAKISTAN_TZ)
+
     except (ValueError, TypeError):
         return None
 
-    if parsed > date.today():
-        return None
 
-    return parsed
+def is_request_expired(needed_by):
+    """
+    Treat missing or invalid deadlines as unavailable for acceptance.
+    """
 
+    deadline = parse_stored_deadline(needed_by)
 
-def form_text(name, max_length=150):
-    return clean_text(request.form.get(name), max_length)
+    if deadline is None:
+        return True
 
+    return deadline <= get_pakistan_time()
 
 # =========================================================
 # 4. AUTHENTICATION
@@ -171,8 +200,12 @@ def get_csrf_token():
 
 
 @app.context_processor
-def inject_csrf_token():
-    return {"csrf_token": get_csrf_token}
+def inject_template_values():
+    return {
+        "csrf_token": get_csrf_token,
+        "current_user_id": get_user_id(),
+        "blood_types": sorted(BLOOD_TYPES),
+    }
 
 
 @app.before_request
@@ -220,7 +253,7 @@ def add_security_headers(response):
 
 
 # =========================================================
-# 7. NOTIFICATION HELPER
+# 7. NOTIFICATIONS
 # =========================================================
 
 def create_notification(
@@ -228,31 +261,34 @@ def create_notification(
     user_id,
     message,
     notification_type,
+    related_request_id=None,
+    related_match_id=None,
 ):
     if not user_id:
         return
 
-    cursor = connection.cursor()
-
-    created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    cursor.execute(
+    connection.execute(
         """
         INSERT INTO notifications
-            (user_id, message, notification_type, created_at)
-        VALUES (?, ?, ?, ?)
+            (
+                user_id, message, notification_type, created_at,
+                related_request_id, related_match_id
+            )
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             user_id,
             message,
             notification_type,
-            created_at,
+            get_current_time(),
+            related_request_id,
+            related_match_id,
         ),
     )
 
 
 # =========================================================
-# 8. 90-DAY DONOR ELIGIBILITY
+# 8. DONOR ELIGIBILITY
 # =========================================================
 
 def check_donor_eligibility(user_id):
@@ -263,34 +299,79 @@ def check_donor_eligibility(user_id):
 
         cursor.execute(
             """
-            SELECT id, name, last_donation, eligible
+            SELECT
+                id, name, last_donation, eligible,
+                availability, health_screening_status
             FROM donors
             WHERE user_id = ?
             """,
             (user_id,),
         )
 
-        donors = cursor.fetchall()
+        for donor in cursor.fetchall():
+            (
+                donor_id,
+                donor_name,
+                last_donation,
+                eligible,
+                availability,
+                health_status,
+            ) = donor
 
-        for donor_record in donors:
-            donor_id = donor_record[0]
-            donor_name = donor_record[1]
-            last_donation = donor_record[2]
-            eligible = donor_record[3]
+            # Unknown or incomplete screening status is not cleared.
+            if health_status != "Self-Declared Clear":
+                cursor.execute(
+                    """
+                    UPDATE donors
+                    SET eligible = 0,
+                        availability = ?
+                    WHERE id = ? AND user_id = ?
+                    """,
+                    (UNAVAILABLE, donor_id, user_id),
+                )
+                continue
 
+            # No previous donation: eligible only if screening is clear.
             if not last_donation:
+                if eligible != 1:
+                    cursor.execute(
+                        """
+                        UPDATE donors
+                        SET eligible = 1
+                        WHERE id = ? AND user_id = ?
+                        """,
+                        (donor_id, user_id),
+                    )
                 continue
 
             donation_date = parse_date(last_donation)
 
             if donation_date is None:
+                cursor.execute(
+                    """
+                    UPDATE donors
+                    SET eligible = 0,
+                        availability = ?
+                    WHERE id = ? AND user_id = ?
+                    """,
+                    (UNAVAILABLE, donor_id, user_id),
+                )
                 continue
 
-            days_since_donation = (
-                date.today() - donation_date
-            ).days
+            days_since = (date.today() - donation_date).days
 
-            if days_since_donation >= 90 and eligible == 0:
+            if days_since < 90:
+                cursor.execute(
+                    """
+                    UPDATE donors
+                    SET eligible = 0,
+                        availability = ?
+                    WHERE id = ? AND user_id = ?
+                    """,
+                    (UNAVAILABLE, donor_id, user_id),
+                )
+
+            elif eligible != 1:
                 cursor.execute(
                     """
                     UPDATE donors
@@ -304,8 +385,9 @@ def check_donor_eligibility(user_id):
                     connection,
                     user_id,
                     (
-                        f"{donor_name} has completed "
-                        "the 90-day donation interval."
+                        f"{donor_name} has completed the 90-day "
+                        "donation interval. Professional screening "
+                        "is still required before donating."
                     ),
                     "eligibility",
                 )
@@ -322,206 +404,136 @@ def check_donor_eligibility(user_id):
 
 
 # =========================================================
-# 9. PUBLIC HOME PAGE
+# 9. MATCH AND UNIT HELPERS
 # =========================================================
 
-@app.route("/")
-def home():
-    connection = get_db_connection()
+def get_reserved_units(connection, request_id, exclude_match_id=None):
+    """
+    Units reserved by active matches.
 
-    try:
-        cursor = connection.cursor()
+    These units are not counted as received units.
+    They only prevent over-acceptance.
+    """
 
-        # Never return donor contact numbers to the public homepage.
-        cursor.execute(
+    if exclude_match_id is None:
+        row = connection.execute(
             """
-            SELECT name, blood_type, location
-            FROM donors
-            WHERE availability = ?
-              AND eligible = 1
-            ORDER BY id DESC
-            LIMIT 20
-            """,
-            (AVAILABLE,),
-        )
-
-        public_donors = cursor.fetchall()
-
-        # Request contact information is excluded from public results.
-        cursor.execute(
-            """
-            SELECT
-                br.id,
-                u.name,
-                br.blood_type,
-                br.urgency,
-                br.location,
-                br.hospital,
-                br.status
-            FROM blood_requests AS br
-            LEFT JOIN users AS u ON br.user_id = u.id
-            WHERE br.status = 'Pending'
-            ORDER BY br.id DESC
-            LIMIT 20
-            """
-        )
-
-        public_requests = cursor.fetchall()
-
-    finally:
-        connection.close()
-
-    return render_template(
-        "index.html",
-        donors=public_donors,
-        requests=public_requests,
-    )
-
-
-# =========================================================
-# 10. DASHBOARD
-# =========================================================
-
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    check_donor_eligibility(session["user_id"])
-
-    return render_template(
-        "dashboard.html",
-        user_name=session.get("user_name", "User"),
-    )
-
-
-# =========================================================
-# 11. DONOR REGISTRATION
-# =========================================================
-
-@app.route("/donor", methods=["GET", "POST"])
-@login_required
-def donor():
-    if request.method == "GET":
-        return render_template("donor.html")
-
-    name = form_text("name", 100)
-    age_text = form_text("age", 3)
-    contact = form_text("contact", 30)
-    blood_type = form_text("blood_type", 3)
-    location = form_text("location", 150)
-
-    last_donation = (
-        request.form.get("last_donation") or ""
-    ).strip()
-
-    if not all([name, age_text, contact, blood_type, location]):
-        flash("Please complete all required donor fields.")
-        return redirect(url_for("donor"))
-
-    try:
-        age = int(age_text)
-    except ValueError:
-        age = 0
-
-    if not 18 <= age <= 100:
-        flash("Donor age must be between 18 and 100.")
-        return redirect(url_for("donor"))
-
-    if not valid_phone(contact):
-        flash("Please enter a valid donor contact number.")
-        return redirect(url_for("donor"))
-
-    if blood_type not in BLOOD_TYPES:
-        flash("Please select a valid blood group.")
-        return redirect(url_for("donor"))
-
-    if last_donation:
-        donation_date = parse_date(last_donation)
-
-        if donation_date is None:
-            flash("Invalid donation date or date is in the future.")
-            return redirect(url_for("donor"))
-
-        eligible = int(
-            (date.today() - donation_date).days >= 90
-        )
-
-        availability = AVAILABLE if eligible else UNAVAILABLE
-
-    else:
-        last_donation = None
-        eligible = 1
-        availability = AVAILABLE
-
-    connection = get_db_connection()
-
-    try:
-        cursor = connection.cursor()
-
-        # Prevent duplicate contact records for the same account.
-        cursor.execute(
-            """
-            SELECT id
-            FROM donors
-            WHERE user_id = ? AND contact = ?
-            """,
-            (session["user_id"], contact),
-        )
-
-        if cursor.fetchone():
-            flash("You have already registered this contact as a donor.")
-            return redirect(url_for("donor"))
-
-        cursor.execute(
-            """
-            INSERT INTO donors
-                (
-                    name,
-                    age,
-                    contact,
-                    blood_type,
-                    location,
-                    availability,
-                    last_donation,
-                    eligible,
-                    user_id
-                )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            SELECT COALESCE(SUM(units_pledged), 0)
+            FROM request_matches
+            WHERE request_id = ?
+              AND status IN (?, ?, ?)
             """,
             (
-                name,
-                age,
-                contact,
-                blood_type,
-                location,
-                availability,
-                last_donation,
-                eligible,
-                session["user_id"],
+                request_id,
+                *ACTIVE_MATCH_STATUSES,
             ),
+        ).fetchone()
+    else:
+        row = connection.execute(
+            """
+            SELECT COALESCE(SUM(units_pledged), 0)
+            FROM request_matches
+            WHERE request_id = ?
+              AND status IN (?, ?, ?)
+              AND id != ?
+            """,
+            (
+                request_id,
+                *ACTIVE_MATCH_STATUSES,
+                exclude_match_id,
+            ),
+        ).fetchone()
+
+    return int(row[0] or 0)
+
+
+def donor_has_active_match(connection, donor_user_id):
+    row = connection.execute(
+        """
+        SELECT id
+        FROM request_matches
+        WHERE donor_user_id = ?
+          AND status IN (?, ?, ?)
+        LIMIT 1
+        """,
+        (
+            donor_user_id,
+            *ACTIVE_MATCH_STATUSES,
+        ),
+    ).fetchone()
+
+    return row is not None
+
+
+def update_request_units(connection, request_id):
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT requested_units, received_units, user_id, status
+        FROM blood_requests
+        WHERE id = ?
+        """,
+        (request_id,),
+    )
+
+    row = cursor.fetchone()
+
+    if not row:
+        return
+
+    requested_units = int(row[0] or 0)
+    received_units = int(row[1] or 0)
+    requester_id = row[2]
+    previous_status = row[3]
+
+    remaining_units = max(requested_units - received_units, 0)
+
+    new_status = (
+        "Fulfilled"
+        if remaining_units == 0
+        else "Pending"
+    )
+
+    cursor.execute(
+        """
+        UPDATE blood_requests
+        SET remaining_units = ?,
+            status = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            remaining_units,
+            new_status,
+            get_current_time(),
+            request_id,
+        ),
+    )
+
+    if remaining_units == 0 and previous_status != "Fulfilled":
+        create_notification(
+            connection,
+            requester_id,
+            "Your blood request has been fully fulfilled.",
+            "request_fulfilled",
+            related_request_id=request_id,
         )
 
-        connection.commit()
-        flash("Donor registered successfully.")
-
-    except Exception:
-        connection.rollback()
-        app.logger.exception("Donor registration failed")
-        flash("Unable to register donor. Please check your information.")
-
-    finally:
-        connection.close()
-
-    return redirect(url_for("donor"))
-
 
 # =========================================================
-# 12. DONOR LIST
+# 10. EMERGENCY PAGE DATA
 # =========================================================
+def get_emergency_page_data(user_id):
+    """
+    Supplies all five sections of emergency.html:
 
-@app.route("/donor-list")
-@login_required
-def donor_list():
-    user_id = session["user_id"]
+    1. Create Blood Request
+    2. Available Blood Requests
+    3. My Blood Requests
+    4. My Matches
+    5. Donation and receipt progress
+    """
 
     check_donor_eligibility(user_id)
 
@@ -530,47 +542,840 @@ def donor_list():
     try:
         cursor = connection.cursor()
 
-        # Column order:
-        # 0 id, 1 name, 2 age, 3 contact, 4 blood_type,
-        # 5 location, 6 availability, 7 eligible, 8 owner user_id.
-        # Contact is returned only for the record's owner.
+        # -------------------------------------------------
+        # Donor profiles belonging to this user
+        # -------------------------------------------------
+
         cursor.execute(
             """
             SELECT
-                id,
-                name,
-                age,
-                CASE WHEN user_id = ? THEN contact ELSE NULL END,
-                blood_type,
-                location,
-                availability,
-                eligible,
-                user_id
+                id, name, blood_type, location, availability,
+                eligible, health_screening_status
             FROM donors
+            WHERE user_id = ?
             ORDER BY id DESC
             """,
             (user_id,),
         )
 
-        donors = cursor.fetchall()
+        donor_profiles = cursor.fetchall()
+
+        # -------------------------------------------------
+        # Blood groups compatible with this user's donors
+        # -------------------------------------------------
+
+        compatible_groups = set()
+
+        for donor in donor_profiles:
+            if (
+                donor[4] == AVAILABLE
+                and donor[5] == 1
+                and donor[6] == "Self-Declared Clear"
+            ):
+                compatible_groups.update(
+                    BLOOD_COMPATIBILITY.get(donor[2], [])
+                )
+
+        # -------------------------------------------------
+        # Available blood requests
+        #
+        # Tuple indexes used by emergency.html:
+        # 0 id
+        # 1 blood_type
+        # 2 urgency
+        # 3 location
+        # 4 hospital
+        # 5 created_at
+        # 6 status
+        # 7 requester user_id
+        # 8 requested_units
+        # 9 received_units
+        # 10 remaining_units
+        # 11 needed_by
+        # 12 reserved_units
+        # 13 requester name
+        # -------------------------------------------------
+
+        available_requests_list = []
+
+        if compatible_groups:
+            placeholders = ", ".join(
+                "?" for _ in compatible_groups
+            )
+
+            cursor.execute(
+                f"""
+                SELECT
+                    br.id,
+                    br.blood_type,
+                    br.urgency,
+                    br.location,
+                    br.hospital,
+                    br.created_at,
+                    br.status,
+                    br.user_id,
+                    br.requested_units,
+                    br.received_units,
+                    br.remaining_units,
+                    br.needed_by,
+                    COALESCE((
+                        SELECT SUM(rm.units_pledged)
+                        FROM request_matches AS rm
+                        WHERE rm.request_id = br.id
+                          AND rm.status IN (?, ?, ?)
+                    ), 0) AS reserved_units,
+                    u.name
+                FROM blood_requests AS br
+                LEFT JOIN users AS u ON u.id = br.user_id
+                WHERE br.status = 'Pending'
+                  AND br.remaining_units > 0
+                  AND br.user_id != ?
+                  AND br.blood_type IN ({placeholders})
+                  AND br.needed_by IS NOT NULL
+                  AND br.needed_by > ?
+                ORDER BY
+                    CASE br.urgency
+                        WHEN 'Emergency' THEN 1
+                        ELSE 2
+                    END,
+                    br.needed_by ASC,
+                    br.id DESC
+                """,
+                (
+                    *ACTIVE_MATCH_STATUSES,
+                    user_id,
+                    *compatible_groups,
+                    get_pakistan_time().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+                ),
+            )
+
+            available_requests_list = cursor.fetchall()
+
+        # -------------------------------------------------
+        # My blood requests
+        #
+        # Tuple indexes:
+        # 0 id, 1 blood_type, 2 urgency, 3 location,
+        # 4 hospital, 5 created_at, 6 status, 7 user_id,
+        # 8 requested_units, 9 received_units,
+        # 10 remaining_units, 11 needed_by
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                id,
+                blood_type,
+                urgency,
+                location,
+                hospital,
+                created_at,
+                status,
+                user_id,
+                requested_units,
+                received_units,
+                remaining_units,
+                needed_by
+            FROM blood_requests
+            WHERE user_id = ?
+            ORDER BY id DESC
+            """,
+            (user_id,),
+        )
+
+        my_requests_list = cursor.fetchall()
+
+        # -------------------------------------------------
+        # My matches
+        # Return dictionaries for emergency.html.
+        # Contact information is added only after confirmation.
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                rm.id,
+                rm.request_id,
+                rm.donor_id,
+                rm.donor_user_id,
+                rm.units_pledged,
+                rm.status,
+                rm.requester_confirmed,
+                rm.accepted_at,
+                rm.confirmed_at,
+                br.user_id,
+                br.blood_type,
+                br.location,
+                br.hospital,
+                br.remaining_units,
+                requester.name,
+                donor.name,
+                br.requested_units,
+                br.received_units
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            JOIN donors AS donor ON donor.id = rm.donor_id
+            LEFT JOIN users AS requester ON requester.id = br.user_id
+            WHERE br.user_id = ?
+               OR rm.donor_user_id = ?
+            ORDER BY rm.id DESC
+            """,
+            (user_id, user_id),
+        )
+
+        match_rows = cursor.fetchall()
+
+        matches = []
+        match_contacts = {}
+
+        for match in match_rows:
+            match_id = match[0]
+            requester_id = match[9]
+            donor_user_id = match[3]
+            match_status = match[5]
+            requester_confirmed = match[6]
+
+            my_role = (
+                "Requester"
+                if requester_id == user_id
+                else "Donor"
+            )
+
+            match_data = {
+                "id": match_id,
+                "request_id": match[1],
+                "donor_id": match[2],
+                "donor_user_id": donor_user_id,
+                "requester_user_id": requester_id,
+                "units_pledged": match[4],
+                "status": match_status,
+                "requester_confirmed": requester_confirmed,
+                "accepted_at": match[7],
+                "confirmed_at": match[8],
+                "blood_type": match[10],
+                "location": match[11],
+                "hospital": match[12],
+                "remaining_units": match[13],
+                "requester_name": match[14],
+                "donor_name": match[15],
+                "requested_units": match[16],
+                "received_units": match[17],
+                "my_role": my_role,
+                "requester_phone": None,
+                "donor_phone": None,
+            }
+
+            # Only confirmed matches can reveal contact details.
+            confirmed = (
+                match_status in {
+                    "Confirmed",
+                    "Donation Reported",
+                }
+                and requester_confirmed == 1
+            )
+
+            if confirmed:
+                if my_role == "Requester":
+                    contact_row = connection.execute(
+                        """
+                        SELECT contact
+                        FROM donors
+                        WHERE id = ?
+                          AND user_id = ?
+                        """,
+                        (match[2], donor_user_id),
+                    ).fetchone()
+
+                    if contact_row:
+                        phone = contact_row[0]
+                        match_data["donor_phone"] = phone
+
+                        match_contacts[match_id] = {
+                            "name": match[15],
+                            "phone": phone,
+                            "whatsapp": normalize_whatsapp_number(
+                                phone
+                            ),
+                        }
+
+                else:
+                    contact_row = connection.execute(
+                        """
+                        SELECT br.contact, u.phone
+                        FROM blood_requests AS br
+                        LEFT JOIN users AS u ON u.id = br.user_id
+                        WHERE br.id = ?
+                          AND br.user_id = ?
+                        """,
+                        (match[1], requester_id),
+                    ).fetchone()
+
+                    if contact_row:
+                        phone = contact_row[0] or contact_row[1]
+                        match_data["requester_phone"] = phone
+
+                        match_contacts[match_id] = {
+                            "name": match[14],
+                            "phone": phone,
+                            "whatsapp": normalize_whatsapp_number(
+                                phone
+                            ),
+                        }
+
+            matches.append(match_data)
+
+        # -------------------------------------------------
+        # Donation and receipt progress
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                d.id,
+                d.donation_date,
+                d.hospital,
+                d.location,
+                d.units,
+                d.status,
+                d.requester_confirmed,
+                d.request_id,
+                d.match_id,
+                donor.name,
+                donor.blood_type,
+                rm.donor_user_id,
+                br.user_id
+            FROM donations AS d
+            JOIN donors AS donor ON donor.id = d.donor_id
+            LEFT JOIN request_matches AS rm ON rm.id = d.match_id
+            LEFT JOIN blood_requests AS br ON br.id = d.request_id
+            WHERE donor.user_id = ?
+               OR br.user_id = ?
+            ORDER BY d.id DESC
+            """,
+            (user_id, user_id),
+        )
+
+        donations = cursor.fetchall()
+
+        return {
+            "donor_profiles": donor_profiles,
+            "available_requests": available_requests_list,
+            "my_requests": my_requests_list,
+            "matches": matches,
+            "donations": donations,
+            "match_contacts": match_contacts,
+            "health_questions": HEALTH_QUESTIONS,
+        }
 
     finally:
         connection.close()
 
-    return render_template("donor_list.html", donors=donors)
+# =========================================================
+# 11. PUBLIC LANDING PAGE
+# =========================================================
+
+@app.route("/")
+def home():
+    connection = get_db_connection()
+
+    try:
+        donor_count = connection.execute(
+            "SELECT COUNT(*) FROM donors"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    return render_template(
+        "index.html",
+        donor_count=donor_count,
+    )
+
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/how-it-works")
+def how_it_works():
+    return render_template("how_it_works.html")
 
 
 # =========================================================
-# 13. REPORT DONATION — OWNER ONLY
+# 13. DASHBOARD
+# =========================================================
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    user_id = get_user_id()
+    check_donor_eligibility(user_id)
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            "SELECT COUNT(*) FROM donors WHERE user_id = ?",
+            (user_id,),
+        )
+        donor_count = cursor.fetchone()[0]
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM blood_requests
+            WHERE user_id = ? AND status = 'Pending'
+            """,
+            (user_id,),
+        )
+        active_request_count = cursor.fetchone()[0]
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM request_matches
+            WHERE donor_user_id = ?
+              AND status IN ('Confirmed', 'Donation Reported')
+            """,
+            (user_id,),
+        )
+        confirmed_match_count = cursor.fetchone()[0]
+
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM notifications
+            WHERE user_id = ? AND is_read = 0
+            """,
+            (user_id,),
+        )
+        unread_notifications = cursor.fetchone()[0]
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "dashboard.html",
+        user_name=session.get("user_name", "User"),
+        donor_count=donor_count,
+        active_request_count=active_request_count,
+        confirmed_match_count=confirmed_match_count,
+        unread_notifications=unread_notifications,
+    )
+
+
+# =========================================================
+# 14. DONOR REGISTRATION / PROFILE
+# =========================================================
+
+@app.route("/donor", methods=["GET", "POST"])
+@login_required
+def donor():
+
+    user_id = get_user_id()
+    connection = get_db_connection()
+
+    try:
+        existing_donor = connection.execute(
+            """
+            SELECT *
+            FROM donors
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_id,)
+        ).fetchone()
+
+        if request.method == "GET":
+            return render_template(
+                "donor.html",
+                donor=existing_donor
+            )
+
+        # -------------------------------
+        # Read form data
+        # -------------------------------
+
+        name = clean_text(request.form.get("name", ""))
+        age_text = clean_text(request.form.get("age", ""))
+        contact = clean_text(request.form.get("contact", ""))
+        blood_type = clean_text(request.form.get("blood_type", ""))
+        location = clean_text(request.form.get("location", ""))
+        hospital = clean_text(request.form.get("hospital", ""))
+
+        donated_before = request.form.get("donated_before", "no")
+        last_donation = request.form.get("last_donation", "").strip()
+
+        allowed_blood_types = {
+            "O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"
+        }
+
+        # -------------------------------
+        # Validate basic information
+        # -------------------------------
+
+        if not all([name, age_text, contact, blood_type, location]):
+            flash("Please complete all required donor details.", "error")
+            return redirect(url_for("donor"))
+
+        try:
+            age = int(age_text)
+        except (TypeError, ValueError):
+            flash("Please enter a valid age.", "error")
+            return redirect(url_for("donor"))
+
+        if age < 18 or age > 100:
+            flash("Donors must be between 18 and 100 years old.", "error")
+            return redirect(url_for("donor"))
+
+        if blood_type not in allowed_blood_types:
+            flash("Please select a valid blood group.", "error")
+            return redirect(url_for("donor"))
+
+        if not valid_phone(contact):
+            flash("Please enter a valid contact number.", "error")
+            return redirect(url_for("donor"))
+
+        # -------------------------------
+        # Validate donation history
+        # -------------------------------
+
+        if donated_before not in ("yes", "no"):
+            flash("Please select your donation history.", "error")
+            return redirect(url_for("donor"))
+
+        if donated_before == "yes":
+            if not last_donation:
+                flash("Please enter your last donation date.", "error")
+                return redirect(url_for("donor"))
+
+            try:
+                donation_date = date.fromisoformat(last_donation)
+            except ValueError:
+                flash("Please enter a valid donation date.", "error")
+                return redirect(url_for("donor"))
+
+            if donation_date > date.today():
+                flash("Last donation date cannot be in the future.", "error")
+                return redirect(url_for("donor"))
+
+            last_donation = donation_date.isoformat()
+
+        else:
+            last_donation = None
+
+        # -------------------------------
+        # Health screening
+        # -------------------------------
+
+        screening_fields = [
+            "fever",
+            "chronic_condition",
+            "medication",
+            "recent_surgery",
+            "blood_condition"
+        ]
+
+        screening_answers = {}
+
+        for field in screening_fields:
+            answer = request.form.get(field, "").strip().lower()
+
+            if answer not in ("yes", "no"):
+                flash("Please answer every health screening question.", "error")
+                return redirect(url_for("donor"))
+
+            screening_answers[field] = answer
+
+        consent = request.form.get("health_screening_consent")
+
+        if consent != "confirmed":
+            flash("Please confirm the health screening declaration.", "error")
+            return redirect(url_for("donor"))
+
+        # A positive answer requires professional review.
+        has_positive_answer = any(
+            answer == "yes"
+            for answer in screening_answers.values()
+        )
+
+        if has_positive_answer:
+            health_status = "Needs Professional Review"
+        else:
+            health_status = "Self-Declared Clear"
+
+        # -------------------------------
+        # Check 90-day donation cooldown
+        # -------------------------------
+
+        eligible = 1
+
+        if last_donation:
+            previous_date = date.fromisoformat(last_donation)
+            days_since_donation = (date.today() - previous_date).days
+
+            if days_since_donation < 90:
+                eligible = 0
+
+        if health_status != "Self-Declared Clear":
+            eligible = 0
+
+        availability = (
+            "Available"
+            if eligible == 1
+            else "Not Available"
+        )
+
+        # -------------------------------
+        # Save donor profile
+        # -------------------------------
+
+        answers_json = json.dumps(screening_answers)
+        screening_date = date.today().isoformat()
+
+        if existing_donor:
+
+            connection.execute(
+                """
+                UPDATE donors
+                SET
+                    name = ?,
+                    age = ?,
+                    contact = ?,
+                    blood_type = ?,
+                    location = ?,
+                    hospital = ?,
+                    last_donation = ?,
+                    eligible = ?,
+                    availability = ?,
+                    health_screening_status = ?,
+                    health_screening_answers = ?,
+                    health_screening_date = ?
+                WHERE id = ?
+                  AND user_id = ?
+                """,
+                (
+                    name,
+                    age,
+                    contact,
+                    blood_type,
+                    location,
+                    hospital,
+                    last_donation,
+                    eligible,
+                    availability,
+                    health_status,
+                    answers_json,
+                    screening_date,
+                    existing_donor["id"] if hasattr(existing_donor, "keys") else existing_donor[0],
+                    user_id
+                )
+            )
+
+            message = "Your donor profile has been updated successfully."
+
+        else:
+
+            connection.execute(
+                """
+                INSERT INTO donors (
+                    name,
+                    age,
+                    contact,
+                    blood_type,
+                    location,
+                    hospital,
+                    last_donation,
+                    eligible,
+                    availability,
+                    user_id,
+                    health_screening_status,
+                    health_screening_answers,
+                    health_screening_date
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    name,
+                    age,
+                    contact,
+                    blood_type,
+                    location,
+                    hospital,
+                    last_donation,
+                    eligible,
+                    availability,
+                    user_id,
+                    health_status,
+                    answers_json,
+                    screening_date
+                )
+            )
+
+            message = "Your donor profile has been registered successfully."
+
+        connection.commit()
+
+        flash(message, "success")
+
+        if health_status != "Self-Declared Clear":
+            flash(
+                "Your answers require professional review. "
+                "Your donor availability remains disabled until cleared.",
+                "warning"
+            )
+        elif eligible == 0:
+            flash(
+                "Your profile is saved, but you are temporarily unavailable "
+                "because fewer than 90 days have passed since your last donation.",
+                "warning"
+            )
+
+        return redirect(url_for("dashboard"))
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Donor registration/update failed.")
+        flash("Something went wrong while saving your donor profile.", "error")
+        return redirect(url_for("donor"))
+
+    finally:
+        connection.close()
+
+
+# =========================================================
+# 15. DONOR SEARCH
+# =========================================================
+
+@app.route("/search", methods=["GET", "POST"])
+@login_required
+def search():
+    donors = []
+    selected_blood_type = ""
+    selected_location = ""
+    compatible_donor_groups = []
+
+    if request.method == "POST":
+        selected_blood_type = form_text("blood_type", 3)
+        selected_location = form_text("location", 150)
+
+        if (
+            selected_blood_type not in BLOOD_TYPES
+            or not selected_location
+        ):
+            flash("Select a valid blood group and enter a location.")
+
+        else:
+            compatible_donor_groups = get_compatible_donor_groups(
+                selected_blood_type
+            )
+
+            connection = get_db_connection()
+
+            try:
+                placeholders = ", ".join(
+                    "?" for _ in compatible_donor_groups
+                )
+
+                donors = connection.execute(
+                    f"""
+               SELECT
+    id, name, contact, blood_type, location,
+    hospital, availability
+                    FROM donors
+                    WHERE LOWER(location) LIKE LOWER(?)
+                      AND availability = ?
+                      AND eligible = 1
+                      AND health_screening_status != ?
+                      AND blood_type IN ({placeholders})
+                    ORDER BY id DESC
+                    """,
+                    (
+                        f"%{selected_location}%",
+                        AVAILABLE,
+                        "Needs Professional Review",
+                        *compatible_donor_groups,
+                    ),
+                ).fetchall()
+
+            except Exception:
+                app.logger.exception("Donor search failed")
+                flash("Unable to search donors.")
+
+            finally:
+                connection.close()
+
+    return render_template(
+        "search.html",
+        donors=donors,
+        selected_blood_type=selected_blood_type,
+        selected_location=selected_location,
+        compatible_donor_groups=compatible_donor_groups,
+    )
+
+
+# =========================================================
+# 16. DONOR DIRECTORY
+# =========================================================
+@app.route("/donor-list")
+@login_required
+def donor_list():
+    connection = get_db_connection()
+
+    try:
+        donors = connection.execute(
+            """
+            SELECT
+                d.id,
+                d.name,
+                d.age,
+
+                CASE
+                    WHEN d.availability = ?
+                         AND d.eligible = 1
+                    THEN d.contact
+                    ELSE NULL
+                END AS authorized_contact,
+
+                d.blood_type,
+                d.location,
+                d.availability,
+                d.eligible,
+                d.last_donation,
+                d.user_id
+
+            FROM donors AS d
+            ORDER BY d.id DESC
+            """,
+            (AVAILABLE,),
+        ).fetchall()
+
+    except Exception:
+        app.logger.exception("Donor directory loading failed")
+        flash("Unable to load the donor directory.", "error")
+        donors = []
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "donor_list.html",
+        donors=donors,
+    )
+    # =========================================================
+# DONOR AVAILABILITY TOGGLE
 # =========================================================
 
 @app.route(
-    "/report-donation/<int:donor_id>",
-    methods=["GET", "POST"],
+    "/toggle-availability/<int:donor_id>",
+    methods=["POST"],
 )
 @login_required
-def report_donation(donor_id):
-    user_id = session["user_id"]
+def toggle_availability(donor_id):
+
+    user_id = get_user_id()
     connection = get_db_connection()
 
     try:
@@ -578,7 +1383,7 @@ def report_donation(donor_id):
 
         cursor.execute(
             """
-            SELECT id, name, blood_type
+            SELECT availability, eligible, health_screening_status
             FROM donors
             WHERE id = ? AND user_id = ?
             """,
@@ -588,118 +1393,29 @@ def report_donation(donor_id):
         donor_record = cursor.fetchone()
 
         if not donor_record:
-            flash("You are not authorized to manage this donor.")
+            flash("Donor profile not found or access denied.", "error")
             return redirect(url_for("donor_list"))
 
-        if request.method == "GET":
-            return render_template(
-                "report_donation.html",
-                donor=donor_record,
-                today=date.today().isoformat(),
-            )
-
-        donation_date_text = form_text("donation_date", 10)
-        hospital = form_text("hospital", 150)
-        location = form_text("location", 150)
-
-        parsed_date = parse_date(donation_date_text)
+        availability = donor_record[0]
+        eligible = donor_record[1]
+        health_status = donor_record[2]
 
         if (
-            not all([hospital, location])
-            or parsed_date is None
+            eligible != 1
+            or health_status != "Self-Declared Clear"
         ):
-            flash("Enter a valid donation date, hospital, and location.")
-            return redirect(
-                url_for("report_donation", donor_id=donor_id)
+            flash(
+                "Your donor profile is not currently eligible. "
+                "Availability cannot be enabled.",
+                "warning",
             )
-
-        cursor.execute(
-            """
-            INSERT INTO donations
-                (donor_id, donation_date, hospital, location)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                donor_id,
-                parsed_date.isoformat(),
-                hospital,
-                location,
-            ),
-        )
-
-        # A new donation starts a new 90-day interval.
-        cursor.execute(
-            """
-            UPDATE donors
-            SET last_donation = ?,
-                eligible = 0,
-                availability = ?
-            WHERE id = ? AND user_id = ?
-            """,
-            (
-                parsed_date.isoformat(),
-                UNAVAILABLE,
-                donor_id,
-                user_id,
-            ),
-        )
-
-        connection.commit()
-        flash("Donation reported successfully.")
-
-    except Exception:
-        connection.rollback()
-        app.logger.exception("Donation report failed")
-        flash("Unable to save the donation report.")
-
-    finally:
-        connection.close()
-
-    return redirect(url_for("donor_list"))
-
-
-# =========================================================
-# 14. TOGGLE AVAILABILITY — OWNER ONLY
-# =========================================================
-
-@app.route(
-    "/toggle-availability/<int:donor_id>",
-    methods=["POST"],
-)
-@login_required
-def toggle_availability(donor_id):
-    connection = get_db_connection()
-
-    try:
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT availability, eligible
-            FROM donors
-            WHERE id = ? AND user_id = ?
-            """,
-            (donor_id, session["user_id"]),
-        )
-
-        donor_record = cursor.fetchone()
-
-        if not donor_record:
-            flash("You are not authorized to modify this donor.")
             return redirect(url_for("donor_list"))
 
-        current_status = donor_record[0]
-        eligible = donor_record[1]
-
-        if current_status == AVAILABLE:
-            new_status = UNAVAILABLE
-
-        elif eligible:
-            new_status = AVAILABLE
-
-        else:
-            flash("This donor has not completed the 90-day interval.")
-            return redirect(url_for("donor_list"))
+        new_availability = (
+            UNAVAILABLE
+            if availability == AVAILABLE
+            else AVAILABLE
+        )
 
         cursor.execute(
             """
@@ -707,91 +1423,30 @@ def toggle_availability(donor_id):
             SET availability = ?
             WHERE id = ? AND user_id = ?
             """,
-            (
-                new_status,
-                donor_id,
-                session["user_id"],
-            ),
+            (new_availability, donor_id, user_id),
         )
 
         connection.commit()
-        flash("Donor availability updated.")
+
+        flash(
+            f"Donor availability changed to {new_availability}.",
+            "success",
+        )
 
     except Exception:
         connection.rollback()
-        app.logger.exception("Availability update failed")
-        flash("Unable to update donor availability.")
+        app.logger.exception("Availability toggle failed")
+        flash("Unable to update donor availability.", "error")
 
     finally:
         connection.close()
 
     return redirect(url_for("donor_list"))
 
-
 # =========================================================
-# 15. SEARCH DONORS
-# =========================================================
-
-@app.route("/search", methods=["GET", "POST"])
-@login_required
-def search():
-    donors = []
-
-    if request.method == "POST":
-        blood_type = form_text("blood_type", 3)
-        location = form_text("location", 150)
-
-        if blood_type not in BLOOD_TYPES or not location:
-            flash("Select a valid blood group and enter a location.")
-            return redirect(url_for("search"))
-
-        connection = get_db_connection()
-
-        try:
-            cursor = connection.cursor()
-
-            # Do not expose donor phone numbers in search results.
-            cursor.execute(
-                """
-                SELECT
-                    name,
-                    NULL AS contact,
-                    blood_type,
-                    location
-                FROM donors
-                WHERE location = ?
-                  AND availability = ?
-                  AND eligible = 1
-                ORDER BY id DESC
-                """,
-                (location, AVAILABLE),
-            )
-
-            all_donors = cursor.fetchall()
-
-            # Match each donor's blood type against the requested
-            # recipient blood type.
-            donors = [
-                row
-                for row in all_donors
-                if (
-                    row[2] in BLOOD_COMPATIBILITY
-                    and blood_type in BLOOD_COMPATIBILITY[row[2]]
-                )
-            ]
-
-        finally:
-            connection.close()
-
-    return render_template("search.html", donors=donors)
-
-
-# =========================================================
-# 16. EMERGENCY BLOOD REQUESTS
+# 17. EMERGENCY PAGE AND CREATE REQUEST
 # =========================================================
 
-# The endpoint is explicitly named "request_blood" to match
-# the dashboard.html and emergency.html templates.
 @app.route(
     "/request",
     methods=["GET", "POST"],
@@ -799,155 +1454,454 @@ def search():
 )
 @login_required
 def blood_request():
-    user_id = session["user_id"]
+    user_id = get_user_id()
 
-    if request.method == "POST":
-        blood_type = form_text("blood_type", 3)
-        urgency = form_text("urgency", 20)
-        location = form_text("location", 150)
-        hospital = form_text("hospital", 150)
-        contact = form_text("contact", 30)
+    if request.method == "GET":
+        page_data = get_emergency_page_data(user_id)
 
-        if (
-            blood_type not in BLOOD_TYPES
-            or urgency not in URGENCY_LEVELS
-            or not location
-            or not hospital
-            or not valid_phone(contact)
-        ):
-            flash(
-                "Check the blood group, urgency, location, "
-                "hospital, and contact number."
-            )
-            return redirect(url_for("request_blood"))
+        return render_template(
+            "emergency.html",
+            **page_data,
+        )
 
-        connection = get_db_connection()
+    blood_type = form_text("blood_type", 3)
+    location = form_text("location", 150)
+    hospital = form_text("hospital", 150)
+    contact = form_text("contact", 30)
+    units_text = form_text("requested_units", 4)
+    needed_by_text = (
+        request.form.get("needed_by") or ""
+    ).strip()
 
-        try:
-            cursor = connection.cursor()
+    try:
+        requested_units = int(units_text)
+    except (TypeError, ValueError):
+        requested_units = 0
 
-            cursor.execute(
-                """
-                INSERT INTO blood_requests
-                    (
-                        blood_type,
-                        urgency,
-                        location,
-                        hospital,
-                        contact,
-                        user_id
-                    )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
+    deadline, needed_by, urgency = parse_needed_by(
+        needed_by_text
+    )
+
+    if (
+        blood_type not in BLOOD_TYPES
+        or not location
+        or not hospital
+        or not valid_phone(contact)
+        or not 1 <= requested_units <= 8
+        or deadline is None
+    ):
+        flash(
+            "Check the blood group, location, hospital, contact number, "
+            "requested units, and future deadline.",
+            "error",
+        )
+        return redirect(url_for("request_blood"))
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        created_at = get_current_time()
+
+        cursor.execute(
+            """
+            INSERT INTO blood_requests
                 (
                     blood_type,
                     urgency,
                     location,
                     hospital,
                     contact,
+                    needed_by,
+                    status,
                     user_id,
-                ),
+                    requested_units,
+                    received_units,
+                    remaining_units,
+                    created_at,
+                    updated_at
+                )
+            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, 0, ?, ?, ?)
+            """,
+            (
+                blood_type,
+                urgency,
+                location,
+                hospital,
+                contact,
+                needed_by,
+                user_id,
+                requested_units,
+                requested_units,
+                created_at,
+                created_at,
+            ),
+        )
+
+        request_id = get_inserted_id(cursor, connection)
+
+        deadline_display = deadline.strftime(
+            "%d %b %Y at %I:%M %p"
+        )
+
+        # Notify every registered user except the requester.
+        cursor.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE id != ?
+            """,
+            (user_id,),
+        )
+
+        registered_users = cursor.fetchall()
+
+        notification_message = (
+            f"New {urgency.lower()} blood request: "
+            f"{blood_type}, {requested_units} unit(s), "
+            f"location: {location}. "
+            f"Blood needed by: {deadline_display} "
+            f"(Pakistan time)."
+        )
+
+        for registered_user in registered_users:
+            create_notification(
+                connection,
+                registered_user[0],
+                notification_message,
+                "blood_request",
+                related_request_id=request_id,
             )
 
-            for donor_blood_type, compatible_recipients in (
-                BLOOD_COMPATIBILITY.items()
-            ):
-                if blood_type not in compatible_recipients:
-                    continue
+        record_audit(
+            connection,
+            user_id,
+            "blood_request_created",
+            "blood_request",
+            request_id,
+            (
+                f"Requested {requested_units} units of {blood_type}. "
+                f"Urgency: {urgency}. Deadline: {needed_by}."
+            ),
+        )
 
-                cursor.execute(
-                    """
-                    SELECT DISTINCT user_id
-                    FROM donors
-                    WHERE blood_type = ?
-                      AND location = ?
-                      AND availability = ?
-                      AND eligible = 1
-                      AND user_id IS NOT NULL
-                    """,
-                    (
-                        donor_blood_type,
-                        location,
-                        AVAILABLE,
-                    ),
-                )
+        connection.commit()
 
-                for donor_user in cursor.fetchall():
-                    donor_user_id = donor_user[0]
+        flash(
+            f"Blood request created successfully. "
+            f"Urgency: {urgency}.",
+            "success",
+        )
 
-                    if donor_user_id != user_id:
-                        create_notification(
-                            connection,
-                            donor_user_id,
-                            (
-                                f"Blood request: {blood_type} "
-                                f"needed in {location}."
-                            ),
-                            "blood_request",
-                        )
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Blood request creation failed")
+        flash("Unable to create the blood request.", "error")
 
-            connection.commit()
-            flash("Blood request posted successfully.")
+    finally:
+        connection.close()
 
-        except Exception:
-            connection.rollback()
-            app.logger.exception("Blood request creation failed")
-            flash("Unable to create the blood request.")
+    return redirect(url_for("request_blood"))
 
-        finally:
-            connection.close()
+# =========================================================
+# 18. LEGACY EMERGENCY ROUTES
+# All sections now live in emergency.html.
+# =========================================================
 
-        return redirect(url_for("dashboard"))
+@app.route("/available-requests")
+@login_required
+def available_requests():
+    return redirect(url_for("request_blood"))
+
+
+@app.route("/my-requests")
+@login_required
+def my_requests():
+    return redirect(url_for("request_blood"))
+
+
+@app.route("/my-matches")
+@login_required
+def my_matches():
+    return redirect(url_for("request_blood"))
+
+
+# =========================================================
+# 19. ACCEPT A REQUEST
+# =========================================================
+@app.route(
+    "/accept-request/<int:request_id>",
+    methods=["POST"],
+)
+@login_required
+def accept_request(request_id):
+    user_id = get_user_id()
+
+    try:
+        units_pledged = int(
+            request.form.get("units_pledged") or "1"
+        )
+    except (ValueError, TypeError):
+        units_pledged = 0
+
+    if not 1 <= units_pledged <= 8:
+        flash("Enter a valid number of units.")
+        return redirect(url_for("request_blood"))
+
+    check_donor_eligibility(user_id)
 
     connection = get_db_connection()
 
     try:
         cursor = connection.cursor()
 
-        # Column order:
-        # 0 id, 1 blood_type, 2 urgency, 3 location,
-        # 4 hospital, 5 contact, 6 status, 7 owner user_id.
-        # Only the owner receives the request's contact number.
+        if donor_has_active_match(connection, user_id):
+            flash(
+                "You already have an active match or pending acceptance. "
+                "Complete or cancel it before accepting another request."
+            )
+            return redirect(url_for("request_blood"))
+
         cursor.execute(
             """
             SELECT
                 id,
                 blood_type,
-                urgency,
                 location,
-                hospital,
-                CASE WHEN user_id = ? THEN contact ELSE NULL END,
-                status,
-                user_id
-            FROM blood_requests
-            WHERE status = 'Pending'
-            ORDER BY id DESC
+                eligible,
+                availability,
+                health_screening_status
+            FROM donors
+            WHERE user_id = ?
+            ORDER BY id
             """,
             (user_id,),
         )
 
-        requests_list = cursor.fetchall()
+        donor_profiles = cursor.fetchall()
+
+        if not donor_profiles:
+            flash("Register as a donor before accepting a request.")
+            return redirect(url_for("donor"))
+
+        cursor.execute(
+            """
+            SELECT
+                id,
+                blood_type,
+                location,
+                user_id,
+                remaining_units,
+                status,
+                needed_by
+            FROM blood_requests
+            WHERE id = ?
+            """,
+            (request_id,),
+        )
+
+        blood_request = cursor.fetchone()
+
+        if not blood_request:
+            flash("This request no longer exists.")
+            return redirect(url_for("request_blood"))
+
+        request_blood_type = blood_request[1]
+        request_location = blood_request[2]
+        requester_id = blood_request[3]
+        remaining_units = int(blood_request[4] or 0)
+        request_status = blood_request[5]
+        needed_by = blood_request[6]
+
+        if requester_id == user_id:
+            flash("You cannot accept your own blood request.")
+            return redirect(url_for("request_blood"))
+
+        if request_status != "Pending" or remaining_units <= 0:
+            flash("This request is no longer available.")
+            return redirect(url_for("request_blood"))
+
+        if is_request_expired(needed_by):
+            flash(
+                "This request has expired because its required deadline "
+                "has passed. It can no longer be accepted."
+            )
+            return redirect(url_for("request_blood"))
+
+        reserved_units = get_reserved_units(
+            connection,
+            request_id,
+        )
+
+        available_units = max(
+            remaining_units - reserved_units,
+            0,
+        )
+
+        if units_pledged > available_units:
+            flash(
+                f"Only {available_units} unreserved units are available "
+                "for acceptance."
+            )
+            return redirect(url_for("request_blood"))
+
+        matching_donor = None
+
+        for donor_record in donor_profiles:
+            donor_id = donor_record[0]
+            donor_type = donor_record[1]
+            donor_location = donor_record[2]
+            donor_eligible = donor_record[3]
+            donor_availability = donor_record[4]
+            screening_status = donor_record[5]
+
+            compatible_recipients = BLOOD_COMPATIBILITY.get(
+                donor_type,
+                [],
+            )
+
+            if (
+                request_blood_type in compatible_recipients
+                and donor_location.lower() == request_location.lower()
+                and donor_eligible == 1
+                and donor_availability == AVAILABLE
+                and screening_status == "Self-Declared Clear"
+            ):
+                matching_donor = donor_record
+                break
+
+        if not matching_donor:
+            flash(
+                "You do not have an available, eligible donor profile "
+                "compatible with this request and location."
+            )
+            return redirect(url_for("request_blood"))
+
+        donor_id = matching_donor[0]
+
+        cursor.execute(
+            """
+            SELECT id, status
+            FROM request_matches
+            WHERE request_id = ? AND donor_id = ?
+            """,
+            (request_id, donor_id),
+        )
+
+        old_match = cursor.fetchone()
+
+        if old_match:
+            old_match_id = old_match[0]
+            old_status = old_match[1]
+
+            if old_status not in {"Rejected", "Cancelled"}:
+                flash("You have already processed this donor/request match.")
+                return redirect(url_for("request_blood"))
+
+            cursor.execute(
+                """
+                UPDATE request_matches
+                SET donor_user_id = ?,
+                    units_pledged = ?,
+                    status = 'Accepted',
+                    requester_confirmed = 0,
+                    accepted_at = ?,
+                    confirmed_at = NULL,
+                    completed_at = NULL,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    user_id,
+                    units_pledged,
+                    get_current_time(),
+                    get_current_time(),
+                    old_match_id,
+                ),
+            )
+
+            match_id = old_match_id
+
+        else:
+            cursor.execute(
+                """
+                INSERT INTO request_matches
+                    (
+                        request_id,
+                        donor_id,
+                        donor_user_id,
+                        units_pledged,
+                        status,
+                        requester_confirmed,
+                        accepted_at,
+                        updated_at
+                    )
+                VALUES (?, ?, ?, ?, 'Accepted', 0, ?, ?)
+                """,
+                (
+                    request_id,
+                    donor_id,
+                    user_id,
+                    units_pledged,
+                    get_current_time(),
+                    get_current_time(),
+                ),
+            )
+
+            match_id = get_inserted_id(cursor, connection)
+
+        create_notification(
+            connection,
+            requester_id,
+            "A donor has accepted your blood request. Please review the match.",
+            "match_acceptance",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        create_notification(
+            connection,
+            user_id,
+            "Your acceptance has been sent to the requester for confirmation.",
+            "match_waiting",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        record_audit(
+            connection,
+            user_id,
+            "request_accepted",
+            "request_match",
+            match_id,
+            f"Accepted request {request_id}.",
+        )
+
+        connection.commit()
+        flash("Your acceptance has been sent to the requester.")
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Request acceptance failed")
+        flash("Unable to accept this request.")
 
     finally:
         connection.close()
 
-    return render_template(
-        "emergency.html",
-        requests=requests_list,
-        current_user_id=user_id,
-    )
-
+    return redirect(url_for("request_blood"))
 
 # =========================================================
-# 17. FULFIL REQUEST — OWNER ONLY
+# 20. DONOR CANCELS PENDING ACCEPTANCE
 # =========================================================
 
 @app.route(
-    "/fulfill/<int:request_id>",
+    "/cancel-acceptance/<int:match_id>",
     methods=["POST"],
 )
 @login_required
-def fulfill_request(request_id):
+def cancel_acceptance(match_id):
+    user_id = get_user_id()
     connection = get_db_connection()
 
     try:
@@ -955,33 +1909,74 @@ def fulfill_request(request_id):
 
         cursor.execute(
             """
-            UPDATE blood_requests
-            SET status = 'Fulfilled'
-            WHERE id = ?
-              AND user_id = ?
-              AND status = 'Pending'
+            SELECT
+                rm.request_id,
+                rm.donor_user_id,
+                rm.status,
+                rm.requester_confirmed,
+                br.user_id
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ?
             """,
-            (
-                request_id,
-                session["user_id"],
-            ),
+            (match_id,),
         )
 
-        if cursor.rowcount != 1:
-            connection.rollback()
-            flash(
-                "Request not found or you are not authorized "
-                "to fulfill it."
-            )
+        match = cursor.fetchone()
 
-        else:
-            connection.commit()
-            flash("Your blood request has been marked as fulfilled.")
+        if not match:
+            flash("Match not found.")
+            return redirect(url_for("request_blood"))
+
+        request_id = match[0]
+        donor_user_id = match[1]
+        match_status = match[2]
+        requester_confirmed = match[3]
+        requester_id = match[4]
+
+        if donor_user_id != user_id:
+            flash("Only the matched donor can cancel this acceptance.")
+            return redirect(url_for("request_blood"))
+
+        if match_status != "Accepted" or requester_confirmed == 1:
+            flash("Only a pending, unconfirmed acceptance can be cancelled.")
+            return redirect(url_for("request_blood"))
+
+        cursor.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Cancelled',
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (get_current_time(), match_id),
+        )
+
+        create_notification(
+            connection,
+            requester_id,
+            "A donor cancelled their pending acceptance.",
+            "match_cancelled",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        record_audit(
+            connection,
+            user_id,
+            "match_cancelled",
+            "request_match",
+            match_id,
+            "Donor cancelled pending acceptance.",
+        )
+
+        connection.commit()
+        flash("Your pending acceptance has been cancelled.")
 
     except Exception:
         connection.rollback()
-        app.logger.exception("Request fulfillment failed")
-        flash("Unable to fulfill the request.")
+        app.logger.exception("Acceptance cancellation failed")
+        flash("Unable to cancel this acceptance.")
 
     finally:
         connection.close()
@@ -990,7 +1985,933 @@ def fulfill_request(request_id):
 
 
 # =========================================================
-# 18. SIGNUP
+# 21. REQUESTER CONFIRMS OR REJECTS MATCH
+# =========================================================
+
+@app.route(
+    "/confirm-match/<int:match_id>",
+    methods=["POST"],
+)
+@login_required
+def confirm_match(match_id):
+    user_id = get_user_id()
+
+    action = (
+        request.form.get("action") or "confirm"
+    ).strip().lower()
+
+    if action not in {"confirm", "reject"}:
+        flash("Invalid match action.")
+        return redirect(url_for("request_blood"))
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                rm.id,
+                rm.request_id,
+                rm.donor_user_id,
+                rm.status,
+                rm.requester_confirmed,
+                br.user_id,
+                br.remaining_units,
+                rm.units_pledged
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ?
+            """,
+            (match_id,),
+        )
+
+        match = cursor.fetchone()
+
+        if not match:
+            flash("Match not found.")
+            return redirect(url_for("request_blood"))
+
+        request_id = match[1]
+        donor_user_id = match[2]
+        match_status = match[3]
+        requester_confirmed = match[4]
+        requester_id = match[5]
+        remaining_units = int(match[6] or 0)
+        units_pledged = int(match[7] or 0)
+
+        if requester_id != user_id:
+            flash("Only the requester can process this match.")
+            return redirect(url_for("request_blood"))
+
+        if match_status != "Accepted" or requester_confirmed:
+            flash("This match has already been processed.")
+            return redirect(url_for("request_blood"))
+
+        if action == "reject":
+            cursor.execute(
+                """
+                UPDATE request_matches
+                SET status = 'Rejected',
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (get_current_time(), match_id),
+            )
+
+            create_notification(
+                connection,
+                donor_user_id,
+                "The requester rejected your acceptance.",
+                "match_rejected",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+
+            flash("Match acceptance rejected.")
+
+        else:
+            reserved_units = get_reserved_units(
+                connection,
+                request_id,
+                exclude_match_id=match_id,
+            )
+
+            available_units = max(
+                remaining_units - reserved_units,
+                0,
+            )
+
+            if units_pledged > available_units:
+                flash(
+                    "The remaining unreserved units have changed. "
+                    "This match cannot be confirmed."
+                )
+                return redirect(url_for("request_blood"))
+
+            cursor.execute(
+                """
+                UPDATE request_matches
+                SET status = 'Confirmed',
+                    requester_confirmed = 1,
+                    confirmed_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    get_current_time(),
+                    get_current_time(),
+                    match_id,
+                ),
+            )
+
+            create_notification(
+                connection,
+                donor_user_id,
+                (
+                    "The requester confirmed your match. "
+                    "You can now coordinate the donation."
+                ),
+                "match_confirmed",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+
+            create_notification(
+                connection,
+                requester_id,
+                "You confirmed a donor match for your request.",
+                "match_confirmed",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+
+            flash("Match confirmed successfully.")
+
+        record_audit(
+            connection,
+            user_id,
+            f"match_{action}",
+            "request_match",
+            match_id,
+            f"Requester processed match {match_id}.",
+        )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Match confirmation failed")
+        flash("Unable to process the match.")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("request_blood"))
+
+
+# =========================================================
+# 22. MATCH DETAILS
+# =========================================================
+
+@app.route("/match/<int:match_id>")
+@login_required
+def match_detail(match_id):
+    user_id = get_user_id()
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                rm.id,
+                rm.request_id,
+                rm.donor_id,
+                rm.donor_user_id,
+                rm.units_pledged,
+                rm.status,
+                rm.requester_confirmed,
+                rm.accepted_at,
+                rm.confirmed_at,
+                br.user_id,
+                br.blood_type,
+                br.location,
+                br.hospital,
+                br.contact,
+                br.remaining_units,
+                donor.name,
+                donor.contact,
+                donor.blood_type,
+                donor.location,
+                requester.name,
+                requester.phone
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            JOIN donors AS donor ON donor.id = rm.donor_id
+            LEFT JOIN users AS requester ON requester.id = br.user_id
+            WHERE rm.id = ?
+              AND (
+                    br.user_id = ?
+                    OR rm.donor_user_id = ?
+              )
+            """,
+            (match_id, user_id, user_id),
+        )
+
+        match = cursor.fetchone()
+
+        if not match:
+            abort(404)
+
+        confirmed = (
+            match[5] in {"Confirmed", "Donation Reported"}
+            and match[6] == 1
+        )
+
+        contact_details = None
+
+        if confirmed:
+            if match[9] == user_id:
+                phone = match[16]
+
+                contact_details = {
+                    "name": match[15],
+                    "phone": phone,
+                    "whatsapp": normalize_whatsapp_number(phone),
+                }
+
+            elif match[3] == user_id:
+                phone = match[13] or match[20]
+
+                contact_details = {
+                    "name": match[19],
+                    "phone": phone,
+                    "whatsapp": normalize_whatsapp_number(phone),
+                }
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "match_detail.html",
+        match=match,
+        contact_details=contact_details,
+    )
+
+
+# =========================================================
+# 23. REPORT DONATION
+# =========================================================
+
+@app.route(
+    "/report-match-donation/<int:match_id>",
+    methods=["POST"],
+)
+@login_required
+def report_match_donation(match_id):
+    user_id = get_user_id()
+
+    try:
+        units = int(request.form.get("units") or "1")
+    except (ValueError, TypeError):
+        units = 0
+
+    donation_date_text = (
+        request.form.get("donation_date") or ""
+    ).strip()
+
+    parsed_date = parse_date(donation_date_text)
+
+    if not 1 <= units <= 8 or parsed_date is None:
+        flash("Enter a valid donation date and number of units.")
+        return redirect(url_for("match_detail", match_id=match_id))
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                rm.id,
+                rm.request_id,
+                rm.donor_id,
+                rm.donor_user_id,
+                rm.units_pledged,
+                rm.status,
+                rm.requester_confirmed,
+                br.remaining_units,
+                br.user_id,
+                br.hospital,
+                br.location
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ?
+            """,
+            (match_id,),
+        )
+
+        match = cursor.fetchone()
+
+        if not match:
+            flash("Match not found.")
+            return redirect(url_for("request_blood"))
+
+        request_id = match[1]
+        donor_id = match[2]
+        donor_user_id = match[3]
+        units_pledged = int(match[4] or 0)
+        match_status = match[5]
+        requester_confirmed = match[6]
+        remaining_units = int(match[7] or 0)
+        requester_id = match[8]
+        hospital = match[9]
+        location = match[10]
+
+        if donor_user_id != user_id:
+            flash("Only the matched donor can report this donation.")
+            return redirect(url_for("request_blood"))
+
+        if match_status != "Confirmed" or requester_confirmed != 1:
+            flash("The requester must confirm the match first.")
+            return redirect(url_for("request_blood"))
+
+        if units > units_pledged:
+            flash("Reported units cannot exceed your pledged units.")
+            return redirect(url_for("match_detail", match_id=match_id))
+
+        if units > remaining_units:
+            flash(f"Only {remaining_units} units remain on this request.")
+            return redirect(url_for("match_detail", match_id=match_id))
+
+        existing = connection.execute(
+            "SELECT id FROM donations WHERE match_id = ?",
+            (match_id,),
+        ).fetchone()
+
+        if existing:
+            flash("A donation has already been reported for this match.")
+            return redirect(url_for("match_detail", match_id=match_id))
+
+        cursor.execute(
+            """
+            INSERT INTO donations
+                (
+                    donor_id, donation_date, hospital, location,
+                    request_id, match_id, units, status,
+                    requester_confirmed
+                )
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Reported', 0)
+            """,
+            (
+                donor_id,
+                parsed_date.isoformat(),
+                hospital,
+                location,
+                request_id,
+                match_id,
+                units,
+            ),
+        )
+
+        donation_id = get_inserted_id(cursor, connection)
+
+        cursor.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Donation Reported',
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (get_current_time(), match_id),
+        )
+
+        # Do not start donor cooldown here.
+        # It starts only after the requester confirms receipt.
+
+        create_notification(
+            connection,
+            requester_id,
+            (
+                "A donor has reported a donation for your request. "
+                "Please confirm the units you actually received."
+            ),
+            "donation_reported",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        create_notification(
+            connection,
+            user_id,
+            "Your donation report has been sent to the requester.",
+            "donation_reported",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        record_audit(
+            connection,
+            user_id,
+            "donation_reported",
+            "donation",
+            donation_id,
+            f"Reported {units} units for match {match_id}.",
+        )
+
+        connection.commit()
+        flash("Donation report submitted. Awaiting receipt confirmation.")
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Match donation report failed")
+        flash("Unable to report this donation.")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("match_detail", match_id=match_id))
+
+
+# =========================================================
+# 24. REQUESTER CONFIRMS RECEIPT
+# =========================================================
+
+@app.route(
+    "/confirm-receipt/<int:donation_id>",
+    methods=["POST"],
+)
+@login_required
+def confirm_receipt(donation_id):
+    user_id = get_user_id()
+
+    try:
+        received_units = int(
+            request.form.get("received_units") or "0"
+        )
+    except (ValueError, TypeError):
+        received_units = 0
+
+    if not 1 <= received_units <= 8:
+        flash("Enter the actual number of units received.")
+        return redirect(url_for("request_blood"))
+
+    connection = get_db_connection()
+
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT
+                d.id,
+                d.request_id,
+                d.match_id,
+                d.donor_id,
+                d.units,
+                d.status,
+                d.requester_confirmed,
+                d.donation_date,
+                br.user_id,
+                br.remaining_units,
+                rm.donor_user_id,
+                rm.status
+            FROM donations AS d
+            JOIN blood_requests AS br ON br.id = d.request_id
+            JOIN request_matches AS rm ON rm.id = d.match_id
+            WHERE d.id = ?
+            """,
+            (donation_id,),
+        )
+
+        donation = cursor.fetchone()
+
+        if not donation:
+            flash("Donation record not found.")
+            return redirect(url_for("request_blood"))
+
+        request_id = donation[1]
+        match_id = donation[2]
+        donor_id = donation[3]
+        reported_units = int(donation[4] or 0)
+        donation_status = donation[5]
+        already_confirmed = donation[6]
+        donation_date = donation[7]
+        requester_id = donation[8]
+        remaining_units = int(donation[9] or 0)
+        donor_user_id = donation[10]
+        match_status = donation[11]
+
+        if requester_id != user_id:
+            flash("Only the requester can confirm receipt.")
+            return redirect(url_for("request_blood"))
+
+        if already_confirmed or donation_status == "Confirmed":
+            flash("This donation has already been confirmed.")
+            return redirect(url_for("request_blood"))
+
+        if match_status != "Donation Reported":
+            flash("This match is not awaiting receipt confirmation.")
+            return redirect(url_for("request_blood"))
+
+        if received_units > reported_units:
+            flash("You cannot confirm more units than the donor reported.")
+            return redirect(url_for("request_blood"))
+
+        if received_units > remaining_units:
+            flash(f"Only {remaining_units} units remain on this request.")
+            return redirect(url_for("request_blood"))
+
+        if received_units <= 0:
+            flash("The confirmed quantity must be greater than zero.")
+            return redirect(url_for("request_blood"))
+
+        cursor.execute(
+            """
+            UPDATE donations
+            SET units = ?,
+                status = 'Confirmed',
+                requester_confirmed = 1,
+                confirmed_at = ?
+            WHERE id = ?
+            """,
+            (
+                received_units,
+                get_current_time(),
+                donation_id,
+            ),
+        )
+
+        cursor.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Completed',
+                completed_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                get_current_time(),
+                get_current_time(),
+                match_id,
+            ),
+        )
+
+        cursor.execute(
+            """
+            UPDATE blood_requests
+            SET received_units = received_units + ?
+            WHERE id = ?
+            """,
+            (received_units, request_id),
+        )
+
+        # Start donor cooldown only after receipt confirmation.
+        confirmed_donation_date = date.today().isoformat()
+
+        cursor.execute(
+            """
+            UPDATE donors
+            SET last_donation = ?,
+                eligible = 0,
+                availability = ?
+            WHERE id = ?
+            """,
+            (
+                confirmed_donation_date,
+                UNAVAILABLE,
+                donor_id,
+            ),
+        )
+        update_request_units(connection, request_id)
+
+        create_notification(
+            connection,
+            donor_user_id,
+            f"The requester confirmed receipt of {received_units} unit(s).",
+            "receipt_confirmed",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        create_notification(
+            connection,
+            requester_id,
+            "You confirmed the received donation.",
+            "receipt_confirmed",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+        record_audit(
+            connection,
+            user_id,
+            "receipt_confirmed",
+            "donation",
+            donation_id,
+            f"Confirmed receipt of {received_units} units.",
+        )
+
+        connection.commit()
+        flash("Receipt confirmed. Request units have been updated.")
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Receipt confirmation failed")
+        flash("Unable to confirm receipt.")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("request_blood"))
+
+
+# =========================================================
+# 25. DONATION HISTORY
+# =========================================================
+
+@app.route("/donation-history")
+@login_required
+def donation_history():
+    user_id = get_user_id()
+
+    connection = get_db_connection()
+
+    try:
+        donations = connection.execute(
+            """
+            SELECT
+                d.id,
+                d.donation_date,
+                d.hospital,
+                d.location,
+                d.units,
+                d.status,
+                d.requester_confirmed,
+                d.request_id,
+                d.match_id,
+                donor.name,
+                donor.blood_type,
+                rm.donor_user_id,
+                br.user_id
+            FROM donations AS d
+            JOIN donors AS donor ON donor.id = d.donor_id
+            LEFT JOIN request_matches AS rm ON rm.id = d.match_id
+            LEFT JOIN blood_requests AS br ON br.id = d.request_id
+            WHERE donor.user_id = ?
+               OR br.user_id = ?
+            ORDER BY d.id DESC
+            """,
+            (user_id, user_id),
+        ).fetchall()
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "donation_history.html",
+        donations=donations,
+    )
+
+
+# =========================================================
+# 26. NOTIFICATIONS
+# =========================================================
+
+@app.route("/notifications")
+@login_required
+def notifications():
+    connection = get_db_connection()
+
+    try:
+        notifications_list = connection.execute(
+            """
+            SELECT
+                id, message, notification_type, created_at,
+                is_read, related_request_id, related_match_id
+            FROM notifications
+            WHERE user_id = ?
+            ORDER BY id DESC
+            """,
+            (get_user_id(),),
+        ).fetchall()
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "notifications.html",
+        notifications=notifications_list,
+    )
+
+
+@app.route(
+    "/notification/read/<int:notification_id>",
+    methods=["POST"],
+)
+@login_required
+def mark_notification_read(notification_id):
+    connection = get_db_connection()
+
+    try:
+        connection.execute(
+            """
+            UPDATE notifications
+            SET is_read = 1
+            WHERE id = ? AND user_id = ?
+            """,
+            (notification_id, get_user_id()),
+        )
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Notification update failed")
+        flash("Unable to update notification.")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("notifications"))
+
+# =========================================================
+# 27. PROFILE
+# =========================================================
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    user_id = get_user_id()
+    connection = get_db_connection()
+
+    # -----------------------------------------
+    # UPDATE PROFILE
+    # -----------------------------------------
+    if request.method == "POST":
+        name = form_text("name", 100)
+
+        email = (
+            request.form.get("email") or ""
+        ).strip().lower()
+
+        phone = (
+            request.form.get("phone") or ""
+        ).strip()
+
+        cnic = normalize_cnic(
+            request.form.get("cnic") or ""
+        )
+
+        if (
+            not name
+            or (email and not valid_email(email))
+            or (phone and not valid_phone(phone))
+            or not cnic
+            or not (email or phone)
+        ):
+            connection.close()
+            flash("Check your name, CNIC, email, and phone number.")
+            return redirect(url_for("profile"))
+
+        try:
+            connection.execute(
+                """
+                UPDATE users
+                SET name = ?, email = ?, phone = ?, cnic = ?
+                WHERE id = ?
+                """,
+                (name, email or None, phone or None, cnic, user_id),
+            )
+
+            connection.commit()
+            session["user_name"] = name
+            flash("Profile updated successfully.", "success")
+
+        except Exception:
+            connection.rollback()
+            app.logger.exception("Profile update failed")
+            flash(
+                "Unable to update profile. The CNIC, email, or phone "
+                "may already be registered.",
+                "error",
+            )
+
+        finally:
+            connection.close()
+
+        return redirect(url_for("profile"))
+
+    # -----------------------------------------
+    # LOAD PROFILE AND PERSONAL HISTORY
+    # -----------------------------------------
+    try:
+        cursor = connection.cursor()
+
+        # Account information: only the logged-in user.
+        cursor.execute(
+            """
+            SELECT id, name, email, phone, cnic
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,),
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+
+        # Latest donor profile belonging to this user.
+        cursor.execute(
+            """
+            SELECT
+                id, name, age, blood_type, location,
+                availability, eligible, last_donation,
+                health_screening_status
+            FROM donors
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        )
+        donor = cursor.fetchone()
+
+        # Count only donations confirmed by the requester.
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM donations AS d
+            JOIN donors AS donor ON donor.id = d.donor_id
+            WHERE donor.user_id = ?
+              AND d.status = 'Confirmed'
+              AND d.requester_confirmed = 1
+            """,
+            (user_id,),
+        )
+        donation_count = cursor.fetchone()[0]
+
+        # Every blood request created by this user.
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM blood_requests
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        )
+        request_count = cursor.fetchone()[0]
+
+        # This user's complete donation-report history.
+        # Pending reports remain visible with their current status.
+        cursor.execute(
+            """
+            SELECT
+                d.id,
+                d.donation_date,
+                d.hospital,
+                d.location,
+                d.units,
+                d.status,
+                d.requester_confirmed,
+                d.request_id
+            FROM donations AS d
+            JOIN donors AS donor ON donor.id = d.donor_id
+            WHERE donor.user_id = ?
+            ORDER BY d.id DESC
+            """,
+            (user_id,),
+        )
+        donations = cursor.fetchall()
+
+        # This user's complete blood-request history.
+        cursor.execute(
+            """
+            SELECT
+                id,
+                blood_type,
+                urgency,
+                location,
+                hospital,
+                requested_units,
+                received_units,
+                remaining_units,
+                status,
+                created_at
+            FROM blood_requests
+            WHERE user_id = ?
+            ORDER BY id DESC
+            """,
+            (user_id,),
+        )
+        my_requests = cursor.fetchall()
+
+    except Exception:
+        app.logger.exception("Profile data loading failed")
+        flash("Unable to load your profile.", "error")
+        return redirect(url_for("dashboard"))
+
+    finally:
+        connection.close()
+
+    return render_template(
+        "profile.html",
+        user=user,
+        donor=donor,
+        donation_count=donation_count,
+        request_count=request_count,
+        donations=donations,
+        my_requests=my_requests,
+    )
+
+# =========================================================
+# 28. SIGNUP
 # =========================================================
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -1008,6 +2929,10 @@ def signup():
         request.form.get("phone") or ""
     ).strip()
 
+    cnic = normalize_cnic(
+        request.form.get("cnic") or ""
+    )
+
     password = request.form.get("password") or ""
 
     if not name:
@@ -1015,22 +2940,24 @@ def signup():
         return redirect(url_for("signup"))
 
     if not email and not phone:
-        flash("Please enter an email address or phone number.")
+        flash("Enter an email address or phone number.")
         return redirect(url_for("signup"))
 
     if email and not valid_email(email):
-        flash("Please enter a valid email address.")
+        flash("Enter a valid email address.")
         return redirect(url_for("signup"))
 
     if phone and not valid_phone(phone):
-        flash("Please enter a valid phone number.")
+        flash("Enter a valid phone number.")
+        return redirect(url_for("signup"))
+
+    if not cnic:
+        flash("Enter a valid 13-digit CNIC number.")
         return redirect(url_for("signup"))
 
     if len(password) < 8 or len(password) > 128:
         flash("Password must be between 8 and 128 characters.")
         return redirect(url_for("signup"))
-
-    hashed_password = generate_password_hash(password)
 
     connection = get_db_connection()
 
@@ -1039,14 +2966,40 @@ def signup():
 
         cursor.execute(
             """
-            INSERT INTO users (name, email, phone, password)
-            VALUES (?, ?, ?, ?)
+            SELECT id
+            FROM users
+            WHERE cnic = ?
+               OR (? IS NOT NULL AND lower(email) = lower(?))
+               OR (? IS NOT NULL AND phone = ?)
+            LIMIT 1
+            """,
+            (
+                cnic,
+                email or None,
+                email or None,
+                phone or None,
+                phone or None,
+            ),
+        )
+
+        if cursor.fetchone():
+            flash(
+                "An account already exists with this CNIC, email, "
+                "or phone number."
+            )
+            return redirect(url_for("signup"))
+
+        cursor.execute(
+            """
+            INSERT INTO users (name, email, phone, password, cnic)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 name,
                 email or None,
                 phone or None,
-                hashed_password,
+                generate_password_hash(password),
+                cnic,
             ),
         )
 
@@ -1057,10 +3010,7 @@ def signup():
     except Exception:
         connection.rollback()
         app.logger.exception("Signup failed")
-        flash(
-            "Unable to create account. Check whether "
-            "the email or phone number is already registered."
-        )
+        flash("Unable to create account. Please check your information.")
 
     finally:
         connection.close()
@@ -1069,7 +3019,7 @@ def signup():
 
 
 # =========================================================
-# 19. LOGIN
+# 29. LOGIN
 # =========================================================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1090,29 +3040,20 @@ def login():
     connection = get_db_connection()
 
     try:
-        cursor = connection.cursor()
-
-        cursor.execute(
+        user = connection.execute(
             """
             SELECT id, name, password
             FROM users
             WHERE lower(email) = ? OR phone = ?
             """,
-            (
-                login_input.lower(),
-                login_input,
-            ),
-        )
-
-        user = cursor.fetchone()
+            (login_input.lower(), login_input),
+        ).fetchone()
 
     finally:
         connection.close()
 
     if user and check_password_hash(user[2], password):
-        # Rotate session and CSRF token after authentication.
         session.clear()
-
         session["user_id"] = user[0]
         session["user_name"] = user[1]
         session.permanent = True
@@ -1126,7 +3067,7 @@ def login():
 
 
 # =========================================================
-# 20. LOGOUT — POST ONLY
+# 30. LOGOUT
 # =========================================================
 
 @app.route("/logout", methods=["POST"])
@@ -1138,45 +3079,25 @@ def logout():
 
 
 # =========================================================
-# 21. NOTIFICATIONS — CURRENT USER ONLY
+# 31. LEGACY FULFIL ROUTE
 # =========================================================
 
-@app.route("/notifications")
+@app.route(
+    "/fulfill/<int:request_id>",
+    methods=["POST"],
+)
 @login_required
-def notifications():
-    connection = get_db_connection()
-
-    try:
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT
-                id,
-                message,
-                notification_type,
-                created_at,
-                is_read
-            FROM notifications
-            WHERE user_id = ?
-            ORDER BY id DESC
-            """,
-            (session["user_id"],),
-        )
-
-        notifications_list = cursor.fetchall()
-
-    finally:
-        connection.close()
-
-    return render_template(
-        "notifications.html",
-        notifications=notifications_list,
+def fulfill_request(request_id):
+    flash(
+        "Requests are fulfilled automatically after the requester "
+        "confirms the received donation."
     )
 
+    return redirect(url_for("request_blood"))
+
 
 # =========================================================
-# 22. ERROR HANDLERS
+# 32. ERROR HANDLERS
 # =========================================================
 
 @app.errorhandler(400)
@@ -1188,13 +3109,23 @@ def bad_request(error):
     )
 
 
+@app.errorhandler(403)
+def forbidden(error):
+    return "You are not authorized to perform this action.", 403
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return "The requested page or record was not found.", 404
+
+
 @app.errorhandler(413)
 def request_too_large(error):
     return "Submitted request is too large.", 413
 
 
 # =========================================================
-# 23. INITIALIZE DATABASE
+# 33. INITIALIZE DATABASE
 # =========================================================
 
 init_database()

@@ -1,124 +1,376 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#a71930">
+    <title>Report Blood Donation | Blood Donor Network</title>
 
-    <title>Report Blood Donation - Blood Donor Network</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --red: #b4233b;
+            --red-dark: #90182e;
+            --red-light: #fff0f2;
+            --text: #222633;
+            --muted: #737b8c;
+            --border: #e6e9ef;
+            --white: #fff;
+            --background: #f5f7fb;
+            --green: #16794b;
+            --green-bg: #eaf8f0;
+            --shadow: 0 6px 24px rgba(30,40,60,.055);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .page-wrapper {
+            min-height: 100vh;
+            padding: 35px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 25px;
+            margin-bottom: 22px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .icon-box {
+            width: 53px;
+            height: 53px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: var(--red-light);
+            color: var(--red);
+            border-radius: 14px;
+        }
+
+        .icon-box svg { width: 28px; height: 28px; }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: clamp(21px,3vw,28px);
+        }
+
+        .page-header p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .donor-card, .form-card {
+            padding: 25px;
+            margin-bottom: 20px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .donor-card h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+        }
+
+        .donor-info {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .blood-badge {
+            padding: 6px 11px;
+            border-radius: 7px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .donor-info span:last-child {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .form-card h2 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        .form-intro {
+            margin: 0 0 23px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        .form-group { margin-bottom: 19px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .required { color: var(--red); }
+
+        input, select, textarea {
+            width: 100%;
+            min-height: 46px;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--white);
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+
+        textarea { min-height: 85px; resize: vertical; }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(180,35,59,.08);
+        }
+
+        .help-text {
+            display: block;
+            margin-top: 7px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .notice {
+            display: flex;
+            gap: 11px;
+            padding: 14px;
+            margin-bottom: 21px;
+            border: 1px solid #cdebd9;
+            border-radius: 10px;
+            background: var(--green-bg);
+            color: var(--green);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        .notice svg {
+            width: 19px;
+            height: 19px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .flash-message {
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            border-radius: 9px;
+            background: var(--green-bg);
+            color: var(--green);
+            font-size: 13px;
+        }
+
+        .flash-message.error, .flash-message.danger {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .submit-btn {
+            width: 100%;
+            min-height: 47px;
+            padding: 12px 16px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--red);
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover { background: var(--red-dark); }
+
+        .back-link { margin-top: 20px; }
+
+        .back-link a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 42px;
+            padding: 0 15px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: var(--white);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .back-link a:hover { color: var(--red); border-color: var(--red); }
+
+        @media(max-width:550px) {
+            .page-wrapper { padding: 20px 12px; }
+            .page-header, .donor-card, .form-card { padding: 18px; }
+            .page-header { align-items: flex-start; }
+        }
+    </style>
 </head>
 
 <body>
-
 <div class="page-wrapper">
+<main class="container">
 
-    <div class="content-container">
-
-        <div class="page-header">
-            <div class="blood-icon">🩸</div>
+    <header class="page-header">
+        <div class="icon-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11Z"/>
+                <path d="M9 15a3 3 0 0 0 3 3"/>
+            </svg>
+        </div>
+        <div>
             <h1>Report Blood Donation</h1>
-            <p>Record a completed blood donation.</p>
+            <p>Record a completed donation and update your donation history.</p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <section class="donor-card">
+        <h2>{{ donor[1] }}</h2>
+        <div class="donor-info">
+            <span class="blood-badge">{{ donor[2] }}</span>
+            <span>Registered blood donor</span>
+        </div>
+    </section>
+
+    <section class="form-card">
+        <h2>Donation Details</h2>
+        <p class="form-intro">
+            Enter the details of the donation that has already taken place.
+            Do not report a donation before it has occurred.
+        </p>
+
+        <div class="notice">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 11v5m0-8h.01"/>
+            </svg>
+            <div>
+                Your report may be linked to a blood request. The requester
+                must confirm receipt before the donated units count toward
+                the request's fulfilled quantity.
+            </div>
         </div>
 
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="success">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <form action="{{ url_for('report_donation', donor_id=donor[0]) }}"
+              method="POST">
 
-        <section class="dashboard-info-card">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <h2>{{ donor[1] }}</h2>
+            <div class="form-group">
+                <label for="donation_date">
+                    Donation Date <span class="required">*</span>
+                </label>
+                <input type="date" id="donation_date" name="donation_date"
+                       max="{{ today }}" required>
+            </div>
 
-            <p>
-                <strong>Blood Type:</strong>
-                {{ donor[2] }}
-            </p>
+            <div class="form-group">
+                <label for="units_donated">
+                    Units Donated <span class="required">*</span>
+                </label>
+                <input type="number" id="units_donated" name="units_donated"
+                       min="1" max="10" step="1" value="1" required>
+                <span class="help-text">
+                    Enter the actual number of units donated.
+                </span>
+            </div>
 
-        </section>
+            <div class="form-group">
+                <label for="request_id">Related Blood Request</label>
+                <select id="request_id" name="request_id">
+                    <option value="">Not linked to a specific request</option>
+                    {% if related_requests %}
+                        {% for request in related_requests %}
+                            <option value="{{ request[0] }}">
+                                {{ request[1] }} — {{ request[2] }}
+                                ({{ request[3] }} unit(s) remaining)
+                            </option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+                <span class="help-text">
+                    Select the request you donated for, if applicable.
+                </span>
+            </div>
 
-        <form
-            action="{{ url_for('report_donation', donor_id=donor[0]) }}"
-            method="POST"
-        >
+            <div class="form-group">
+                <label for="hospital">
+                    Hospital / Blood Bank <span class="required">*</span>
+                </label>
+                <input type="text" id="hospital" name="hospital"
+                       minlength="2" maxlength="120"
+                       autocomplete="organization" required>
+            </div>
 
-            <!-- CSRF protection -->
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
-            >
+            <div class="form-group">
+                <label for="location">
+                    City / Location <span class="required">*</span>
+                </label>
+                <input type="text" id="location" name="location"
+                       minlength="2" maxlength="120"
+                       autocomplete="address-level2" required>
+            </div>
 
-            <label for="donation_date">
-                Donation Date
-            </label>
+            <div class="form-group">
+                <label for="notes">Additional Notes (Optional)</label>
+                <textarea id="notes" name="notes" maxlength="500"
+                          placeholder="Any relevant donation details..."></textarea>
+            </div>
 
-            <input
-                type="date"
-                id="donation_date"
-                name="donation_date"
-                max="{{ today }}"
-                required
-            >
-
-            <br><br>
-
-            <label for="hospital">
-                Hospital / Blood Bank
-            </label>
-
-            <input
-                type="text"
-                id="hospital"
-                name="hospital"
-                minlength="2"
-                maxlength="120"
-                autocomplete="organization"
-                required
-            >
-
-            <br><br>
-
-            <label for="location">
-                City / Location
-            </label>
-
-            <input
-                type="text"
-                id="location"
-                name="location"
-                minlength="2"
-                maxlength="120"
-                autocomplete="address-level2"
-                required
-            >
-
-            <br><br>
-
-            <button type="submit" class="primary-btn">
+            <button type="submit" class="submit-btn">
                 Submit Donation Report
             </button>
-
         </form>
+    </section>
 
-        <div class="back-link">
-            <a href="{{ url_for('donor_list') }}">
-                ← Back to Donor List
-            </a>
-        </div>
-
+    <div class="back-link">
+        <a href="{{ url_for('donor_list') }}">&#8592; Back to Donor Directory</a>
     </div>
 
+</main>
 </div>
-
 </body>
 </html>
-```

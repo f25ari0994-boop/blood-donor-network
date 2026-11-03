@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#a71930">
-    <title>Login | Blood Donor Network</title>
+    <meta name="theme-color" content="#b4233b">
+
+    <title>Login | Blood Donor &amp; Emergency Request Network</title>
 
     <style>
         :root {
@@ -45,8 +46,9 @@
         }
 
         /* Header */
+
         .topbar {
-            height: 78px;
+            min-height: 78px;
             padding: 0 7%;
             display: flex;
             align-items: center;
@@ -61,6 +63,8 @@
             align-items: center;
             gap: 12px;
             min-width: 0;
+            text-decoration: none;
+            color: var(--text);
         }
 
         .brand img {
@@ -72,7 +76,7 @@
         .brand-name {
             font-size: 19px;
             font-weight: 800;
-            letter-spacing: -0.4px;
+            letter-spacing: -.4px;
         }
 
         .brand-subtitle {
@@ -81,6 +85,32 @@
             color: var(--muted);
             letter-spacing: 1.1px;
             text-transform: uppercase;
+        }
+
+        .header-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-links a {
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #344054;
+            font-size: 13px;
+            font-weight: 700;
+            transition: .2s;
+        }
+
+        .header-links a:hover {
+            background: #f2f4f7;
+            color: var(--primary);
+        }
+
+        .header-links a.active {
+            background: var(--primary);
+            color: white;
         }
 
         .secure-label {
@@ -100,6 +130,7 @@
         }
 
         /* Main layout */
+
         .main {
             flex: 1;
             width: 100%;
@@ -107,12 +138,13 @@
             margin: 0 auto;
             padding: 55px 35px;
             display: grid;
-            grid-template-columns: 1.05fr 0.95fr;
+            grid-template-columns: 1.05fr .95fr;
             align-items: center;
             gap: 65px;
         }
 
         /* Information panel */
+
         .intro {
             padding: 10px 0;
         }
@@ -127,12 +159,15 @@
             color: var(--primary);
             font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0.4px;
+            letter-spacing: .4px;
             margin-bottom: 25px;
         }
 
-        .eyebrow-icon {
-            font-size: 15px;
+        .eyebrow-mark {
+            width: 9px;
+            height: 9px;
+            background: var(--primary);
+            border-radius: 50%;
         }
 
         .intro h1 {
@@ -175,7 +210,9 @@
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: 12px;
-            font-size: 20px;
+            color: var(--primary);
+            font-size: 19px;
+            font-weight: 800;
         }
 
         .feature h3 {
@@ -190,6 +227,7 @@
         }
 
         /* Login card */
+
         .login-card {
             width: 100%;
             max-width: 450px;
@@ -198,23 +236,28 @@
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: 20px;
-            box-shadow: 0 15px 45px rgba(28, 37, 54, 0.07);
+            box-shadow: 0 15px 45px rgba(28, 37, 54, .07);
         }
 
         .login-symbol {
-            width: 55px;
-            height: 55px;
+            width: 65px;
+            height: 65px;
             display: grid;
             place-items: center;
             border-radius: 15px;
             background: var(--light-red);
-            font-size: 27px;
             margin-bottom: 23px;
+        }
+
+        .login-symbol img {
+            width: 49px;
+            height: 49px;
+            object-fit: contain;
         }
 
         .login-card h2 {
             font-size: 28px;
-            letter-spacing: -0.7px;
+            letter-spacing: -.7px;
             margin-bottom: 9px;
         }
 
@@ -224,6 +267,8 @@
             color: var(--muted);
             margin-bottom: 27px;
         }
+
+        /* Flash messages */
 
         .flash-messages {
             margin-bottom: 20px;
@@ -258,6 +303,8 @@
             border: 1px solid #f5e4b8;
         }
 
+        /* Form */
+
         .form-group {
             margin-bottom: 20px;
         }
@@ -282,7 +329,7 @@
             border: 1px solid #dfe3e9;
             border-radius: 10px;
             outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: border-color .2s, box-shadow .2s;
         }
 
         .input-wrap input::placeholder {
@@ -292,7 +339,7 @@
 
         .input-wrap input:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(180, 35, 59, 0.10);
+            box-shadow: 0 0 0 3px rgba(180, 35, 59, .10);
         }
 
         .password-input {
@@ -328,7 +375,7 @@
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s, transform 0.2s;
+            transition: background .2s, transform .2s;
         }
 
         .login-button:hover {
@@ -338,8 +385,9 @@
 
         .login-button:focus-visible,
         .toggle-password:focus-visible,
+        .header-links a:focus-visible,
         .signup-link:focus-visible {
-            outline: 3px solid rgba(180, 35, 59, 0.3);
+            outline: 3px solid rgba(180, 35, 59, .3);
             outline-offset: 3px;
         }
 
@@ -376,7 +424,15 @@
             text-align: center;
         }
 
+        .privacy-mark {
+            width: 8px;
+            height: 8px;
+            border: 2px solid #23965c;
+            border-radius: 50%;
+        }
+
         /* Footer */
+
         .footer {
             padding: 20px;
             text-align: center;
@@ -408,8 +464,9 @@
 
         @media (max-width: 700px) {
             .topbar {
-                height: 70px;
-                padding: 0 20px;
+                min-height: 70px;
+                padding: 12px 20px;
+                flex-wrap: wrap;
             }
 
             .brand img {
@@ -418,15 +475,24 @@
             }
 
             .brand-name {
-                font-size: 16px;
+                font-size: 15px;
             }
 
             .brand-subtitle {
                 font-size: 9px;
             }
 
+            .header-links {
+                margin-left: auto;
+            }
+
+            .header-links a {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
             .secure-label {
-                font-size: 10px;
+                display: none;
             }
 
             .main {
@@ -476,10 +542,6 @@
         }
 
         @media (max-width: 380px) {
-            .secure-label {
-                display: none;
-            }
-
             .intro h1 {
                 font-size: 30px;
             }
@@ -502,29 +564,37 @@
 <div class="page">
 
     <header class="topbar">
-        <div class="brand">
+
+        <a class="brand" href="{{ url_for('home') }}">
             <img
                 src="{{ url_for('static', filename='images/blood-logo.png') }}"
                 alt="Blood Donor Network logo"
-                onerror="this.style.display='none'"
             >
             <div>
                 <div class="brand-name">Blood Donor Network</div>
-                <div class="brand-subtitle">Connecting lives</div>
+                <div class="brand-subtitle">Connecting Lives</div>
             </div>
-        </div>
+        </a>
+
+        <nav class="header-links" aria-label="Account navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a class="active" href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('signup') }}">Sign Up</a>
+        </nav>
 
         <div class="secure-label">
             <span class="secure-dot"></span>
             Secure Account Access
         </div>
+
     </header>
 
     <main class="main">
 
         <section class="intro">
+
             <div class="eyebrow">
-                <span class="eyebrow-icon">❤</span>
+                <span class="eyebrow-mark"></span>
                 EVERY DONATION MATTERS
             </div>
 
@@ -540,8 +610,9 @@
             </p>
 
             <div class="feature-list">
+
                 <div class="feature">
-                    <div class="feature-icon">🩸</div>
+                    <div class="feature-icon" aria-hidden="true">+</div>
                     <div>
                         <h3>Find compatible donors</h3>
                         <p>Search for donors according to blood group and location.</p>
@@ -549,7 +620,7 @@
                 </div>
 
                 <div class="feature">
-                    <div class="feature-icon">🚨</div>
+                    <div class="feature-icon" aria-hidden="true">!</div>
                     <div>
                         <h3>Support emergency requests</h3>
                         <p>Access blood requests and help connect patients with donors.</p>
@@ -557,19 +628,28 @@
                 </div>
 
                 <div class="feature">
-                    <div class="feature-icon">🤝</div>
+                    <div class="feature-icon" aria-hidden="true">✓</div>
                     <div>
                         <h3>Make a meaningful difference</h3>
                         <p>Manage your donor profile and stay connected with the network.</p>
                     </div>
                 </div>
+
             </div>
+
         </section>
 
         <section class="login-card">
-            <div class="login-symbol" aria-hidden="true">🩸</div>
+
+            <div class="login-symbol">
+                <img
+                    src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                    alt=""
+                >
+            </div>
 
             <h2>Sign in to your account</h2>
+
             <p class="login-description">
                 Enter your registered email or phone number to continue.
             </p>
@@ -578,7 +658,7 @@
                 {% if messages %}
                     <div class="flash-messages" aria-live="polite">
                         {% for category, message in messages %}
-                            <div class="flash-message {{ category }}">
+                            <div class="flash-message {{ category }}" role="alert">
                                 {{ message }}
                             </div>
                         {% endfor %}
@@ -587,6 +667,7 @@
             {% endwith %}
 
             <form action="{{ url_for('login') }}" method="POST">
+
                 <input
                     type="hidden"
                     name="csrf_token"
@@ -594,7 +675,10 @@
                 >
 
                 <div class="form-group">
-                    <label for="login_input">Email or phone number</label>
+                    <label for="login_input">
+                        Email or phone number
+                    </label>
+
                     <div class="input-wrap">
                         <input
                             type="text"
@@ -610,6 +694,7 @@
 
                 <div class="form-group">
                     <label for="password">Password</label>
+
                     <div class="input-wrap">
                         <input
                             class="password-input"
@@ -636,6 +721,7 @@
                 <button type="submit" class="login-button">
                     Sign In <span aria-hidden="true">→</span>
                 </button>
+
             </form>
 
             <div class="signup-prompt">
@@ -646,9 +732,10 @@
             </div>
 
             <div class="privacy-note">
-                <span aria-hidden="true">🔒</span>
+                <span class="privacy-mark"></span>
                 Your account access is protected.
             </div>
+
         </section>
 
     </main>

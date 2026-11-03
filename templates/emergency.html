@@ -1,271 +1,2131 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Blood Requests | Blood Donor Network</title>
 
-    <title>Emergency Blood Request</title>
+    <style>
+        :root {
+            --primary: #8f1538;
+            --primary-dark: #70102c;
+            --primary-light: #fbedf1;
+            --text: #29252a;
+            --muted: #77717a;
+            --border: #e9e3e6;
+            --background: #f8f7f8;
+            --white: #ffffff;
+            --success: #16834a;
+            --success-bg: #eaf7ef;
+            --warning: #a66a00;
+            --warning-bg: #fff5dc;
+            --danger: #bd263d;
+            --danger-bg: #fff0f1;
+            --shadow: 0 5px 22px rgba(40, 20, 30, 0.06);
+            --radius: 13px;
+        }
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        /* HEADER */
+
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-inner {
+            max-width: 1450px;
+            min-height: 76px;
+            margin: auto;
+            padding: 0 35px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 25px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--primary);
+            font-size: 19px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .brand-icon {
+            width: 39px;
+            height: 39px;
+            display: grid;
+            place-items: center;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .brand-icon svg {
+            width: 23px;
+            height: 23px;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav a {
+            padding: 10px 13px;
+            border-radius: 8px;
+            color: #514a50;
+            font-size: 14px;
+            font-weight: 600;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .menu-toggle {
+            display: none;
+            width: 43px;
+            height: 43px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: white;
+            color: var(--primary);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-toggle svg {
+            width: 23px;
+            height: 23px;
+        }
+
+        /* MAIN */
+
+        .container {
+            max-width: 1250px;
+            width: calc(100% - 50px);
+            margin: 0 auto;
+            padding: 32px 0 65px;
+        }
+
+        .hero {
+            background: linear-gradient(115deg, #861332, #a82449);
+            color: white;
+            padding: 34px 38px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero h1 {
+            font-size: 29px;
+            line-height: 1.3;
+            margin-bottom: 9px;
+        }
+
+        .hero p {
+            color: rgba(255,255,255,0.88);
+            max-width: 690px;
+            font-size: 15px;
+        }
+
+        .hero-icon {
+            width: 75px;
+            height: 75px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.14);
+        }
+
+        .hero-icon svg {
+            width: 43px;
+            height: 43px;
+        }
+
+        /* FLASH MESSAGES */
+
+        .flash-list {
+            margin-bottom: 20px;
+        }
+
+        .flash {
+            padding: 13px 17px;
+            margin-bottom: 10px;
+            border-radius: 9px;
+            font-size: 14px;
+            border: 1px solid transparent;
+        }
+
+        .flash.success {
+            color: #126c3b;
+            background: var(--success-bg);
+            border-color: #c8e9d4;
+        }
+
+        .flash.error,
+        .flash.danger {
+            color: #a31f34;
+            background: var(--danger-bg);
+            border-color: #f4cbd1;
+        }
+
+        .flash.warning {
+            color: #865900;
+            background: var(--warning-bg);
+            border-color: #f0dfae;
+        }
+
+        .flash.info {
+            color: #245d91;
+            background: #edf6ff;
+            border-color: #d2e6f8;
+        }
+
+        /* SECTION NAVIGATION */
+
+        .section-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            padding: 13px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-nav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: #625b62;
+            font-size: 13px;
+            font-weight: 700;
+            transition: 0.2s;
+        }
+
+        .section-nav a:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .section-nav svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        /* SECTION AND CARDS */
+
+        .section {
+            margin-bottom: 34px;
+            scroll-margin-top: 100px;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 17px;
+        }
+
+        .section-heading h2 {
+            font-size: 21px;
+            color: #30272d;
+        }
+
+        .section-heading p {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 3px;
+        }
+
+        .section-count {
+            min-width: 31px;
+            height: 31px;
+            padding: 0 9px;
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+        }
+
+        /* FORM */
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 19px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            color: #403940;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .required {
+            color: var(--danger);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            min-height: 46px;
+            padding: 11px 13px;
+            border: 1px solid #ded7dc;
+            border-radius: 8px;
+            outline: none;
+            background: white;
+            color: var(--text);
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(143,21,56,0.09);
+        }
+
+        .form-help {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .deadline-note {
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #fff5e7;
+            color: #80520a;
+            border: 1px solid #f1dfbd;
+            font-size: 13px;
+        }
+
+        .form-actions {
+            margin-top: 22px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* BUTTONS */
+
+        .btn {
+            min-height: 40px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 15px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            transition: 0.2s;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background: white;
+            border-color: var(--border);
+            color: #514a50;
+        }
+
+        .btn-outline:hover {
+            background: #f7f3f5;
+            border-color: #d7c5cd;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #106c3c;
+        }
+
+        .btn-danger {
+            background: white;
+            border-color: #edc5cc;
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-bg);
+        }
+
+        .btn-whatsapp {
+            background: #168b51;
+            color: white;
+        }
+
+        .btn-call {
+            background: #2868a5;
+            color: white;
+        }
+
+        .btn-small {
+            min-height: 35px;
+            padding: 7px 11px;
+            font-size: 12px;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        /* REQUEST AND MATCH CARDS */
+
+        .item-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .item-card {
+            padding: 21px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .blood-heading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .blood-icon {
+            width: 47px;
+            height: 47px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 16px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .blood-heading h3 {
+            font-size: 17px;
+            line-height: 1.4;
+        }
+
+        .blood-heading p {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .status,
+        .urgency {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .status.pending,
+        .status.accepted {
+            color: #865900;
+            background: var(--warning-bg);
+        }
+
+        .status.confirmed,
+        .status.completed,
+        .status.fulfilled {
+            color: #126c3b;
+            background: var(--success-bg);
+        }
+
+        .status.rejected,
+        .status.cancelled {
+            color: #a31f34;
+            background: var(--danger-bg);
+        }
+
+        .status.donation-reported {
+            color: #245d91;
+            background: #edf6ff;
+        }
+
+        .urgency.emergency {
+            color: #a31f34;
+            background: var(--danger-bg);
+        }
+
+        .urgency.normal {
+            color: #245d91;
+            background: #edf6ff;
+        }
+
+        .item-details {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 11px 18px;
+            margin: 15px 0;
+        }
+
+        .detail {
+            font-size: 13px;
+            color: #5f5860;
+            overflow-wrap: anywhere;
+        }
+
+        .detail strong {
+            display: block;
+            margin-bottom: 2px;
+            color: #383139;
+            font-size: 12px;
+        }
+
+        .deadline-detail {
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* PROGRESS */
+
+        .progress-area {
+            margin-top: 16px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 7px;
+            font-size: 12px;
+            color: #625b62;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 9px;
+            border-radius: 20px;
+            background: #eee9ec;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 20px;
+            transition: width 0.3s;
+        }
+
+        .progress-fill.complete {
+            background: var(--success);
+        }
+
+        /* EMPTY STATE */
+
+        .empty-state {
+            padding: 35px 20px;
+            background: white;
+            border: 1px dashed #dcd1d7;
+            border-radius: var(--radius);
+            text-align: center;
+        }
+
+        .empty-state svg {
+            width: 39px;
+            height: 39px;
+            color: #b49ba5;
+            margin-bottom: 10px;
+        }
+
+        .empty-state h3 {
+            color: #453c43;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .empty-state p {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* MATCH CARDS */
+
+        .match-role {
+            color: var(--primary);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .privacy-note {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #f5f2f4;
+            color: #6c6269;
+            font-size: 12px;
+        }
+
+        .action-form {
+            display: inline-flex;
+            margin: 0;
+        }
+
+        .inline-form {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .inline-form .form-group {
+            min-width: 130px;
+            flex: 1;
+        }
+
+        .inline-form input {
+            min-height: 38px;
+            padding: 8px 10px;
+            border: 1px solid #ded7dc;
+            border-radius: 7px;
+            width: 100%;
+        }
+
+        .match-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+            margin-top: 15px;
+        }
+
+        /* FOOTER */
+
+        .page-footer {
+            margin-top: 35px;
+            padding: 20px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 1150px) {
+            .header-inner {
+                min-height: 70px;
+                padding: 0 22px;
+            }
+
+            .menu-toggle {
+                display: inline-flex;
+            }
+
+            .nav {
+                display: none;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                right: 0;
+                padding: 13px 20px 18px;
+                background: white;
+                border-bottom: 1px solid var(--border);
+                box-shadow: 0 10px 18px rgba(0,0,0,0.06);
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+
+            .nav.open {
+                display: flex;
+            }
+
+            .nav a {
+                padding: 12px 14px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .header-inner {
+                padding: 0 16px;
+            }
+
+            .brand {
+                font-size: 16px;
+            }
+
+            .brand-icon {
+                width: 35px;
+                height: 35px;
+            }
+
+            .container {
+                width: calc(100% - 28px);
+                padding-top: 20px;
+            }
+
+            .hero {
+                padding: 25px 22px;
+            }
+
+            .hero h1 {
+                font-size: 23px;
+            }
+
+            .hero p {
+                font-size: 13px;
+            }
+
+            .hero-icon {
+                width: 55px;
+                height: 55px;
+            }
+
+            .hero-icon svg {
+                width: 31px;
+                height: 31px;
+            }
+
+            .section-nav {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 5px;
+                padding: 9px;
+            }
+
+            .section-nav a {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .form-group.full {
+                grid-column: auto;
+            }
+
+            .item-details {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .item-card {
+                padding: 16px;
+            }
+
+            .section-heading h2 {
+                font-size: 19px;
+            }
+        }
+
+        @media (max-width: 430px) {
+            .hero-icon {
+                display: none;
+            }
+
+            .item-top {
+                flex-direction: column;
+            }
+
+            .item-details {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+            }
+
+            .button-row,
+            .match-actions {
+                flex-direction: column;
+            }
+
+            .button-row .btn,
+            .match-actions .btn,
+            .action-form,
+            .action-form .btn {
+                width: 100%;
+            }
+
+            .inline-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .inline-form .form-group {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="emergency-page">
-    <div class="emergency-container">
+<header class="header">
+    <div class="header-inner">
 
-        <!-- EMERGENCY REQUEST FORM -->
-        <div class="emergency-form-card">
+        <a href="{{ url_for('dashboard') }}" class="brand">
+            <span class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11z"/>
+                    <path d="M12 8v7M8.5 11.5h7"/>
+                </svg>
+            </span>
+            <span>Blood Donor Network</span>
+        </a>
 
-            <div class="emergency-header">
-                <div class="emergency-icon">🚨</div>
+        <button
+            class="menu-toggle"
+            id="menuToggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mainNavigation"
+        >
+            <svg id="menuIcon" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round">
+                <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
 
-                <div>
-                    <h1>Emergency Blood Request</h1>
-                    <p>
-                        Post an urgent blood request and connect with eligible donors.
-                    </p>
+        <nav class="nav" id="mainNavigation">
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('donor') }}">Become a Donor</a>
+            <a href="{{ url_for('search') }}">Find Donors</a>
+            <a href="{{ url_for('request_blood') }}" class="active">Emergency Request</a>
+            <a href="{{ url_for('donor_list') }}">Donor Directory</a>
+            <a href="{{ url_for('profile') }}">Profile</a>
+        </nav>
+
+    </div>
+</header>
+
+
+<main class="container">
+
+    <!-- PAGE INTRODUCTION -->
+
+    <section class="hero">
+        <div>
+            <h1>Emergency Blood Requests</h1>
+            <p>
+                Create a blood request, find compatible requests, manage your
+                matches, and track donation and receipt progress in one place.
+            </p>
+        </div>
+
+        <div class="hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.7" stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M12 21s-8-4.5-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.5-8 11-8 11z"/>
+                <path d="M12 8v7M8.5 11.5h7"/>
+            </svg>
+        </div>
+    </section>
+
+
+    <!-- FLASH MESSAGES -->
+
+    <div class="flash-list">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">
+                    {{ message }}
                 </div>
+            {% endfor %}
+        {% endwith %}
+    </div>
+
+
+    <!-- SECTION NAVIGATION -->
+
+    <nav class="section-nav" aria-label="Emergency request sections">
+
+        <a href="#create-request">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Create Request
+        </a>
+
+        <a href="#available-requests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-4-4"/>
+            </svg>
+            Find Requests
+        </a>
+
+        <a href="#my-requests">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <path d="M8 4h12v16H4V8z"/>
+                <path d="M8 4v4H4M8 12h8M8 16h8"/>
+            </svg>
+            My Requests
+        </a>
+
+        <a href="#my-matches">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <circle cx="9" cy="8" r="3"/>
+                <circle cx="17" cy="8" r="3"/>
+                <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
+                <path d="m10 17 2 2 4-4"/>
+            </svg>
+            My Matches
+        </a>
+
+        <a href="#donation-progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <path d="M4 19V5M4 19h17"/>
+                <path d="m7 15 4-4 3 2 6-7"/>
+            </svg>
+            Donation Progress
+        </a>
+
+    </nav>
+
+
+    <!-- =====================================================
+         1. CREATE BLOOD REQUEST
+    ====================================================== -->
+
+    <section class="section" id="create-request">
+
+        <div class="section-heading">
+            <div>
+                <h2>Create Blood Request</h2>
+                <p>Enter the required details to create a new request.</p>
             </div>
+        </div>
 
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="emergency-message">
-                            {{ message }}
+        <div class="card">
+
+            <form method="POST" action="{{ url_for('request_blood') }}">
+
+                <input type="hidden" name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label for="blood_type">
+                            Required Blood Group <span class="required">*</span>
+                        </label>
+
+                        <select id="blood_type" name="blood_type" required>
+                            <option value="">Select blood group</option>
+                            {% for group in ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"] %}
+                                <option value="{{ group }}">{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="requested_units">
+                            Required Units <span class="required">*</span>
+                        </label>
+
+                        <input
+                            type="number"
+                            id="requested_units"
+                            name="requested_units"
+                            min="1"
+                            max="8"
+                            step="1"
+                            value="1"
+                            required
+                        >
+
+                        <span class="form-help">
+                            You can request between 1 and 8 units.
+                        </span>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="location">
+                            City / Area <span class="required">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            id="location"
+                            name="location"
+                            maxlength="150"
+                            placeholder="Enter city or area"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="hospital">
+                            Hospital Name <span class="required">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            id="hospital"
+                            name="hospital"
+                            maxlength="150"
+                            placeholder="Enter hospital name"
+                            required
+                        >
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="contact">
+                            Contact Number <span class="required">*</span>
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="contact"
+                            name="contact"
+                            maxlength="30"
+                            placeholder="03XXXXXXXXX"
+                            required
+                        >
+
+                        <span class="form-help">
+                            Contact details are shared with the matched donor
+                            only after you confirm the match.
+                        </span>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="needed_by">
+                            Blood Needed By <span class="required">*</span>
+                        </label>
+
+                        <input
+                            type="datetime-local"
+                            id="needed_by"
+                            name="needed_by"
+                            required
+                        >
+
+                        <span class="form-help">
+                            Select the date and time by which the blood is needed.
+                        </span>
+                    </div>
+
+
+                    <div class="form-group full">
+                        <div class="deadline-note">
+                            <strong>Automatic urgency:</strong>
+                            If blood is needed within 24 hours, the request
+                            will automatically be marked <strong>Emergency</strong>.
+                            If more than 24 hours remain, it will be marked
+                            <strong>Normal</strong>. You cannot manually select urgency.
+                            Pakistan time is used.
                         </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+                    </div>
 
-            <form action="{{ url_for('request_blood') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="emergency-form-group">
-                    <label for="blood_type">Blood Type</label>
-
-                    <select id="blood_type" name="blood_type" required>
-                        <option value="O-">O-</option>
-                        <option value="O+">O+</option>
-                        <option value="A-">A-</option>
-                        <option value="A+">A+</option>
-                        <option value="B-">B-</option>
-                        <option value="B+">B+</option>
-                        <option value="AB-">AB-</option>
-                        <option value="AB+">AB+</option>
-                    </select>
                 </div>
 
-                <div class="emergency-form-group">
-                    <label for="urgency">Urgency Level</label>
 
-                    <select id="urgency" name="urgency" required>
-                        <option value="Emergency">🚨 Emergency</option>
-                        <option value="Urgent">⚠️ Urgent</option>
-                        <option value="Normal">Normal</option>
-                    </select>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        Submit Blood Request
+                    </button>
                 </div>
 
-                <div class="emergency-form-group">
-                    <label for="location">City / Area</label>
-
-                    <input
-                        type="text"
-                        id="location"
-                        name="location"
-                        placeholder="e.g. Sukkur, Rohri"
-                        maxlength="120"
-                        required
-                    >
-                </div>
-
-                <div class="emergency-form-group">
-                    <label for="hospital">Hospital</label>
-
-                    <input
-                        type="text"
-                        id="hospital"
-                        name="hospital"
-                        placeholder="Enter hospital name"
-                        maxlength="150"
-                        required
-                    >
-                </div>
-
-                <div class="emergency-form-group">
-                    <label for="contact">Contact Number</label>
-
-                    <input
-                        type="tel"
-                        id="contact"
-                        name="contact"
-                        placeholder="Enter contact number"
-                        maxlength="20"
-                        autocomplete="tel"
-                        required
-                    >
-                </div>
-
-                <button type="submit" class="emergency-submit-btn">
-                    🚨 Post Blood Request
-                </button>
             </form>
 
         </div>
 
-        <!-- PENDING REQUESTS -->
-        <div class="pending-section">
+    </section>
 
-            <div class="pending-header">
-                <div>
-                    <h2>Pending Emergency Requests</h2>
-                    <p>Current blood requests waiting to be fulfilled.</p>
-                </div>
 
-                <div class="pending-badge">
-                    <img
-                        src="{{ url_for('static', filename='images/blood-logo.png') }}"
-                        alt="Blood"
-                        class="small-blood-logo"
-                    >
-                    Requests
-                </div>
+
+    <!-- =====================================================
+         2. AVAILABLE BLOOD REQUESTS
+    ====================================================== -->
+
+    <section class="section" id="available-requests">
+
+        <div class="section-heading">
+            <div>
+                <h2>Available Blood Requests</h2>
+                <p>
+                    Requests compatible with your available donor profiles.
+                    You can accept a request if you meet the eligibility rules.
+                </p>
             </div>
 
-            {% if requests %}
+            <span class="section-count">
+                {{ available_requests|length }}
+            </span>
+        </div>
 
-                <div class="request-grid">
 
-                    {% for req in requests %}
+        {% if available_requests %}
 
-                        <div class="request-card">
+            <div class="item-list">
 
-                            <div class="request-card-header">
+                {% for req in available_requests %}
 
-                                <div class="request-blood">
-                                    <span class="blood-drop">
-                                        <img
-                                            src="{{ url_for('static', filename='images/blood-logo.png') }}"
-                                            alt="Blood"
-                                        >
-                                    </span>
+                    {% set requested = req[8]|int %}
+                    {% set received = req[9]|int %}
+                    {% set remaining = req[10]|int %}
+                    {% set progress = ((received / requested * 100)|int) if requested > 0 else 0 %}
+                    {% set progress = [100, [0, progress]|max]|min %}
 
-                                    <div>
-                                        <h3>{{ req[1] }} Blood Needed</h3>
+                    <article class="item-card">
 
-                                        <span class="request-location">
-                                            📍 {{ req[3] }}
-                                        </span>
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ req[1] }}
+                                </div>
+
+                                <div>
+                                    <h3>{{ req[1] }} Blood Required</h3>
+                                    <p>
+                                        Request #{{ req[0] }}
+                                        {% if req[13] %}
+                                            · Requested by {{ req[13] }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+
+                            </div>
+
+
+                            <div>
+                                {% if req[2] == "Emergency" %}
+                                    <span class="urgency emergency">Emergency</span>
+                                {% else %}
+                                    <span class="urgency normal">Normal</span>
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ req[3] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ req[4] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Total Required</strong>
+                                {{ requested }} unit(s)
+                            </div>
+
+                            <div class="detail">
+                                <strong>Units Remaining</strong>
+                                {{ remaining }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Request Created</strong>
+                                {{ req[5] or "Not available" }}
+                            </div>
+
+                            <div class="detail deadline-detail">
+                                <strong>Blood Needed By</strong>
+                                {{ req[11] or "Not specified" }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="progress-area">
+
+                            <div class="progress-label">
+                                <span>Donation progress</span>
+                                <strong>{{ received }} / {{ requested }} units</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    class="progress-fill {% if progress >= 100 %}complete{% endif %}"
+                                    style="width: {{ progress }}%;"
+                                ></div>
+                            </div>
+
+                        </div>
+
+
+                        <div class="button-row">
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('accept_request', request_id=req[0]) }}"
+                                class="action-form"
+                            >
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <div class="form-group">
+                                    <label for="units-{{ req[0] }}">
+                                        Units you can donate
+                                    </label>
+
+                                    <input
+                                        id="units-{{ req[0] }}"
+                                        type="number"
+                                        name="units_pledged"
+                                        min="1"
+                                        max="8"
+                                        value="1"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    Accept This Request
+                                </button>
+                            </form>
+
+                        </div>
+
+                        <p class="form-help" style="margin-top: 12px;">
+                            Your acceptance will be sent to the requester.
+                            The match becomes confirmed only after the requester
+                            approves it. Your active match must be completed or
+                            cancelled before accepting another request.
+                        </p>
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m20 20-4-4"/>
+                </svg>
+
+                <h3>No compatible requests available</h3>
+
+                <p>
+                    There are currently no unexpired blood requests matching
+                    your available eligible donor profiles.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    <!-- =====================================================
+         3. MY BLOOD REQUESTS
+    ====================================================== -->
+
+    <section class="section" id="my-requests">
+
+        <div class="section-heading">
+            <div>
+                <h2>My Blood Requests</h2>
+                <p>Track the requests you have created.</p>
+            </div>
+
+            <span class="section-count">
+                {{ my_requests|length }}
+            </span>
+        </div>
+
+
+        {% if my_requests %}
+
+            <div class="item-list">
+
+                {% for req in my_requests %}
+
+                    {% set requested = req[8]|int %}
+                    {% set received = req[9]|int %}
+                    {% set remaining = req[10]|int %}
+                    {% set progress = ((received / requested * 100)|int) if requested > 0 else 0 %}
+                    {% set progress = [100, [0, progress]|max]|min %}
+                    {% set status_class = (req[6] or "pending")|lower|replace(" ", "-") %}
+
+                    <article class="item-card">
+
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ req[1] }}
+                                </div>
+
+                                <div>
+                                    <h3>{{ req[1] }} Blood Request</h3>
+                                    <p>Request #{{ req[0] }}</p>
+                                </div>
+
+                            </div>
+
+
+                            <div>
+                                <span class="status {{ status_class }}">
+                                    {{ req[6] }}
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ req[3] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ req[4] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Urgency</strong>
+
+                                {% if req[2] == "Emergency" %}
+                                    <span class="urgency emergency">Emergency</span>
+                                {% else %}
+                                    <span class="urgency normal">Normal</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Created At</strong>
+                                {{ req[5] or "Not available" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Required Units</strong>
+                                {{ requested }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Received Units</strong>
+                                {{ received }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Remaining Units</strong>
+                                {{ remaining }}
+                            </div>
+
+                            <div class="detail deadline-detail">
+                                <strong>Blood Needed By</strong>
+                                {{ req[11] or "Not specified" }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="progress-area">
+
+                            <div class="progress-label">
+                                <span>Request completion</span>
+                                <strong>{{ received }} / {{ requested }} units</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    class="progress-fill {% if progress >= 100 %}complete{% endif %}"
+                                    style="width: {{ progress }}%;"
+                                ></div>
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <path d="M8 4h12v16H4V8z"/>
+                    <path d="M8 4v4H4M8 12h8M8 16h8"/>
+                </svg>
+
+                <h3>You have not created any requests</h3>
+
+                <p>Your blood requests will appear here after you submit them.</p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    <!-- =====================================================
+         4. MY MATCHES
+    ====================================================== -->
+
+    <section class="section" id="my-matches">
+
+        <div class="section-heading">
+            <div>
+                <h2>My Matches</h2>
+                <p>
+                    Manage donor acceptances, requester confirmations,
+                    and confirmed matches.
+                </p>
+            </div>
+
+            <span class="section-count">
+                {{ matches|length }}
+            </span>
+        </div>
+
+
+        {% if matches %}
+
+            <div class="item-list">
+
+                {% for match in matches %}
+
+                    {% set status_class = (match.status or "pending")|lower|replace(" ", "-") %}
+                    {% set confirmed_contact = match_contacts.get(match.id, {}) %}
+
+                    <article class="item-card">
+
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ match.blood_type }}
+                                </div>
+
+                                <div>
+                                    <h3>Match #{{ match.id }}</h3>
+                                    <p>
+                                        Blood Request #{{ match.request_id }}
+                                    </p>
+
+                                    <div class="match-role">
+                                        Your role: {{ match.my_role }}
                                     </div>
                                 </div>
 
-                                {% if req[2] == "Emergency" %}
-                                    <span class="urgency emergency-badge">
-                                        🚨 Emergency
-                                    </span>
-                                {% elif req[2] == "Urgent" %}
-                                    <span class="urgency urgent-badge">
-                                        ⚠️ Urgent
-                                    </span>
-                                {% else %}
-                                    <span class="urgency normal-badge">
-                                        Normal
-                                    </span>
-                                {% endif %}
-
                             </div>
 
-                            <div class="request-details">
 
-                                <div class="request-detail-row">
-                                    <span>🏥 Hospital</span>
-                                    <strong>{{ req[4] }}</strong>
-                                </div>
+                            <span class="status {{ status_class }}">
+                                {{ match.status }}
+                            </span>
 
-                                <div class="request-detail-row">
-                                    <span>📞 Contact</span>
-                                    <strong>
-                                        {% if req[7] == current_user_id %}
-                                            {{ req[5] }}
-                                        {% else %}
-                                            Contact details are private
-                                        {% endif %}
-                                    </strong>
-                                </div>
+                        </div>
 
-                                <div class="request-detail-row">
-                                    <span>📍 Location</span>
-                                    <strong>{{ req[3] }}</strong>
-                                </div>
 
-                                <div class="request-detail-row">
-                                    <span>Status</span>
-                                    <span class="status status-pending">
-                                        {{ req[6] }}
-                                    </span>
-                                </div>
+                        <div class="item-details">
 
+                            <div class="detail">
+                                <strong>Blood Group</strong>
+                                {{ match.blood_type }}
                             </div>
 
-                            <!-- CSRF-PROTECTED FULFILL FORM -->
-                            {% if req[7] == current_user_id %}
-                                <form
-                                    action="{{ url_for('fulfill_request', request_id=req[0]) }}"
-                                    method="POST"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="csrf_token"
-                                        value="{{ csrf_token() }}"
-                                    >
+                            <div class="detail">
+                                <strong>Units Pledged</strong>
+                                {{ match.units_pledged }}
+                            </div>
 
-                                    <button type="submit" class="fulfill-btn">
-                                        Mark as Fulfilled
-                                    </button>
-                                </form>
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ match.location }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ match.hospital }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Requester</strong>
+                                {{ match.requester_name or "Requester" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Donor</strong>
+                                {{ match.donor_name or "Donor" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Accepted At</strong>
+                                {{ match.accepted_at or "Not available" }}
+                            </div>
+
+                            {% if match.confirmed_at %}
+                                <div class="detail">
+                                    <strong>Confirmed At</strong>
+                                    {{ match.confirmed_at }}
+                                </div>
                             {% endif %}
 
                         </div>
 
-                    {% endfor %}
 
-                </div>
+                        <!-- REQUESTER CONFIRMATION -->
 
-            {% else %}
+                        {% if match.status == "Accepted" and match.my_role == "Requester" %}
 
-                <div class="empty-state">
+                            <div class="privacy-note">
+                                A donor has accepted your request.
+                                Confirm the match to allow the matched parties
+                                to access their contact actions.
+                            </div>
 
-                    <div class="empty-icon">
-                        <img
-                            src="{{ url_for('static', filename='images/blood-logo.png') }}"
-                            alt="Blood"
-                        >
-                    </div>
+                            <div class="match-actions">
 
-                    <h3>No Pending Blood Requests</h3>
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('confirm_match', match_id=match.id) }}"
+                                    class="action-form"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
 
-                    <p>
-                        There are currently no pending emergency blood requests.
-                    </p>
+                                    <input type="hidden" name="action"
+                                           value="confirm">
 
-                </div>
+                                    <button type="submit" class="btn btn-success">
+                                        Confirm Match
+                                    </button>
+                                </form>
 
-            {% endif %}
 
-            <div class="back-link">
-                <a href="{{ url_for('dashboard') }}">
-                    ← Back to Dashboard
-                </a>
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('confirm_match', match_id=match.id) }}"
+                                    class="action-form"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <input type="hidden" name="action"
+                                           value="reject">
+
+                                    <button type="submit" class="btn btn-danger">
+                                        Reject Match
+                                    </button>
+                                </form>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- DONOR CANCELLATION BEFORE CONFIRMATION -->
+
+                        {% if match.status == "Accepted" and match.my_role == "Donor" %}
+
+                            <div class="privacy-note">
+                                Your acceptance is waiting for the requester
+                                to confirm. You can cancel it before confirmation.
+                            </div>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('cancel_acceptance', match_id=match.id) }}"
+                                class="button-row"
+                            >
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <button type="submit" class="btn btn-danger">
+                                    Cancel My Acceptance
+                                </button>
+                            </form>
+
+                        {% endif %}
+
+
+                        <!-- CONTACT ACTIONS AFTER REQUESTER CONFIRMATION -->
+
+                        {% if match.requester_confirmed == 1
+                              and match.status in ["Confirmed", "Donation Reported"] %}
+
+                            <div class="privacy-note">
+                                <strong>Match confirmed.</strong>
+                                Contact actions are now available to the matched parties.
+                            </div>
+
+                            {% if match.my_role == "Requester" and confirmed_contact.phone %}
+
+                                <div class="match-actions">
+
+                                    <a
+                                        class="btn btn-call"
+                                        href="tel:{{ confirmed_contact.phone }}"
+                                    >
+                                        Call Donor
+                                    </a>
+
+                                    {% if confirmed_contact.whatsapp %}
+                                        <a
+                                            class="btn btn-whatsapp"
+                                            href="https://wa.me/{{ confirmed_contact.whatsapp }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            WhatsApp Donor
+                                        </a>
+                                    {% endif %}
+
+                                </div>
+
+                            {% elif match.my_role == "Donor" and confirmed_contact.phone %}
+
+                                <div class="match-actions">
+
+                                    <a
+                                        class="btn btn-call"
+                                        href="tel:{{ confirmed_contact.phone }}"
+                                    >
+                                        Call Requester
+                                    </a>
+
+                                    {% if confirmed_contact.whatsapp %}
+                                        <a
+                                            class="btn btn-whatsapp"
+                                            href="https://wa.me/{{ confirmed_contact.whatsapp }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            WhatsApp Requester
+                                        </a>
+                                    {% endif %}
+
+                                </div>
+
+                            {% else %}
+
+                                <p class="form-help" style="margin-top: 12px;">
+                                    Contact information is not available.
+                                </p>
+
+                            {% endif %}
+
+                        {% elif match.status == "Accepted" %}
+
+                            <div class="privacy-note">
+                                Contact information remains private until
+                                the requester confirms this match.
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- DONOR REPORTS DONATION -->
+
+                        {% if match.status == "Confirmed"
+                              and match.my_role == "Donor"
+                              and match.requester_confirmed == 1 %}
+
+                            <div class="privacy-note">
+                                After donating, report the donation details
+                                so the requester can confirm receipt.
+                            </div>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('report_match_donation', match_id=match.id) }}"
+                                class="inline-form"
+                            >
+
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <div class="form-group">
+                                    <label for="donation-units-{{ match.id }}">
+                                        Units Donated
+                                    </label>
+
+                                    <input
+                                        id="donation-units-{{ match.id }}"
+                                        type="number"
+                                        name="units"
+                                        min="1"
+                                        max="{{ [8, match.units_pledged]|min }}"
+                                        value="1"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="donation-date-{{ match.id }}">
+                                        Donation Date
+                                    </label>
+
+                                    <input
+                                        id="donation-date-{{ match.id }}"
+                                        type="date"
+                                        name="donation_date"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    Report Donation
+                                </button>
+
+                            </form>
+
+                        {% endif %}
+
+
+                        {% if match.status == "Donation Reported" %}
+
+                            <div class="privacy-note">
+                                Donation reported. The requester must confirm
+                                receipt before this match is completed.
+                            </div>
+
+                        {% endif %}
+
+
+                        {% if match.status == "Completed" %}
+
+                            <div class="privacy-note">
+                                This match has been completed.
+                                The donation and receipt process is finished.
+                            </div>
+
+                        {% endif %}
+
+                    </article>
+
+                {% endfor %}
+
             </div>
 
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <circle cx="9" cy="8" r="3"/>
+                    <circle cx="17" cy="8" r="3"/>
+                    <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
+                </svg>
+
+                <h3>No matches yet</h3>
+
+                <p>
+                    Accepted requests and confirmed matches will appear here.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    <!-- =====================================================
+         5. DONATION AND RECEIPT PROGRESS
+    ====================================================== -->
+
+    <section class="section" id="donation-progress">
+
+        <div class="section-heading">
+            <div>
+                <h2>Donation and Receipt Progress</h2>
+                <p>
+                    Review reported donations and confirm the units
+                    you have received.
+                </p>
+            </div>
+
+            <span class="section-count">
+                {{ donations|length }}
+            </span>
         </div>
 
+
+        {% if donations %}
+
+            <div class="item-list">
+
+                {% for donation in donations %}
+
+                    {% set donation_status = (donation[5] or "pending")|lower|replace(" ", "-") %}
+
+                    <article class="item-card">
+
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ donation[10] }}
+                                </div>
+
+                                <div>
+                                    <h3>Donation #{{ donation[0] }}</h3>
+                                    <p>
+                                        {% if donation[9] %}
+                                            Donor: {{ donation[9] }}
+                                        {% else %}
+                                            Donation record
+                                        {% endif %}
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <span class="status {{ donation_status }}">
+                                {{ donation[5] }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Blood Group</strong>
+                                {{ donation[10] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Units Donated</strong>
+                                {{ donation[4] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Donation Date</strong>
+                                {{ donation[1] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ donation[2] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ donation[3] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Request ID</strong>
+                                {{ donation[7] or "Not linked" }}
+                            </div>
+
+                        </div>
+
+
+                        {% if donation[5] == "Reported"
+                              and donation[6] == 0 %}
+
+                            {% set donation_match_role = namespace(value="") %}
+
+                            {% for item in matches %}
+                                {% if item.id == donation[8] %}
+                                    {% set donation_match_role.value = item.my_role %}
+                                {% endif %}
+                            {% endfor %}
+
+
+                            {% if donation_match_role.value == "Requester" %}
+
+                                <div class="privacy-note">
+                                    The donor has reported this donation.
+                                    Confirm the number of units you actually received.
+                                </div>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('confirm_receipt', donation_id=donation[0]) }}"
+                                    class="inline-form"
+                                >
+
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <div class="form-group">
+                                        <label for="received-units-{{ donation[0] }}">
+                                            Units Actually Received
+                                        </label>
+
+                                        <input
+                                            id="received-units-{{ donation[0] }}"
+                                            type="number"
+                                            name="received_units"
+                                            min="1"
+                                            max="{{ [8, donation[4]|int]|min }}"
+                                            value="{{ donation[4] }}"
+                                            required
+                                        >
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success">
+                                        Confirm Receipt
+                                    </button>
+
+                                </form>
+
+                            {% else %}
+
+                                <div class="privacy-note">
+                                    Waiting for the requester to confirm receipt.
+                                </div>
+
+                            {% endif %}
+
+                        {% elif donation[5] == "Confirmed" %}
+
+                            <div class="privacy-note">
+                                <strong>Receipt confirmed.</strong>
+                                This donation has been completed.
+                            </div>
+
+                        {% endif %}
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <path d="M4 19V5M4 19h17"/>
+                    <path d="m7 15 4-4 3 2 6-7"/>
+                </svg>
+
+                <h3>No donation records yet</h3>
+
+                <p>
+                    Reported donations and receipt confirmations will appear here.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <div class="page-footer">
+        Blood Donor &amp; Emergency Request Network
+        <br>
+        Helping connect blood donors with people in need.
     </div>
-</div>
+
+</main>
+
+
+<script>
+    // Mobile navigation
+    const menuToggle = document.getElementById("menuToggle");
+    const mainNavigation = document.getElementById("mainNavigation");
+    const menuIcon = document.getElementById("menuIcon");
+
+    function closeMenu() {
+        mainNavigation.classList.remove("open");
+        menuToggle.setAttribute("aria-expanded", "false");
+        menuToggle.setAttribute("aria-label", "Open navigation menu");
+
+        menuIcon.innerHTML =
+            '<path d="M4 6h16M4 12h16M4 18h16"/>';
+    }
+
+    menuToggle.addEventListener("click", function () {
+        const isOpen = mainNavigation.classList.toggle("open");
+
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+        menuToggle.setAttribute(
+            "aria-label",
+            isOpen ? "Close navigation menu" : "Open navigation menu"
+        );
+
+        menuIcon.innerHTML = isOpen
+            ? '<path d="m6 6 12 12M18 6 6 18"/>'
+            : '<path d="M4 6h16M4 12h16M4 18h16"/>';
+    });
+
+    mainNavigation.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", closeMenu);
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeMenu();
+        }
+    });
+
+    window.addEventListener("resize", function () {
+        if (window.innerWidth > 1150) {
+            closeMenu();
+        }
+    });
+
+
+    // Set the minimum deadline to the current browser-local time.
+    // The backend independently validates the deadline using Pakistan time.
+    const deadlineInput = document.getElementById("needed_by");
+
+    if (deadlineInput) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+        deadlineInput.min = now.toISOString().slice(0, 16);
+    }
+
+
+    // Prevent donation dates later than today in the browser.
+    // The backend also validates donation dates.
+    const today = new Date();
+    const todayString = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0")
+    ].join("-");
+
+    document.querySelectorAll('input[name="donation_date"]').forEach(
+        function (input) {
+            input.max = todayString;
+        }
+    );
+</script>
 
 </body>
 </html>

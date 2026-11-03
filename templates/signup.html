@@ -1,333 +1,807 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#b4233b">
 
-    <title>Sign Up - Blood Donor Network</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Create Account | Blood Donor &amp; Emergency Request Network</title>
 
     <style>
-
-        /* =========================
-           SAME HEADER AS HOME
-        ========================= */
-
-        .site-header {
-            background: #ffffff;
-            border-bottom: 1px solid #e7eaf0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        :root {
+            --primary: #b4233b;
+            --primary-dark: #8f172c;
+            --light-red: #fff0f2;
+            --text: #20242c;
+            --muted: #697386;
+            --border: #e6e8ed;
+            --white: #ffffff;
+            --background: #f5f7fb;
+            --success: #16794b;
+            --danger: #b42318;
         }
 
-        .site-nav {
-            width: min(1180px, 92%);
-            min-height: 72px;
-            margin: auto;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--text);
+            background: var(--background);
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+
+        .topbar {
+            min-height: 78px;
+            padding: 0 7%;
             display: flex;
             align-items: center;
             justify-content: space-between;
-
             gap: 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
         }
 
-        .site-logo {
+        .brand {
             display: flex;
             align-items: center;
-            gap: 10px;
-
+            gap: 12px;
+            min-width: 0;
             text-decoration: none;
-            color: #b42318;
-
-            font-size: 21px;
-            font-weight: 800;
+            color: var(--text);
         }
 
-        .site-logo img {
-            width: 44px;
-            height: 44px;
+        .brand img {
+            width: 48px;
+            height: 48px;
             object-fit: contain;
         }
 
-        .site-nav-links {
+        .brand-name {
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -.4px;
+        }
+
+        .brand-subtitle {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+        }
+
+        .header-links {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .site-nav-links a {
-            display: inline-block;
-
-            padding: 10px 16px;
-
+        .header-links a {
+            padding: 10px 15px;
             border-radius: 8px;
-
             text-decoration: none;
-
             color: #344054;
-            background: transparent;
-
+            font-size: 13px;
             font-weight: 700;
-
-            transition: 0.2s ease;
+            transition: .2s;
         }
 
-        .site-nav-links a:hover {
+        .header-links a:hover {
             background: #f2f4f7;
-            color: #b42318;
+            color: var(--primary);
         }
 
-        /* Sign Up is the active page */
-
-        .site-nav-links a.active {
-            background: #b42318;
-            color: #ffffff;
+        .header-links a.active {
+            background: var(--primary);
+            color: white;
         }
 
-        .site-nav-links a.active:hover {
-            background: #991b1b;
-            color: #ffffff;
+        .secure-label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap;
         }
 
-        /* Mobile */
+        .secure-dot {
+            width: 8px;
+            height: 8px;
+            background: #23965c;
+            border-radius: 50%;
+        }
+
+        /* Main layout */
+
+        .main {
+            flex: 1;
+            width: 100%;
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 45px 35px;
+            display: grid;
+            grid-template-columns: 1.05fr .95fr;
+            align-items: center;
+            gap: 65px;
+        }
+
+        /* Information panel */
+
+        .intro {
+            padding: 10px 0;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 13px;
+            border-radius: 30px;
+            background: var(--light-red);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            margin-bottom: 25px;
+        }
+
+        .eyebrow-mark {
+            width: 9px;
+            height: 9px;
+            background: var(--primary);
+            border-radius: 50%;
+        }
+
+        .intro h1 {
+            max-width: 550px;
+            font-size: clamp(34px, 4vw, 52px);
+            line-height: 1.12;
+            letter-spacing: -1.8px;
+            margin-bottom: 22px;
+        }
+
+        .intro h1 span {
+            color: var(--primary);
+        }
+
+        .intro-description {
+            max-width: 480px;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.9;
+        }
+
+        .feature-list {
+            display: grid;
+            gap: 20px;
+            margin-top: 34px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .feature-icon {
+            flex-shrink: 0;
+            width: 43px;
+            height: 43px;
+            display: grid;
+            place-items: center;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--primary);
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .feature h3 {
+            font-size: 14px;
+            margin: 2px 0 6px;
+        }
+
+        .feature p {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        /* Signup card */
+
+        .signup-card {
+            width: 100%;
+            max-width: 480px;
+            justify-self: end;
+            padding: 34px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 15px 45px rgba(28, 37, 54, .07);
+        }
+
+        .signup-symbol {
+            width: 65px;
+            height: 65px;
+            display: grid;
+            place-items: center;
+            border-radius: 15px;
+            background: var(--light-red);
+            margin-bottom: 20px;
+        }
+
+        .signup-symbol img {
+            width: 49px;
+            height: 49px;
+            object-fit: contain;
+        }
+
+        .signup-card h2 {
+            font-size: 28px;
+            letter-spacing: -.7px;
+            margin-bottom: 9px;
+        }
+
+        .signup-description {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--muted);
+            margin-bottom: 22px;
+        }
+
+        /* Flash messages */
+
+        .flash-messages {
+            margin-bottom: 18px;
+        }
+
+        .flash-message {
+            padding: 12px 14px;
+            border-radius: 9px;
+            margin-bottom: 9px;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .flash-message.error,
+        .flash-message.danger {
+            color: var(--danger);
+            background: #fff0ef;
+            border: 1px solid #ffd4d0;
+        }
+
+        .flash-message.success {
+            color: var(--success);
+            background: #edfbf3;
+            border: 1px solid #c9f0d8;
+        }
+
+        .flash-message.info,
+        .flash-message.warning {
+            color: #875a0a;
+            background: #fff8e8;
+            border: 1px solid #f5e4b8;
+        }
+
+        /* Form */
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            height: 46px;
+            padding: 0 13px;
+            color: var(--text);
+            background: #fff;
+            border: 1px solid #dfe3e9;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .input-wrap input::placeholder {
+            color: #a0a7b4;
+            font-size: 13px;
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(180, 35, 59, .10);
+        }
+
+        .field-help {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .signup-button {
+            width: 100%;
+            min-height: 50px;
+            margin-top: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--white);
+            background: var(--primary);
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s, transform .2s;
+        }
+
+        .signup-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .signup-button:focus-visible,
+        .header-links a:focus-visible,
+        .login-link:focus-visible {
+            outline: 3px solid rgba(180, 35, 59, .3);
+            outline-offset: 3px;
+        }
+
+        .privacy-note {
+            margin-top: 17px;
+            padding: 12px;
+            border-radius: 9px;
+            background: #f7f8fb;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        .login-prompt {
+            margin-top: 22px;
+            padding-top: 19px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .login-link {
+            display: inline-block;
+            margin-left: 4px;
+            color: var(--primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .login-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+
+        .footer {
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            background: var(--white);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        .footer strong {
+            color: var(--primary);
+        }
+
+        @media (max-width: 1000px) {
+            .main {
+                gap: 35px;
+                padding: 40px 25px;
+            }
+
+            .signup-card {
+                padding: 27px;
+            }
+        }
 
         @media (max-width: 850px) {
-
-            .site-nav {
-                flex-direction: column;
-                padding: 16px 0;
+            .main {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                max-width: 600px;
             }
 
-            .site-logo {
+            .intro {
                 text-align: center;
-                font-size: 18px;
             }
 
-            .site-nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
+            .eyebrow {
+                margin-bottom: 18px;
             }
 
+            .intro h1 {
+                max-width: 550px;
+                margin: 0 auto 15px;
+                font-size: 38px;
+            }
+
+            .intro-description {
+                margin: 0 auto;
+            }
+
+            .feature-list {
+                display: none;
+            }
+
+            .signup-card {
+                justify-self: center;
+                max-width: 500px;
+            }
         }
 
+        @media (max-width: 700px) {
+            .topbar {
+                min-height: 70px;
+                padding: 12px 20px;
+                flex-wrap: wrap;
+            }
 
-/* Keep header navigation independent from .btn styles */
+            .brand img {
+                width: 42px;
+                height: 42px;
+            }
 
-.site-nav-links a {
-    background: transparent !important;
-    color: #344054 !important;
-    border: none !important;
-}
+            .brand-name {
+                font-size: 15px;
+            }
 
-.site-nav-links a:hover {
-    background: #f2f4f7 !important;
-    color: #b42318 !important;
-}
+            .brand-subtitle {
+                font-size: 9px;
+            }
 
-.site-nav-links a.active {
-    background: #b42318 !important;
-    color: #ffffff !important;
-    border: none !important;
-}
+            .header-links {
+                margin-left: auto;
+            }
 
+            .header-links a {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
 
+            .secure-label {
+                display: none;
+            }
+
+            .main {
+                padding: 30px 18px;
+            }
+
+            .intro h1 {
+                font-size: 34px;
+                letter-spacing: -1px;
+            }
+
+            .intro-description {
+                font-size: 13px;
+            }
+
+            .signup-card {
+                padding: 25px 21px;
+                border-radius: 16px;
+            }
+
+            .signup-card h2 {
+                font-size: 25px;
+            }
+
+            .footer {
+                padding: 17px 15px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .intro h1 {
+                font-size: 30px;
+            }
+
+            .signup-card {
+                padding: 22px 17px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                transition: none !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
-
 </head>
 
-
 <body>
+<div class="page">
 
+    <header class="topbar">
 
-    <!-- =========================
-         HEADER
-    ========================= -->
+        <a class="brand" href="{{ url_for('home') }}">
+            <img
+                src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                alt="Blood Donor Network logo"
+            >
+            <div>
+                <div class="brand-name">Blood Donor Network</div>
+                <div class="brand-subtitle">Connecting Lives</div>
+            </div>
+        </a>
 
-    <header class="site-header">
+        <nav class="header-links" aria-label="Account navigation">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('login') }}">Login</a>
+            <a class="active" href="{{ url_for('signup') }}">Sign Up</a>
+        </nav>
 
-        <div class="site-nav">
-
-            <a class="site-logo" href="/">
-
-                <img
-                    src="{{ url_for('static', filename='images/blood-logo.png') }}"
-                    alt="Blood Donor Network Logo"
-                >
-
-                <span>
-                    Blood Donor & Emergency Request Network
-                </span>
-
-            </a>
-
-
-            <nav class="site-nav-links">
-
-                <a href="/">
-                    Home
-                </a>
-
-                <a href="/login">
-                    Login
-                </a>
-
-                <a class="active" href="/signup">
-                    Sign Up
-                </a>
-
-            </nav>
-
+        <div class="secure-label">
+            <span class="secure-dot"></span>
+            Create Your Account
         </div>
 
     </header>
 
+    <main class="main">
 
-    <!-- =========================
-         SIGN UP
-    ========================= -->
+        <section class="intro">
 
-    <div class="auth-page">
-
-        <div class="auth-container">
-
-<div class="auth-icon">
-    <img
-        src="{{ url_for('static', filename='images/blood-logo.png') }}"
-        alt="Blood Donor Network"
-    >
-</div>
+            <div class="eyebrow">
+                <span class="eyebrow-mark"></span>
+                BECOME PART OF THE NETWORK
+            </div>
 
             <h1>
-                Create Account
+                Join the network.
+                <span>Help save lives.</span>
             </h1>
 
-
-            <p class="auth-subtitle">
-                Join the Blood Donor Network
+            <p class="intro-description">
+                Create your account to connect with blood donors,
+                respond to emergency requests, and become part of
+                a community working together to help people in need.
             </p>
 
+            <div class="feature-list">
 
-            <!-- Flash Messages -->
+                <div class="feature">
+                    <div class="feature-icon" aria-hidden="true">+</div>
+                    <div>
+                        <h3>Connect with donors</h3>
+                        <p>Find compatible donors according to blood group and location.</p>
+                    </div>
+                </div>
 
-            {% with messages = get_flashed_messages() %}
+                <div class="feature">
+                    <div class="feature-icon" aria-hidden="true">!</div>
+                    <div>
+                        <h3>Request emergency blood</h3>
+                        <p>Create blood requests and connect with potential donors.</p>
+                    </div>
+                </div>
 
+                <div class="feature">
+                    <div class="feature-icon" aria-hidden="true">✓</div>
+                    <div>
+                        <h3>Be part of something meaningful</h3>
+                        <p>Join a network that brings donors and people in need together.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="signup-card">
+
+            <div class="signup-symbol">
+                <img
+                    src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                    alt=""
+                >
+            </div>
+
+            <h2>Create your account</h2>
+
+            <p class="signup-description">
+                Enter your details below to join the Blood Donor Network.
+            </p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-
-                    {% for message in messages %}
-
-                        <div class="auth-message">
-                            {{ message }}
-                        </div>
-
-                    {% endfor %}
-
+                    <div class="flash-messages" aria-live="polite">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
-
             {% endwith %}
 
-
-            <!-- Signup Form -->
-
             <form action="{{ url_for('signup') }}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
 
-                <div class="auth-form-group">
-
-                    <label>
-                        Name
-                    </label>
-
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="Enter your full name"
-                        required
-                    >
-
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <div class="input-wrap">
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
                 </div>
 
-
-                <div class="auth-form-group">
-
-                    <label>
-                        Email
-                    </label>
-
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="Enter your email"
-                    >
-
+                <div class="form-group">
+                    <label for="cnic">CNIC Number</label>
+                    <div class="input-wrap">
+                        <input
+                            type="text"
+                            id="cnic"
+                            name="cnic"
+                            placeholder="XXXXX-XXXXXXX-X"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            maxlength="15"
+                            pattern="[0-9]{5}-[0-9]{7}-[0-9]{1}"
+                            title="Enter CNIC in the format 12345-1234567-1"
+                            required
+                        >
+                    </div>
+                    <small class="field-help">
+                        Enter your 13-digit CNIC. It is used for registration
+                        and must never appear on public profiles.
+                    </small>
                 </div>
 
-
-                <div class="auth-form-group">
-
-                    <label>
-                        Phone Number
-                    </label>
-
-                    <input
-                        type="text"
-                        name="phone"
-                        placeholder="Enter your phone number"
-                    >
-
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrap">
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="Enter your email address"
+                            autocomplete="email"
+                            maxlength="150"
+                        >
+                    </div>
                 </div>
 
-
-                <div class="auth-form-group">
-
-                    <label>
-                        Password
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Create a password"
-                        required
-                    >
-
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <div class="input-wrap">
+                        <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            placeholder="Enter your phone number"
+                            autocomplete="tel"
+                            maxlength="20"
+                        >
+                    </div>
+                    <small class="field-help">
+                        Provide at least one login identifier: email address
+                        or phone number.
+                    </small>
                 </div>
 
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrap">
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            placeholder="Create a password"
+                            autocomplete="new-password"
+                            minlength="8"
+                            maxlength="128"
+                            required
+                        >
+                    </div>
+                    <small class="field-help">
+                        Your password must contain at least 8 characters.
+                    </small>
+                </div>
 
-                <button type="submit" class="auth-btn">
-                    Create Account
+                <button type="submit" class="signup-button">
+                    Create Account <span aria-hidden="true">→</span>
                 </button>
 
             </form>
 
-
-            <!-- Login Link -->
-
-            <div class="auth-footer">
-
-                <span>
-                    Already have an account?
-                </span>
-
-                <a href="/login">
-                    Login
-                </a>
-
+            <div class="privacy-note">
+                Your CNIC and account credentials are private.
+                They must never appear on public donor profiles.
             </div>
 
+            <div class="login-prompt">
+                Already have an account?
+                <a class="login-link" href="{{ url_for('login') }}">
+                    Sign in
+                </a>
+            </div>
 
-        </div>
+        </section>
 
-    </div>
+    </main>
 
+    <footer class="footer">
+        <p>
+            <strong>Blood Donor Network</strong>
+            &nbsp;|&nbsp; Connecting donors with people in need.
+        </p>
+        <p>Every donation brings hope.</p>
+    </footer>
+
+</div>
+
+<script>
+    const cnicInput = document.getElementById("cnic");
+
+    cnicInput.addEventListener("input", function () {
+        const digits = this.value.replace(/\D/g, "").slice(0, 13);
+
+        let formatted = digits;
+
+        if (digits.length > 5 && digits.length <= 12) {
+            formatted = digits.slice(0, 5) + "-" + digits.slice(5);
+        } else if (digits.length > 12) {
+            formatted = digits.slice(0, 5) + "-" +
+                        digits.slice(5, 12) + "-" +
+                        digits.slice(12, 13);
+        }
+
+        this.value = formatted;
+    });
+</script>
 
 </body>
 </html>
-

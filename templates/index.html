@@ -1,439 +1,1076 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#b4233b">
+    <meta name="description" content="Blood Donor and Emergency Request Network connects blood donors and people seeking blood through emergency requests, matching and donation tracking.">
 
-    <title>Blood Donor & Emergency Request Network</title>
+    <title>Blood Donor &amp; Emergency Request Network</title>
 
     <style>
+        :root {
+            --red: #b4233b;
+            --red-dark: #90182e;
+            --red-light: #fff0f2;
+            --ink: #20242c;
+            --muted: #737b8c;
+            --border: #e8eaf0;
+            --white: #fff;
+            --page: #f7f8fb;
+            --shadow: 0 10px 35px rgba(25,35,55,.06);
+        }
+
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 90px;
         }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            background: #f6f8fb;
-            color: #172033;
-            line-height: 1.5;
+            background: var(--page);
+            color: var(--ink);
+            line-height: 1.65;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        button {
+            font: inherit;
         }
 
         .container {
-            width: min(1180px, 92%);
+            width: min(1160px, 92%);
             margin: auto;
         }
 
-        /* =========================
-           HEADER
-        ========================= */
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 12px;
+            z-index: 200;
+            padding: 10px 15px;
+            background: white;
+            color: var(--red);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-weight: 700;
+        }
+
+        .skip-link:focus {
+            top: 12px;
+        }
+
+        /* NAVIGATION */
 
         .site-header {
-            background: #ffffff;
-            border-bottom: 1px solid #e7eaf0;
             position: sticky;
             top: 0;
             z-index: 100;
+            background: rgba(255,255,255,.97);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
         }
 
         .site-nav {
-            width: min(1180px, 92%);
-            min-height: 72px;
+            width: min(1200px, 94%);
+            min-height: 78px;
             margin: auto;
-
             display: flex;
             align-items: center;
             justify-content: space-between;
-
-            gap: 20px;
+            gap: 25px;
         }
 
         .site-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
-
-            text-decoration: none;
-            color: #b42318;
-
-            font-size: 21px;
+            gap: 11px;
+            color: var(--red);
             font-weight: 800;
+            font-size: 15px;
+            line-height: 1.3;
+            max-width: 300px;
         }
 
         .site-logo img {
-            width: 44px;
-            height: 44px;
+            width: 46px;
+            height: 46px;
             object-fit: contain;
         }
 
-        .site-nav-links {
+        .nav-links {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 17px;
+            list-style: none;
         }
 
-        .site-nav-links a {
-            display: inline-block;
-
-            padding: 10px 16px;
-
-            border-radius: 8px;
-
-            text-decoration: none;
-
-            color: #344054;
-            background: transparent;
-
+        .nav-links a {
+            color: #555e6e;
+            font-size: 12px;
             font-weight: 700;
-
-            transition: 0.2s ease;
         }
 
-        .site-nav-links a:hover {
-            background: #f2f4f7;
-            color: #b42318;
+        .nav-links a:hover {
+            color: var(--red);
         }
 
-        /* Active page */
-        .site-nav-links a.active {
-            background: #b42318;
-            color: #ffffff;
+        .nav-links a:focus-visible,
+        .btn:focus-visible,
+        .menu-toggle:focus-visible {
+            outline: 3px solid rgba(180,35,59,.35);
+            outline-offset: 3px;
         }
 
-        .site-nav-links a.active:hover {
-            background: #991b1b;
-            color: #ffffff;
+        .nav-links .register-link {
+            padding: 11px 16px;
+            color: white;
+            background: var(--red);
+            border-radius: 9px;
         }
 
-        /* =========================
-           HERO
-        ========================= */
+        .nav-links .register-link:hover {
+            background: var(--red-dark);
+            color: white;
+        }
+
+        .menu-toggle {
+            display: none;
+            width: 43px;
+            height: 43px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: white;
+            color: var(--red);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 19px;
+            height: 2px;
+            border-radius: 2px;
+            background: currentColor;
+            transition: .2s;
+        }
+
+        .menu-toggle[aria-expanded="true"] span:first-child {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .menu-toggle[aria-expanded="true"] span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle[aria-expanded="true"] span:last-child {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* HERO */
 
         .hero {
-            padding: 62px 0 42px;
-
+            padding: 85px 0;
+            color: white;
             background:
-                linear-gradient(
-                    180deg,
-                    #ffffff 0%,
-                    #fdf5f4 100%
-                );
+                radial-gradient(circle at 90% 15%, rgba(255,255,255,.14), transparent 30%),
+                linear-gradient(115deg, #a71930, #c42d47 60%, #e04b60);
         }
 
         .hero-grid {
-            display: block;
+            display: grid;
+            grid-template-columns: 1.35fr .75fr;
+            align-items: center;
+            gap: 55px;
+        }
+
+        .hero-label {
+            display: inline-block;
+            margin-bottom: 23px;
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,.3);
+            border-radius: 100px;
+            background: rgba(255,255,255,.1);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .hero h1 {
-            font-size: clamp(34px, 5vw, 58px);
-            line-height: 1.05;
-
-            margin-bottom: 18px;
+            max-width: 750px;
+            margin-bottom: 22px;
+            font-size: clamp(38px,5.4vw,64px);
+            line-height: 1.12;
+            letter-spacing: -1.7px;
         }
 
         .hero h1 span {
-            color: #b42318;
+            color: #ffe0e5;
         }
 
-        .hero p {
-            color: #667085;
-
-            font-size: 18px;
-
-            max-width: 680px;
-
-            margin-bottom: 26px;
+        .hero-description {
+            max-width: 610px;
+            margin-bottom: 30px;
+            color: rgba(255,255,255,.89);
+            font-size: 16px;
+            line-height: 1.9;
         }
 
         .hero-actions {
             display: flex;
-            gap: 12px;
             flex-wrap: wrap;
+            gap: 13px;
         }
 
-        /* =========================
-           BUTTONS
-        ========================= */
-
         .btn {
-            display: inline-block;
-
-            padding: 11px 17px;
-
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 48px;
+            padding: 12px 21px;
+            border: 1px solid transparent;
             border-radius: 9px;
-
-            border: 1px solid #b42318;
-
-            background: #b42318;
-            color: #ffffff !important;
-
-            text-decoration: none;
-
-            font-weight: 700;
-
-            transition: 0.2s ease;
+            font-size: 14px;
+            font-weight: 800;
+            transition: .2s;
+            cursor: pointer;
         }
 
         .btn:hover {
-            background: #991b1b;
-            border-color: #991b1b;
+            transform: translateY(-2px);
         }
 
-        .btn.secondary {
-            background: #ffffff;
-            color: #b42318 !important;
+        .btn-white {
+            color: var(--red);
+            background: white;
         }
 
-        .btn.secondary:hover {
-            background: #fdf0ef;
+        .btn-outline {
+            color: white;
+            border-color: rgba(255,255,255,.65);
+            background: rgba(255,255,255,.08);
         }
 
-        /* =========================
-           MAIN
-        ========================= */
-
-        main {
-            padding: 42px 0 70px;
+        .hero-panel {
+            padding: 29px;
+            border: 1px solid rgba(255,255,255,.25);
+            border-radius: 20px;
+            background: rgba(255,255,255,.11);
         }
 
-        .section-title {
-            margin-bottom: 22px;
-        }
-
-        .section-title h2 {
-            font-size: 29px;
-            margin-bottom: 5px;
-        }
-
-        .section-title p {
-            color: #667085;
-        }
-
-        /* =========================
-           CARDS
-        ========================= */
-
-        .cards {
+        .hero-symbol {
             display: grid;
-
-            grid-template-columns:
-                repeat(3, 1fr);
-
-            gap: 18px;
-
-            margin-bottom: 52px;
+            place-items: center;
+            width: 65px;
+            height: 65px;
+            margin-bottom: 21px;
+            border-radius: 17px;
+            background: white;
+            color: var(--red);
+            font-size: 30px;
+            font-weight: 800;
         }
 
-        .card {
-            background: #ffffff;
+        .hero-panel h2 {
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
 
-            border: 1px solid #e7eaf0;
+        .hero-panel p {
+            color: rgba(255,255,255,.87);
+            font-size: 14px;
+        }
 
+        .hero-divider {
+            height: 1px;
+            margin: 22px 0;
+            background: rgba(255,255,255,.23);
+        }
+
+        /* GENERAL SECTIONS */
+
+        .section {
+            padding: 72px 0;
+        }
+
+        .section-white {
+            background: white;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-heading {
+            max-width: 700px;
+            margin: 0 auto 35px;
+            text-align: center;
+        }
+
+        .eyebrow {
+            display: block;
+            margin-bottom: 9px;
+            color: var(--red);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .section-heading h2 {
+            margin-bottom: 12px;
+            font-size: clamp(27px,4vw,36px);
+            line-height: 1.25;
+        }
+
+        .section-heading p {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        /* ABOUT */
+
+        .about-grid {
+            display: grid;
+            grid-template-columns: repeat(2,1fr);
+            gap: 23px;
+        }
+
+        .info-card {
+            padding: 29px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: white;
+            box-shadow: var(--shadow);
+        }
+
+        .info-icon {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            margin-bottom: 17px;
             border-radius: 14px;
-
-            padding: 20px;
-
-            box-shadow:
-                0 5px 18px
-                rgba(16, 24, 40, 0.05);
-        }
-
-        .card-top {
-            display: flex;
-
-            align-items: center;
-            justify-content: space-between;
-
-            gap: 10px;
-
-            margin-bottom: 13px;
-        }
-
-        .name {
+            background: var(--red-light);
+            color: var(--red);
             font-size: 18px;
             font-weight: 800;
         }
 
-        .blood {
-            display: inline-block;
+        .info-card h3 {
+            margin-bottom: 11px;
+            font-size: 19px;
+        }
 
-            background: #fdecec;
+        .info-card p {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.85;
+        }
 
-            color: #b42318;
+        /* HOW IT WORKS */
 
-            border-radius: 8px;
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 22px;
+        }
 
-            padding: 7px 10px;
+        .step-card {
+            padding: 27px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            background: var(--page);
+        }
 
+        .step-number {
+            display: grid;
+            place-items: center;
+            width: 43px;
+            height: 43px;
+            margin-bottom: 17px;
+            border-radius: 12px;
+            background: var(--red);
+            color: white;
             font-weight: 800;
         }
 
-        .detail {
-            color: #667085;
-
-            margin-top: 7px;
+        .step-card h3 {
+            margin-bottom: 9px;
+            font-size: 17px;
         }
 
-        .status {
-            margin-top: 15px;
-
+        .step-card p {
+            color: var(--muted);
             font-size: 13px;
-
-            font-weight: 700;
-
-            color: #027a48;
+            line-height: 1.8;
         }
 
-        /* =========================
-           REQUEST CARD
-        ========================= */
+        /* PLATFORM FEATURES */
 
-        .request-card {
-            border-left: 4px solid #b42318;
+        .features-section {
+            padding: 75px 0;
+            background: var(--page);
         }
 
-        .urgency {
-            font-size: 12px;
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 20px;
+        }
 
+        .feature-card {
+            padding: 25px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            background: white;
+            box-shadow: var(--shadow);
+            transition: .2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: #e8aab4;
+        }
+
+        .feature-icon {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            border-radius: 13px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 19px;
             font-weight: 800;
-
-            text-transform: uppercase;
-
-            color: #b42318;
         }
 
-        /* =========================
-           EMPTY STATE
-        ========================= */
+        .feature-card h3 {
+            margin-bottom: 9px;
+            font-size: 17px;
+        }
 
-        .empty {
-            background: #ffffff;
+        .feature-card p {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
 
-            border: 1px dashed #d0d5dd;
-
-            border-radius: 14px;
-
+        .feature-workflow {
+            margin-top: 35px;
             padding: 30px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: white;
+        }
 
-            color: #667085;
+        .feature-workflow h3 {
+            margin-bottom: 15px;
+            font-size: 21px;
+        }
 
-            grid-column: 1 / -1;
+        .workflow-list {
+            padding-left: 22px;
+        }
 
+        .workflow-list li {
+            margin-bottom: 11px;
+            padding-left: 5px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .workflow-list strong {
+            color: var(--ink);
+        }
+
+        /* BLOOD EXPLORATION */
+
+        .explore-section {
+            padding: 75px 0;
+            background: var(--red-light);
+        }
+
+        .explore-card {
+            max-width: 850px;
+            margin: auto;
+            padding: 35px;
+            border: 1px solid #f3d8dd;
+            border-radius: 18px;
+            background: white;
+            box-shadow: var(--shadow);
+        }
+
+        .explore-card h3 {
+            margin-bottom: 9px;
+            font-size: 21px;
             text-align: center;
         }
 
-        /* =========================
-           MOBILE
-        ========================= */
+        .explore-card > p {
+            max-width: 600px;
+            margin: 0 auto 25px;
+            color: var(--muted);
+            font-size: 14px;
+            text-align: center;
+        }
 
-        @media (max-width: 850px) {
+        .blood-groups {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 13px;
+            margin-bottom: 25px;
+        }
 
-            .site-nav {
-                flex-direction: column;
+        .blood-option {
+            position: relative;
+        }
 
-                padding: 16px 0;
+        .blood-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .blood-option label {
+            display: grid;
+            place-items: center;
+            min-height: 67px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--page);
+            color: var(--ink);
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .blood-option label:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .blood-option input:checked + label {
+            border-color: var(--red);
+            background: var(--red);
+            color: white;
+        }
+
+        .blood-option input:focus-visible + label {
+            outline: 3px solid rgba(180,35,59,.3);
+            outline-offset: 3px;
+        }
+
+        .explore-submit {
+            width: 100%;
+            min-height: 49px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--red);
+            color: white;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .explore-submit:hover {
+            background: var(--red-dark);
+        }
+
+        .explore-note {
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* DONOR STATISTICS */
+
+        .donor-stat-card {
+            max-width: 460px;
+            margin: auto;
+            padding: 38px 28px;
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: white;
+            box-shadow: var(--shadow);
+        }
+
+        .donor-stat-number {
+            color: var(--ink);
+            font-size: 62px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .donor-stat-label {
+            margin-top: 8px;
+            color: var(--red);
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .stat-divider {
+            width: 48px;
+            height: 3px;
+            margin: 21px auto;
+            border-radius: 10px;
+            background: var(--red);
+        }
+
+        .donor-stat-description {
+            max-width: 320px;
+            margin: auto;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* SAFETY NOTICE */
+
+        .notice {
+            max-width: 850px;
+            margin: auto;
+            padding: 29px;
+            border: 1px solid #f3d8dd;
+            border-radius: 15px;
+            background: var(--red-light);
+        }
+
+        .notice h3 {
+            margin-bottom: 11px;
+            font-size: 19px;
+        }
+
+        .notice p {
+            color: #555e6e;
+            font-size: 14px;
+            line-height: 1.9;
+        }
+
+        /* BOTTOM CTA */
+
+        .bottom-cta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 25px;
+            padding: 38px;
+            border: 1px solid #f3d8dd;
+            border-radius: 18px;
+            background: var(--red-light);
+        }
+
+        .bottom-cta h2 {
+            margin-bottom: 9px;
+            font-size: 25px;
+        }
+
+        .bottom-cta p {
+            max-width: 600px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            flex-shrink: 0;
+            color: white;
+            background: var(--red);
+        }
+
+        .btn-primary:hover {
+            background: var(--red-dark);
+        }
+
+        /* FOOTER */
+
+        .site-footer {
+            padding: 38px 0 22px;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+
+        .footer-main {
+            display: flex;
+            justify-content: space-between;
+            gap: 35px;
+            padding-bottom: 28px;
+        }
+
+        .footer-brand {
+            max-width: 370px;
+        }
+
+        .footer-brand h3 {
+            margin-bottom: 10px;
+            color: var(--red);
+            font-size: 16px;
+        }
+
+        .footer-brand p,
+        .footer-links a {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .footer-nav h4 {
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .footer-links a {
+            font-weight: 700;
+        }
+
+        .footer-links a:hover {
+            color: var(--red);
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding-top: 19px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 1050px) {
+            .nav-links {
+                gap: 11px;
             }
 
-            .site-logo {
-                text-align: center;
+            .nav-links a {
+                font-size: 11px;
+            }
 
+            .hero-grid {
+                gap: 30px;
+            }
+        }
+
+        @media (max-width: 850px) {
+            .site-nav {
+                min-height: 70px;
+                flex-wrap: wrap;
+            }
+
+            .menu-toggle {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+                width: 100%;
+                align-items: stretch;
+                flex-direction: column;
+                gap: 0;
+                padding: 8px 0 15px;
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .nav-links a {
+                display: block;
+                padding: 12px;
+                border-radius: 7px;
+                font-size: 14px;
+            }
+
+            .nav-links .register-link {
+                margin-top: 8px;
+                text-align: center;
+            }
+
+            .hero {
+                padding: 57px 0;
+            }
+
+            .hero-grid,
+            .about-grid,
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2,1fr);
+            }
+
+            .hero-panel {
+                max-width: 520px;
+            }
+
+            .bottom-cta,
+            .footer-main {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .site-logo {
+                max-width: 260px;
+                font-size: 12px;
+            }
+
+            .site-logo img {
+                width: 39px;
+                height: 39px;
+            }
+
+            .hero h1 {
+                font-size: 38px;
+            }
+
+            .hero-actions {
+                flex-direction: column;
+            }
+
+            .hero-actions .btn {
+                width: 100%;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-workflow {
+                padding: 22px;
+            }
+
+            .explore-card {
+                padding: 24px 17px;
+            }
+
+            .blood-groups {
+                gap: 8px;
+            }
+
+            .blood-option label {
+                min-height: 58px;
                 font-size: 18px;
             }
 
-            .site-nav-links {
-                flex-wrap: wrap;
-
-                justify-content: center;
+            .donor-stat-number {
+                font-size: 53px;
             }
 
-            .cards {
-                grid-template-columns: 1fr;
+            .bottom-cta {
+                padding: 27px;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+
+            *, *::before, *::after {
+                transition-duration: .01ms !important;
+                animation-duration: .01ms !important;
             }
         }
     </style>
 </head>
 
-
 <body>
 
-    <!-- =========================
-         HEADER
-    ========================= -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
-    <header class="site-header">
+<header class="site-header">
+    <nav class="site-nav" aria-label="Main navigation">
 
-        <div class="site-nav">
+        <a class="site-logo" href="{{ url_for('home') }}">
+            <img
+                src="{{ url_for('static', filename='images/blood-logo.png') }}"
+                alt="Blood donation logo"
+            >
+            <span>Blood Donor &amp; Emergency Request Network</span>
+        </a>
 
-            <a class="site-logo" href="/">
+        <button
+            class="menu-toggle"
+            id="menuToggle"
+            type="button"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="navLinks"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+<ul class="nav-links" id="navLinks">
 
-                <img
-                    src="{{ url_for('static', filename='images/blood-logo.png') }}"
-                    alt="Blood Donor Network Logo"
-                >
+    <li>
+        <a href="{{ url_for('home') }}">Home</a>
+    </li>
 
-                <span>
-                    Blood Donor & Emergency Request Network
-                </span>
+    <li>
+        <a href="#about">About</a>
+    </li>
 
-            </a>
+    <li>
+        <a href="#how-it-works">How It Works</a>
+    </li>
 
+    <li>
+        <a href="#explore">Find Blood Donors</a>
+    </li>
 
-            <nav class="site-nav-links">
-
-                <a class="active" href="/">
-                    Home
-                </a>
-
-                <a href="/login">
-                    Login
-                </a>
-
-                <a href="/signup">
-                    Sign Up
-                </a>
-
-            </nav>
-
-        </div>
-
-    </header>
+</ul>    </nav>
+</header>
 
 
-    <!-- =========================
-         HERO
-    ========================= -->
+<main id="main-content">
 
-    <section class="hero">
+    <!-- HERO SECTION -->
+
+    <section class="hero" id="home">
 
         <div class="container hero-grid">
 
             <div>
 
+                <div class="hero-label">
+                    Connecting donors. Supporting lives.
+                </div>
+
                 <h1>
-                    Find blood when it
-                    <span>matters most.</span>
+                    When every second counts,
+                    <span>every drop matters.</span>
                 </h1>
 
-                <p>
-                    A blood donor and emergency request network that connects
-                    people with available and eligible blood donors.
+                <p class="hero-description">
+                    The Blood Donor &amp; Emergency Request Network helps connect
+                    people seeking blood with potential donors through a coordinated
+                    digital platform. Explore compatible blood groups, create
+                    emergency requests and coordinate donation progress.
                 </p>
-
 
                 <div class="hero-actions">
 
-                    <a class="btn" href="/request">
-                        Request Blood
+                    <a class="btn btn-white" href="#explore">
+                        Find Blood Donors
                     </a>
 
-                    <a class="btn secondary" href="/donor">
-                        Become a Donor
+                    <a class="btn btn-outline"
+                       href="{{ url_for('signup') }}">
+                        Create an Account
                     </a>
 
                 </div>
+
+            </div>
+
+
+            <aside class="hero-panel">
+
+                <div class="hero-symbol" aria-hidden="true">+</div>
+
+                <h2>A small act can make a big difference.</h2>
+
+                <p>
+                    Every willing donor can help create a connection between
+                    people who need blood and people who may be able to donate.
+                </p>
+
+                <div class="hero-divider"></div>
+
+                <p>
+                    <strong>One connected network</strong><br>
+                    Supporting donor discovery, emergency requests and
+                    donation coordination.
+                </p>
+
+            </aside>
+
+        </div>
+
+    </section>
+
+
+    <!-- ABOUT SECTION -->
+
+    <section class="section" id="about">
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <span class="eyebrow">ABOUT THE PROJECT</span>
+
+                <h2>Bringing blood donors and people in need together</h2>
+
+                <p>
+                    A coordinated digital network for donor discovery,
+                    emergency blood requests, controlled matching,
+                    direct communication and donation receipt tracking.
+                </p>
+
+            </div>
+
+
+            <div class="about-grid">
+
+                <article class="info-card">
+
+                    <div class="info-icon" aria-hidden="true">01</div>
+
+                    <h3>Our Mission</h3>
+
+                    <p>
+                        Our mission is to simplify the process of finding potential
+                        blood donors and coordinating emergency blood requests.
+                        We aim to provide a structured alternative to scattered
+                        phone calls and social media messages.
+                    </p>
+
+                </article>
+
+
+                <article class="info-card">
+
+                    <div class="info-icon" aria-hidden="true">02</div>
+
+                    <h3>Our Vision</h3>
+
+                    <p>
+                        We envision a connected community where donors and people
+                        seeking blood can find relevant information and coordinate
+                        assistance through a reliable and accessible platform.
+                    </p>
+
+                </article>
 
             </div>
 
@@ -442,157 +1079,463 @@
     </section>
 
 
-    <!-- =========================
-         MAIN
-    ========================= -->
+    <!-- HOW IT WORKS SECTION -->
 
-    <main>
+    <section class="section section-white" id="how-it-works">
 
         <div class="container">
 
+            <div class="section-heading">
 
-            <!-- AVAILABLE DONORS -->
+                <span class="eyebrow">HOW IT WORKS</span>
 
-            <section>
+                <h2>A simple and organized process</h2>
 
-                <div class="section-title">
+                <p>
+                    The platform brings important blood donation coordination
+                    activities together.
+                </p>
 
-                    <h2>
-                        Available Blood Donors
-                    </h2>
-
-                    <p>
-                        Recently registered donors who are currently
-                        available and eligible.
-                    </p>
-
-                </div>
+            </div>
 
 
-                <div class="cards">
+            <div class="steps-grid">
 
-                    {% if donors %}
+                <article class="step-card">
 
-                        {% for donor in donors %}
+                    <div class="step-number">01</div>
 
-                            <article class="card">
-
-                                <div class="card-top">
-
-                                    <div class="name">
-                                        {{ donor[0] }}
-                                    </div>
-
-                                    <div class="blood">
-                                        {{ donor[1] }}
-                                    </div>
-
-                                </div>
-
-
-                                <div class="detail">
-                                    📍 {{ donor[2] }}
-                                </div>
-
-
-                                <div class="status">
-                                    ● Available
-                                </div>
-
-                            </article>
-
-                        {% endfor %}
-
-                    {% else %}
-
-                        <div class="empty">
-                            No available blood donors have registered yet.
-                        </div>
-
-                    {% endif %}
-
-                </div>
-
-            </section>
-
-
-            <!-- BLOOD REQUESTS -->
-
-            <section>
-
-                <div class="section-title">
-
-                    <h2>
-                        Blood Requests
-                    </h2>
+                    <h3>Create Your Account</h3>
 
                     <p>
-                        Recent pending requests from people who need blood.
+                        Register using your personal information and securely
+                        access your account. You can register as a donor
+                        or participate as a requester.
                     </p>
 
-                </div>
+                </article>
 
 
-                <div class="cards">
+                <article class="step-card">
 
-                    {% if requests %}
+                    <div class="step-number">02</div>
 
-                        {% for req in requests %}
+                    <h3>Explore or Request Blood</h3>
 
-                            <article class="card request-card">
+                    <p>
+                        Explore compatible blood groups, register as a donor,
+                        or create an emergency request with the required
+                        blood units and hospital information.
+                    </p>
 
-                                <div class="card-top">
-
-                                    <div class="name">
-                                        {{ req[1] if req[1] else "Blood requester" }}
-                                    </div>
-
-                                    <div class="blood">
-                                        {{ req[2] }}
-                                    </div>
-
-                                </div>
+                </article>
 
 
-                                <div class="urgency">
-                                    {{ req[3] }} request
-                                </div>
+                <article class="step-card">
 
+                    <div class="step-number">03</div>
 
-                                <div class="detail">
-                                    📍 {{ req[4] }}
-                                </div>
+                    <h3>Match, Donate and Confirm</h3>
 
+                    <p>
+                        Donors accept requests, requesters confirm matches,
+                        and both parties track donation and receipt progress.
+                    </p>
 
-                                <div class="detail">
-                                    🏥 {{ req[5] }}
-                                </div>
+                </article>
 
-
-                                <div class="detail">
-                                    Status: {{ req[6] }}
-                                </div>
-
-                            </article>
-
-                        {% endfor %}
-
-                    {% else %}
-
-                        <div class="empty">
-                            No pending blood requests right now.
-                        </div>
-
-                    {% endif %}
-
-                </div>
-
-            </section>
+            </div>
 
         </div>
 
-    </main>
+    </section>
+
+
+
+            <div class="feature-workflow">
+
+                <h3>How the complete matching process works</h3>
+
+                <ol class="workflow-list">
+
+                    <li>
+                        <strong>Request:</strong>
+                        A requester creates a blood request and specifies
+                        the required blood group and units.
+                    </li>
+
+                    <li>
+                        <strong>Discovery:</strong>
+                        The platform identifies potentially compatible,
+                        available and eligible donors.
+                    </li>
+
+                    <li>
+                        <strong>Acceptance:</strong>
+                        A donor accepts a request. A pending acceptance
+                        reserves that donor from accepting another request.
+                    </li>
+
+                    <li>
+                        <strong>Confirmation:</strong>
+                        The requester confirms or rejects the proposed match.
+                        A rejected match releases the donor.
+                    </li>
+
+                    <li>
+                        <strong>Communication:</strong>
+                        Once confirmed, the matched parties can contact
+                        each other using Call and WhatsApp actions.
+                    </li>
+
+                    <li>
+                        <strong>Donation:</strong>
+                        The donor reports the donation and the requester
+                        confirms the actual units received.
+                    </li>
+
+                    <li>
+                        <strong>Completion:</strong>
+                        Confirmed received units reduce the remaining
+                        requirement. Once all requested units are received,
+                        the request is marked fulfilled and the donor
+                        becomes available for another match.
+                    </li>
+
+                </ol>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- PUBLIC BLOOD EXPLORATION -->
+
+    <section class="explore-section" id="explore">
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <span class="eyebrow">PUBLIC BLOOD EXPLORATION</span>
+
+                <h2>Explore compatible blood groups</h2>
+
+                <p>
+                    You do not need an account to begin exploring.
+                    Select a blood group to view compatible donor groups
+                    and relevant blood requests.
+                </p>
+
+            </div>
+
+
+            <div class="explore-card">
+
+                <h3>Select a blood group</h3>
+
+                <p>
+                    Choose the blood group needed by the patient.
+                    The platform will find potentially compatible donor groups.
+                </p>
+
+                <form
+                    id="exploreForm"
+                    action="{{ url_for('public_explore') }}"
+                    method="GET"
+                >
+
+                    <div class="blood-groups">
+
+                        {% for group in blood_types %}
+
+                            <div class="blood-option">
+
+                                <input
+                                    type="radio"
+                                    id="blood-{{ loop.index }}"
+                                    name="blood_type"
+                                    value="{{ group }}"
+                                    required
+                                >
+
+                                <label for="blood-{{ loop.index }}">
+                                    {{ group }}
+                                </label>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <button class="explore-submit" type="submit">
+                        Explore Compatible Donors and Requests
+                    </button>
+
+                </form>
+
+
+                <p class="explore-note">
+                    Public profiles display relevant donor information.
+                    Private contact details and CNIC information are not displayed.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- DONOR STATISTICS -->
+
+    <section class="section">
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <span class="eyebrow">OUR COMMUNITY</span>
+
+                <h2>Growing through generosity</h2>
+
+                <p>
+                    Every registered donor represents someone willing
+                    to become part of a supportive community.
+                </p>
+
+            </div>
+
+
+            <div class="donor-stat-card">
+
+                <div class="donor-stat-number">
+                    {{ donor_count|default(0, true) }}
+                </div>
+
+                <div class="donor-stat-label">
+                    Registered Donor Profiles
+                </div>
+
+                <div class="stat-divider"></div>
+
+                <p class="donor-stat-description">
+                    Total number of donor profiles registered in the network.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- MEDICAL SAFETY INFORMATION -->
+
+    <section class="section section-white">
+
+        <div class="container">
+
+            <div class="section-heading">
+
+                <span class="eyebrow">IMPORTANT INFORMATION</span>
+
+                <h2>Safe and responsible blood donation</h2>
+
+            </div>
+
+
+            <div class="notice">
+
+                <h3>Medical compatibility and eligibility</h3>
+
+                <p>
+                    Blood group compatibility displayed by this platform is
+                    intended for preliminary donor discovery only. Actual
+                    transfusion suitability must always be determined by qualified
+                    medical professionals through appropriate blood-bank testing.
+                    Donor health and eligibility must also be assessed by qualified
+                    medical staff. This platform does not replace medical advice,
+                    clinical screening or blood-bank procedures.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- BOTTOM CALL TO ACTION -->
+
+    <section class="section">
+
+        <div class="container">
+
+            <div class="bottom-cta">
+
+                <div>
+
+                    <h2>Be part of a life-supporting community.</h2>
+
+                    <p>
+                        Create an account to register as a donor, manage your
+                        activities, submit emergency requests and participate
+                        in donation coordination.
+                    </p>
+
+                </div>
+
+
+                <a class="btn btn-primary"
+                   href="{{ url_for('signup') }}">
+                    Join the Network
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<!-- FOOTER -->
+
+<footer class="site-footer">
+
+    <div class="container">
+
+        <div class="footer-main">
+
+            <div class="footer-brand">
+
+                <h3>Blood Donor &amp; Emergency Request Network</h3>
+
+                <p>
+                    Connecting potential blood donors and people seeking blood
+                    through a coordinated digital platform.
+                </p>
+
+            </div>
+
+
+            <div class="footer-nav">
+
+                <h4>Navigation</h4>
+
+                <div class="footer-links">
+
+                    <a href="{{ url_for('home') }}">Home</a>
+
+                    <a href="#about">About</a>
+
+                    <a href="#how-it-works">How It Works</a>
+
+                    <a href="#explore">Find Blood Donors</a>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-nav">
+
+                <h4>Account</h4>
+
+                <div class="footer-links">
+
+                    <a href="{{ url_for('login') }}">Login</a>
+
+                    <a href="{{ url_for('signup') }}">Register</a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer-bottom">
+
+            <span>
+                &copy; {{ current_year|default(2026, true) }}
+                Blood Donor &amp; Emergency Request Network.
+            </span>
+
+            <span>Every Drop Matters.</span>
+
+        </div>
+
+    </div>
+
+</footer>
+
+
+<!-- MOBILE NAVIGATION -->
+
+<script>
+    (function () {
+        const menuToggle = document.getElementById("menuToggle");
+        const navLinks = document.getElementById("navLinks");
+
+        if (!menuToggle || !navLinks) {
+            return;
+        }
+
+        function closeMenu() {
+            navLinks.classList.remove("open");
+
+            menuToggle.setAttribute("aria-expanded", "false");
+            menuToggle.setAttribute(
+                "aria-label",
+                "Open navigation menu"
+            );
+        }
+
+        function openMenu() {
+            navLinks.classList.add("open");
+
+            menuToggle.setAttribute("aria-expanded", "true");
+            menuToggle.setAttribute(
+                "aria-label",
+                "Close navigation menu"
+            );
+        }
+
+        menuToggle.addEventListener("click", function () {
+            const isOpen =
+                menuToggle.getAttribute("aria-expanded") === "true";
+
+            if (isOpen) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+
+        navLinks.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", closeMenu);
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                closeMenu();
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            if (window.innerWidth > 850) {
+                closeMenu();
+            }
+        });
+    })();
+</script>
 
 </body>
 </html>
-
