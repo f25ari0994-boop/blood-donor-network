@@ -383,6 +383,11 @@
             transform: translateY(-1px);
         }
 
+        .signup-button {
+            margin-top: 12px;
+            text-decoration: none;
+        }
+
         .login-button:focus-visible,
         .toggle-password:focus-visible,
         .header-links a:focus-visible,
@@ -719,12 +724,9 @@
 
             </form>
 
-            <div class="signup-prompt">
-                Don't have an account?
-                <a class="signup-link" href="{{ url_for('signup') }}">
-                    Create account
-                </a>
-            </div>
+            <a class="login-button signup-button" href="{{ url_for('signup') }}">
+                Sign Up <span aria-hidden="true">→</span>
+            </a>
 
             <div class="privacy-note">
                 <span class="privacy-mark"></span>
