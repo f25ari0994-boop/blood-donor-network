@@ -546,9 +546,9 @@
     href="{{ url_for('notifications') }}"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
     title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; margin-left:8px; vertical-align:middle;"
+    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
 >
-    <svg viewBox="0 0 24 24" width="23" height="23" fill="none"
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
          stroke="currentColor" stroke-width="1.8"
          stroke-linecap="round" stroke-linejoin="round"
          aria-hidden="true">
@@ -556,7 +556,7 @@
         <path d="M10 21h4"/>
     </svg>
     {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:17px; height:17px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
         </span>
     {% endif %}
