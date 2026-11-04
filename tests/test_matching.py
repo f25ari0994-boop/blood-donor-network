@@ -5,6 +5,7 @@ from datetime import datetime
 from app import (
     PAKISTAN_TZ,
     donor_has_active_match,
+    donor_has_other_active_match,
     get_active_request_count,
     calculate_request_reminder_time,
     donor_matches_request,
@@ -232,6 +233,34 @@ class DonorProfileEligibilityIsolationTests(unittest.TestCase):
 
 
 class DonorProfileActiveMatchTests(unittest.TestCase):
+    def test_other_active_match_is_checked_per_profile_not_account(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                status TEXT
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO request_matches (id, donor_id, donor_user_id, status)
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (1, 101, 7, "Invited"),
+                (2, 102, 7, "Confirmed"),
+            ],
+        )
+
+        self.assertFalse(donor_has_other_active_match(connection, 101, 1))
+        self.assertTrue(donor_has_other_active_match(connection, 102, 99))
+        self.assertFalse(donor_has_other_active_match(connection, 103, 99))
+        connection.close()
+
     def test_active_match_is_scoped_to_donor_profile_not_account(self):
         connection = sqlite3.connect(":memory:")
         connection.execute(
