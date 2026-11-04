@@ -1154,6 +1154,9 @@
                                 <option value="{{ group }}">{{ group }}</option>
                             {% endfor %}
                         </select>
+                        <div class="form-help" id="compatibleDonorGroups" hidden aria-live="polite">
+                            Compatible donor groups: <strong id="compatibleDonorGroupValues"></strong>
+                        </div>
                     </div>
 
 
@@ -2488,6 +2491,24 @@
             input.max = todayString;
         }
     );
+</script>
+
+<script>
+    // Show compatible donor groups after the requester selects a blood group.
+    const requestBloodType = document.getElementById("blood_type");
+    const compatibleDonorGroups = document.getElementById("compatibleDonorGroups");
+    const compatibleDonorGroupValues = document.getElementById("compatibleDonorGroupValues");
+    const compatibleDonorGroupsByRecipient = {{ compatible_donor_groups_by_recipient|tojson }};
+
+    if (requestBloodType && compatibleDonorGroups && compatibleDonorGroupValues) {
+        function updateCompatibleDonorGroups() {
+            const groups = compatibleDonorGroupsByRecipient[requestBloodType.value] || [];
+            compatibleDonorGroupValues.textContent = groups.join(", ");
+            compatibleDonorGroups.hidden = groups.length === 0;
+        }
+        requestBloodType.addEventListener("change", updateCompatibleDonorGroups);
+        updateCompatibleDonorGroups();
+    }
 </script>
 
 </body>

@@ -434,9 +434,19 @@ def is_request_expired(needed_by):
 
     return deadline <= get_pakistan_time()
 
+
+def calculate_request_reminder_time(created_at, needed_by):
+    """Return the reminder point with 45% of the request duration remaining."""
+    created = parse_stored_deadline(created_at)
+    deadline = parse_stored_deadline(needed_by)
+    if created is None or deadline is None or deadline <= created:
+        return None
+    return created + (deadline - created) * 0.55
+
+
 # =========================================================
 # 4. AUTHENTICATION
-# =========================================================
+
 
 def login_required(view_function):
     @wraps(view_function)
@@ -772,12 +782,129 @@ def donor_has_active_match(connection, donor_user_id):
     return row is not None
 
 
+def process_due_request_notifications(connection, now=None):
+    """Create one-time donor reminders and overdue notifications."""
+    now = now or get_pakistan_time()
+    requests = connection.execute(
+        """
+        SELECT id, user_id, created_at, needed_by, status,
+               remaining_units, overdue_notification_sent_at
+        FROM blood_requests
+        WHERE status NOT IN ('Cancelled', 'Fulfilled')
+          AND remaining_units > 0
+          AND needed_by IS NOT NULL
+        """
+    ).fetchall()
+
+    for row in requests:
+        request_id, requester_id, created_at, needed_by = row[:4]
+        overdue_sent_at = row[6]
+        deadline = parse_stored_deadline(needed_by)
+        if deadline is None:
+            continue
+
+        if now >= deadline:
+            if overdue_sent_at:
+                continue
+            create_notification(
+                connection, requester_id,
+                (
+                    f"Blood request #{request_id} is overdue. "
+                    f"{int(row[5] or 0)} unit(s) remain unfulfilled."
+                ),
+                "request_overdue",
+                related_request_id=request_id,
+            )
+            active_matches = connection.execute(
+                """
+                SELECT id, donor_user_id
+                FROM request_matches
+                WHERE request_id = ?
+                  AND status IN ('Accepted', 'Confirmed', 'Donation Reported')
+                """,
+                (request_id,),
+            ).fetchall()
+            for match in active_matches:
+                create_notification(
+                    connection, match[1],
+                    (
+                        f"Blood request #{request_id} has passed its deadline "
+                        "and is still incomplete. Please coordinate with the requester."
+                    ),
+                    "request_overdue",
+                    related_request_id=request_id,
+                    related_match_id=match[0],
+                )
+            connection.execute(
+                """
+                UPDATE blood_requests
+                SET overdue_notification_sent_at = ?
+                WHERE id = ? AND overdue_notification_sent_at IS NULL
+                """,
+                (now.strftime("%Y-%m-%d %H:%M:%S"), request_id),
+            )
+            continue
+
+        reminder_at = calculate_request_reminder_time(created_at, needed_by)
+        if reminder_at is None or now < reminder_at:
+            continue
+
+        matches = connection.execute(
+            """
+            SELECT rm.id, rm.donor_user_id
+            FROM request_matches AS rm
+            WHERE rm.request_id = ?
+              AND rm.status IN ('Accepted', 'Confirmed')
+              AND rm.reminder_sent_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM donations AS d WHERE d.match_id = rm.id
+              )
+            """,
+            (request_id,),
+        ).fetchall()
+        for match in matches:
+            create_notification(
+                connection, match[1],
+                (
+                    f"Donation reminder for blood request #{request_id}: "
+                    f"{needed_by} is the required deadline. "
+                    "Please coordinate your donation with the requester."
+                ),
+                "donor_reminder",
+                related_request_id=request_id,
+                related_match_id=match[0],
+            )
+            connection.execute(
+                """
+                UPDATE request_matches SET reminder_sent_at = ?
+                WHERE id = ? AND reminder_sent_at IS NULL
+                """,
+                (now.strftime("%Y-%m-%d %H:%M:%S"), match[0]),
+            )
+
+
+def process_scheduled_notifications():
+    """Entry point for the PythonAnywhere scheduled task."""
+    connection = get_db_connection()
+    try:
+        expire_overdue_requests(connection)
+        app.logger.info("Scheduled blood-request notifications processed.")
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Scheduled notification processing failed")
+        raise
+    finally:
+        connection.close()
+
+
 def expire_overdue_requests(connection):
     """
     Expire pending requests whose deadline has passed or is missing.
     Pending, unconfirmed acceptances are cancelled so donors are released.
     Confirmed matches are left intact to finish an active donation.
     """
+    begin_write_transaction(connection)
+    process_due_request_notifications(connection)
     now = get_current_time()
 
     pending_requests = connection.execute(
@@ -795,6 +922,7 @@ def expire_overdue_requests(connection):
     ]
 
     if not expired_requests:
+        connection.commit()
         return
 
     for blood_request in expired_requests:
@@ -870,6 +998,40 @@ def expire_overdue_requests(connection):
     connection.commit()
 
 
+def release_unneeded_matches(connection, request_id, reason, notification_type):
+    """Release matches without donation records; retain reported donations."""
+    matches = connection.execute(
+        """
+        SELECT rm.id, rm.donor_user_id
+        FROM request_matches AS rm
+        WHERE rm.request_id = ?
+          AND rm.status IN ('Accepted', 'Confirmed')
+          AND NOT EXISTS (
+              SELECT 1 FROM donations AS d WHERE d.match_id = rm.id
+          )
+        """,
+        (request_id,),
+    ).fetchall()
+
+    for match in matches:
+        match_id, donor_user_id = match[0], match[1]
+        connection.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Cancelled', updated_at = ?
+            WHERE id = ? AND status IN ('Accepted', 'Confirmed')
+            """,
+            (get_current_time(), match_id),
+        )
+        create_notification(
+            connection, donor_user_id, reason, notification_type,
+            related_request_id=request_id, related_match_id=match_id,
+        )
+        record_audit(
+            connection, None, "match_released", "request_match", match_id, reason,
+        )
+
+
 def update_request_units(connection, request_id):
     cursor = connection.cursor()
 
@@ -924,6 +1086,17 @@ def update_request_units(connection, request_id):
             "Your blood request has been fully fulfilled.",
             "request_fulfilled",
             related_request_id=request_id,
+        )
+
+    if remaining_units == 0:
+        release_unneeded_matches(
+            connection,
+            request_id,
+            (
+                f"Blood request #{request_id} has been fulfilled by other "
+                "donation(s). Your undonated match has been released."
+            ),
+            "request_fulfilled",
         )
 
 
@@ -2379,6 +2552,9 @@ def render_emergency_view(page_view):
     return render_template(
         "emergency.html",
         page_view=page_view,
+        compatible_donor_groups_by_recipient={
+            group: get_compatible_donor_groups(group) for group in BLOOD_TYPES
+        },
         **page_data,
     )
 
@@ -2655,67 +2831,33 @@ def cancel_blood_request(request_id):
             (now, request_id, user_id),
         )
 
-        pending_matches = cursor.execute(
+        release_unneeded_matches(
+            connection,
+            request_id,
+            (
+                f"Blood request #{request_id} was cancelled by the requester. "
+                "Your undonated match has been released."
+            ),
+            "request_cancelled",
+        )
+
+        reported_matches = cursor.execute(
             """
             SELECT id, donor_user_id
             FROM request_matches
-            WHERE request_id = ?
-              AND status = 'Accepted'
-              AND requester_confirmed = 0
+            WHERE request_id = ? AND status = 'Donation Reported'
             """,
             (request_id,),
         ).fetchall()
 
-        for match in pending_matches:
-            match_id = match[0]
-            donor_user_id = match[1]
-
-            cursor.execute(
-                """
-                UPDATE request_matches
-                SET status = 'Cancelled',
-                    updated_at = ?
-                WHERE id = ?
-                  AND status = 'Accepted'
-                  AND requester_confirmed = 0
-                """,
-                (now, match_id),
-            )
-
-            create_notification(
-                connection,
-                donor_user_id,
-                (
-                    f"Blood request #{request_id} was cancelled by the requester. "
-                    "Your unconfirmed acceptance has been released."
-                ),
-                "request_cancelled",
-                related_request_id=request_id,
-                related_match_id=match_id,
-            )
-
-        # Keep already-confirmed donations active so their actual receipt
-        # can still be confirmed without deleting or losing donation records.
-        confirmed_matches = cursor.execute(
-            """
-            SELECT id, donor_user_id
-            FROM request_matches
-            WHERE request_id = ?
-              AND requester_confirmed = 1
-              AND status IN ('Confirmed', 'Donation Reported')
-            """,
-            (request_id,),
-        ).fetchall()
-
-        for match in confirmed_matches:
+        for match in reported_matches:
             create_notification(
                 connection,
                 match[1],
                 (
                     f"The requester cancelled the remaining open units for "
-                    f"blood request #{request_id}. Any already-confirmed "
-                    "donation remains active and should only be reported if "
-                    "it has actually taken place."
+                    f"blood request #{request_id}. Your reported donation "
+                    "remains active for receipt confirmation."
                 ),
                 "request_cancelled",
                 related_request_id=request_id,
@@ -4152,8 +4294,13 @@ def profile():
             request.form.get("cnic") or ""
         )
 
+        language_preference = (
+            request.form.get("language_preference") or "English"
+        ).strip()
+
         if (
-            not name
+            language_preference not in {"Sindhi", "Urdu", "English"}
+            or not name
             or (email and not valid_email(email))
             or (phone and not valid_phone(phone))
             or not cnic
@@ -4167,10 +4314,14 @@ def profile():
             connection.execute(
                 """
                 UPDATE users
-                SET name = ?, email = ?, phone = ?, cnic = ?
+                SET name = ?, email = ?, phone = ?, cnic = ?,
+                    language_preference = ?
                 WHERE id = ?
                 """,
-                (name, email or None, phone or None, cnic, user_id),
+                (
+                    name, email or None, phone or None, cnic,
+                    language_preference, user_id,
+                ),
             )
 
             connection.commit()
@@ -4200,7 +4351,7 @@ def profile():
         # Account information: only the logged-in user.
         cursor.execute(
             """
-            SELECT id, name, email, phone, cnic
+            SELECT id, name, email, phone, cnic, language_preference
             FROM users
             WHERE id = ?
             """,

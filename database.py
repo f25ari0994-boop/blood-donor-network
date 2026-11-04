@@ -336,7 +336,8 @@ def create_sqlite_tables(connection):
             phone TEXT UNIQUE,
 
             password TEXT NOT NULL,
-            cnic TEXT
+            cnic TEXT,
+            language_preference TEXT DEFAULT 'English'
         );
 
 
@@ -401,6 +402,7 @@ location TEXT NOT NULL,
 
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT,
+            overdue_notification_sent_at TEXT,
 
             FOREIGN KEY(user_id)
                 REFERENCES users(id)
@@ -428,6 +430,7 @@ location TEXT NOT NULL,
             confirmed_at TEXT,
             completed_at TEXT,
             updated_at TEXT,
+            reminder_sent_at TEXT,
 
             UNIQUE(request_id, donor_id),
 
@@ -568,6 +571,12 @@ def migrate_sqlite_database(connection):
         "cnic",
         "TEXT"
     )
+    add_sqlite_column(
+        connection,
+        "users",
+        "language_preference",
+        "TEXT DEFAULT 'English'"
+    )
 
     # -----------------------------------------------------
     # DONORS
@@ -604,7 +613,8 @@ def migrate_sqlite_database(connection):
         "remaining_units": "INTEGER DEFAULT 1",
         "needed_by": "TEXT",
         "created_at": "TEXT",
-        "updated_at": "TEXT"
+        "updated_at": "TEXT",
+        "overdue_notification_sent_at": "TEXT"
     }
 
     for column, definition in request_columns.items():
@@ -627,7 +637,8 @@ def migrate_sqlite_database(connection):
         "accepted_at": "TEXT",
         "confirmed_at": "TEXT",
         "completed_at": "TEXT",
-        "updated_at": "TEXT"
+        "updated_at": "TEXT",
+        "reminder_sent_at": "TEXT"
     }
 
     for column, definition in match_columns.items():
@@ -873,7 +884,8 @@ def create_postgresql_tables(connection):
             email TEXT UNIQUE,
             phone TEXT UNIQUE,
             password TEXT NOT NULL,
-            cnic TEXT
+            cnic TEXT,
+            language_preference TEXT DEFAULT 'English'
         )
         """,
 
@@ -916,7 +928,8 @@ def create_postgresql_tables(connection):
             received_units INTEGER DEFAULT 0,
             remaining_units INTEGER DEFAULT 1,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT
+            updated_at TEXT,
+            overdue_notification_sent_at TEXT
         )
         """,
 
@@ -939,6 +952,7 @@ def create_postgresql_tables(connection):
             confirmed_at TEXT,
             completed_at TEXT,
             updated_at TEXT,
+            reminder_sent_at TEXT,
             UNIQUE(request_id, donor_id)
         )
         """,
@@ -1035,6 +1049,12 @@ def migrate_postgresql_database(connection):
         "cnic",
         "TEXT"
     )
+    add_postgresql_column(
+        connection,
+        "users",
+        "language_preference",
+        "TEXT DEFAULT 'English'"
+    )
 
     # -----------------------------------------------------
     # DONORS
@@ -1071,7 +1091,8 @@ def migrate_postgresql_database(connection):
         "remaining_units": "INTEGER DEFAULT 1",
         "needed_by": "TEXT",
         "created_at": "TEXT",
-        "updated_at": "TEXT"
+        "updated_at": "TEXT",
+        "overdue_notification_sent_at": "TEXT"
     }
 
     for column, definition in request_columns.items():
@@ -1094,7 +1115,8 @@ def migrate_postgresql_database(connection):
         "accepted_at": "TEXT",
         "confirmed_at": "TEXT",
         "completed_at": "TEXT",
-        "updated_at": "TEXT"
+        "updated_at": "TEXT",
+        "reminder_sent_at": "TEXT"
     }
 
     for column, definition in match_columns.items():

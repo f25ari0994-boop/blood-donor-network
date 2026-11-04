@@ -1,11 +1,37 @@
 import unittest
+from datetime import datetime
 
 from app import (
+    PAKISTAN_TZ,
+    calculate_request_reminder_time,
     donor_matches_request,
     get_compatible_donor_groups,
     get_notification_recipient_user_ids,
     locations_match,
 )
+
+
+class RequestReminderTimingTests(unittest.TestCase):
+    def test_twenty_hour_request_reminder_is_nine_hours_before_deadline(self):
+        reminder = calculate_request_reminder_time(
+            "2026-11-04 10:00:00",
+            "2026-11-05 06:00:00",
+        )
+        self.assertEqual(
+            reminder,
+            datetime(2026, 11, 4, 21, 0, tzinfo=PAKISTAN_TZ),
+        )
+
+    def test_invalid_or_non_positive_duration_has_no_reminder(self):
+        self.assertIsNone(
+            calculate_request_reminder_time(
+                "2026-11-05 06:00:00",
+                "2026-11-04 10:00:00",
+            )
+        )
+        self.assertIsNone(
+            calculate_request_reminder_time("", "2026-11-05 06:00:00")
+        )
 
 
 class LocationMatchingTests(unittest.TestCase):

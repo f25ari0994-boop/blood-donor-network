@@ -703,6 +703,15 @@
                             >
                         </div>
 
+                        <div class="form-group">
+                            <label for="language_preference">Language Preference</label>
+                            <select id="language_preference" name="language_preference" required>
+                                <option value="Sindhi" {% if user[5] == 'Sindhi' %}selected{% endif %}>Sindhi</option>
+                                <option value="Urdu" {% if user[5] == 'Urdu' %}selected{% endif %}>Urdu</option>
+                                <option value="English" {% if user[5] == 'English' or not user[5] %}selected{% endif %}>English</option>
+                            </select>
+                        </div>
+
                     </div>
 
 
