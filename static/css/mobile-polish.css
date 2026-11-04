@@ -1,3 +1,42 @@
+
+/* Preserve the desktop bell; only the mobile menu expands it to a text row. */
+.dashboard-header > .menu-toggle { display: none; }
+.notification-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.notification-nav-link .notification-bell {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+}
+.notification-nav-link .notification-text { display: none; }
+.notification-count-badge {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+}
+
 /* Mobile-only polish layer. Dashboard is intentionally excluded. */
 @media (max-width: 760px) {
   html { scroll-padding-top: 82px; }
@@ -115,6 +154,22 @@
   .notification-nav-link {
     justify-content: space-between !important;
     gap: 10px;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 43px !important;
+    margin: 0 !important;
+    padding: 10px 13px !important;
+  }
+  .notification-nav-link .notification-bell { display: none !important; }
+  .notification-nav-link .notification-text { display: inline !important; }
+  .notification-nav-link .notification-count-badge {
+    position: static;
+    min-width: 21px;
+    min-height: 21px;
+    height: auto;
+    padding: 0 6px;
+    border: 0;
+    flex: 0 0 auto;
   }
   .notification-count-badge {
     display: inline-flex;
