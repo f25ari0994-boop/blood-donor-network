@@ -3357,6 +3357,11 @@ def request_donor(donor_id):
             flash("This donor is no longer eligible or compatible with your active request.", "warning")
             return redirect(request.referrer or url_for("donor_list"))
 
+        reserved_units = get_reserved_units(connection, blood_request["id"])
+        if reserved_units >= blood_request["remaining_units"]:
+            flash("All units for your active request are already matched.", "warning")
+            return redirect(request.referrer or url_for("donor_list"))
+
         old = connection.execute(
             "SELECT id, status FROM request_matches WHERE request_id = ? AND donor_id = ?",
             (blood_request["id"], donor_id),
@@ -3372,12 +3377,12 @@ def request_donor(donor_id):
                 """
                 UPDATE request_matches
                 SET donor_user_id = ?, units_pledged = 1,
-                    status = 'Invited', requester_confirmed = 0,
-                    accepted_at = ?, confirmed_at = NULL,
+                    status = 'Confirmed', requester_confirmed = 1,
+                    accepted_at = ?, confirmed_at = ?,
                     completed_at = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (donor_user_id, now, now, match_id),
+                (donor_user_id, now, now, now, match_id),
             )
         else:
             cursor = connection.cursor()
@@ -3385,31 +3390,30 @@ def request_donor(donor_id):
                 """
                 INSERT INTO request_matches
                     (request_id, donor_id, donor_user_id, units_pledged,
-                     status, requester_confirmed, accepted_at, updated_at)
-                VALUES (?, ?, ?, 1, 'Invited', 0, ?, ?)
+                     status, requester_confirmed, accepted_at, confirmed_at, updated_at)
+                VALUES (?, ?, ?, 1, 'Confirmed', 1, ?, ?, ?)
                 """,
-                (blood_request["id"], donor_id, donor_user_id, now, now),
+                (blood_request["id"], donor_id, donor_user_id, now, now, now),
             )
             match_id = get_inserted_id(cursor, connection)
 
         create_notification(
             connection, donor_user_id,
-            f"You have a blood donation invitation for {blood_request['blood_type']} "
-            f"({blood_request['remaining_units']} unit(s)) in {blood_request['location']}. "
-            "Open My Matches and accept it to start coordinating.",
-            "donor_invitation", related_request_id=blood_request["id"],
+            f"You have been matched for a {blood_request['blood_type']} blood request "
+            f"in {blood_request['location']}. Open My Matches to coordinate the donation.",
+            "match_confirmed", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
         create_notification(
             connection, user_id,
-            f"Your request was sent to donor {donor_id}. The match starts when the donor accepts.",
-            "donor_invitation_sent", related_request_id=blood_request["id"],
+            f"Your request was matched with donor {donor_id}. The match is active and private chat is ready.",
+            "match_confirmed", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
-        record_audit(connection, user_id, "donor_invited", "request_match", match_id,
-                     f"Invited donor profile {donor_id} for request {blood_request['id']}.")
+        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
+                     f"Requester started a match with donor profile {donor_id} for request {blood_request['id']}.")
         connection.commit()
-        flash("Donor request sent. The match will start when the donor accepts.", "success")
+        flash("Donor requested successfully. Your match is now active.", "success")
     except Exception:
         connection.rollback()
         app.logger.exception("Donor invitation failed")
