@@ -4701,6 +4701,8 @@ def notifications():
         "blood_request": "New blood request",
         "match_request_found": "Match request found",
         "request_created": "Your blood request was created",
+        "compatible_donor": "Compatible donor found",
+        "match_invitation": "New donor invitation",
         "match_acceptance": "Donor accepted your request",
         "match_waiting": "Your acceptance is waiting",
         "match_confirmed": "Match confirmed",
@@ -4742,6 +4744,11 @@ def notifications():
                     target_url += f"#match-chat-{match_id}"
             elif notification_type in ("blood_request", "match_request_found"):
                 target_url = url_for("available_requests")
+            elif notification_type in (
+                "compatible_donor", "match_invitation", "match_acceptance",
+                "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
+            ):
+                target_url = url_for("my_matches")
             elif request_id:
                 target_url = url_for("my_requests")
             elif notification_type == "eligibility":
