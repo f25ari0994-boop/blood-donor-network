@@ -1615,6 +1615,14 @@ def get_emergency_page_data(user_id):
               AND br.user_id != ?
               AND br.needed_by IS NOT NULL
               AND br.needed_by > ?
+              AND br.remaining_units > COALESCE((
+                  SELECT SUM(reserved.units_pledged)
+                  FROM request_matches AS reserved
+                  WHERE reserved.request_id = br.id
+                    AND reserved.status IN (
+                        'Accepted', 'Confirmed', 'Donation Reported', 'Invited'
+                    )
+              ), 0)
             ORDER BY
                 CASE br.urgency
                     WHEN 'Emergency' THEN 1
