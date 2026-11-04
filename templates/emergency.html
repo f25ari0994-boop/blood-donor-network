@@ -155,30 +155,58 @@
             padding: 32px 0 65px;
         }
 
+        /* HERO — MATCH THE BECOME A DONOR PAGE */
         .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 42px 30px;
+            border-radius: 20px;
             background: linear-gradient(115deg, #650019, #800020 60%, #a32643);
             color: white;
-            padding: 34px 38px;
-            border-radius: 16px;
-            margin-bottom: 25px;
+            box-shadow: 0 12px 30px rgba(128,0,32,.13);
+            text-align: center;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 25px;
-            box-shadow: var(--shadow);
+            justify-content: center;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            right: -70px;
+            top: -90px;
+            border: 28px solid rgba(255,255,255,.10);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero > div:first-child {
+            position: relative;
+            z-index: 1;
+            width: 100%;
         }
 
         .hero h1 {
             color: #ffffff !important;
-            font-size: 29px;
-            line-height: 1.3;
-            margin-bottom: 9px;
+            font-size: clamp(28px, 4vw, 38px);
+            font-weight: 750;
+            line-height: 1.25;
+            margin: 0 0 14px;
         }
 
         .hero p {
-            color: rgba(255,255,255,0.88);
-            max-width: 690px;
+            color: #fff3f5;
+            max-width: 650px;
+            margin: 0 auto;
             font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .hero-icon {
+            display: none;
         }
 
         .hero-icon {
@@ -870,20 +898,16 @@
             }
 
             .hero {
-                padding: 25px 22px;
+                padding: 28px 23px;
+                border-radius: 16px;
             }
 
             .hero h1 {
-                font-size: 23px;
+                font-size: 28px;
             }
 
             .hero p {
-                font-size: 13px;
-            }
-
-            .hero-icon {
-                width: 55px;
-                height: 55px;
+                font-size: 12px;
             }
 
             .hero-icon svg {
