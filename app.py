@@ -1930,7 +1930,7 @@ def get_emergency_page_data(user_id):
                   SELECT SUM(reserved.units_pledged)
                   FROM request_matches AS reserved
                   WHERE reserved.request_id = br.id
-                    AND reserved.status IN (?, ?, ?)
+                    AND reserved.status IN (?, ?, ?, 'Invited')
               ), 0)
               AND d.availability = ?
               AND d.eligible = 1
@@ -2046,7 +2046,7 @@ def get_emergency_page_data(user_id):
                   SELECT SUM(reserved.units_pledged)
                   FROM request_matches AS reserved
                   WHERE reserved.request_id = br.id
-                    AND reserved.status IN (?, ?, ?)
+                    AND reserved.status IN (?, ?, ?, 'Invited')
               ), 0)
               AND NOT EXISTS (
                   SELECT 1
