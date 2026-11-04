@@ -2084,7 +2084,7 @@
                         {% endif %}
 
 
-                        {% if match.status in ["Accepted", "Confirmed", "Donation Reported", "Completed"] %}
+                        {% if match.requester_confirmed == 1 and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
 
                             <section class="match-chat" id="match-chat-{{ match.id }}"
                                      data-poll-url="{{ url_for('get_match_messages', match_id=match.id) }}">
@@ -2451,5 +2451,6 @@
     }
 </script>
 
+<script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
 </body>
 </html>
