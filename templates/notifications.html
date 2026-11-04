@@ -342,9 +342,26 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
 </head>
 
-<body>
+<body class="notifications-page">
+<header class="dashboard-header">
+ <a href="{{ url_for('dashboard') }}" class="brand">
+  <img src="{{ url_for('static', filename='images/blood-logo.png') }}" alt="Blood Donor Network logo">
+  <div><strong>Blood Donor &amp; Emergency Request Network</strong><span>Connecting donors. Supporting lives.</span></div>
+ </a>
+ <button type="button" class="menu-toggle" id="notificationsMenuToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="notificationsNavigation"><span></span><span></span><span></span></button>
+ <nav class="desktop-nav" id="notificationsNavigation" aria-label="Main navigation">
+  <a href="{{ url_for('dashboard') }}">Dashboard</a>
+  <a href="{{ url_for('donor') }}">Become a Donor</a>
+  <a href="{{ url_for('search') }}">Find Donors</a>
+  <a href="{{ url_for('request_blood') }}">Emergency Request</a>
+  <a href="{{ url_for('donor_list') }}">Donor Directory</a>
+  <a href="{{ url_for('profile') }}">Profile</a>
+  <a href="{{ url_for('notifications') }}" class="notification-nav-link active" aria-current="page"><svg class="notification-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notification-text">Notification</span>{% if unread_count > 0 %}<span class="notification-count-badge">{{ unread_count if unread_count < 100 else '99+' }}</span>{% endif %}</a>
+ </nav>
+</header>
 <div class="page-wrapper">
 <main class="container">
 
@@ -485,6 +502,18 @@
 
 </main>
 </div>
+<script>
+(function () {
+ const toggle = document.getElementById("notificationsMenuToggle");
+ const nav = document.getElementById("notificationsNavigation");
+ if (!toggle || !nav) return;
+ toggle.addEventListener("click", function () {
+  const open = nav.classList.toggle("open");
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+ });
+})();
+</script>
 <script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
 </body>
 </html>
