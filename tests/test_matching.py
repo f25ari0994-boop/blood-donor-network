@@ -10,6 +10,7 @@ from app import (
     donor_matches_request,
     get_compatible_donor_groups,
     get_notification_recipient_user_ids,
+    check_donor_eligibility,
     locations_match,
 )
 
@@ -153,6 +154,81 @@ class ActiveRequestLimitTests(unittest.TestCase):
         self.assertEqual(get_active_request_count(connection, 7), 2)
         self.assertEqual(get_active_request_count(connection, 8), 1)
         connection.close()
+
+
+class DonorProfileEligibilityIsolationTests(unittest.TestCase):
+    def test_recalculating_one_profile_does_not_change_sibling_profiles(self):
+        import os
+        import tempfile
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "eligibility-test.db")
+            setup = sqlite3.connect(database_path)
+            setup.execute(
+                """
+                CREATE TABLE donors (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    name TEXT,
+                    last_donation TEXT,
+                    eligible INTEGER,
+                    availability TEXT,
+                    health_screening_status TEXT
+                )
+                """
+            )
+            setup.execute(
+                """
+                CREATE TABLE notifications (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    message TEXT,
+                    notification_type TEXT,
+                    created_at TEXT,
+                    related_request_id INTEGER,
+                    related_match_id INTEGER
+                )
+                """
+            )
+            setup.executemany(
+                """
+                INSERT INTO donors
+                    (id, user_id, name, last_donation, eligible,
+                     availability, health_screening_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (101, 7, "Rizwan", None, 0, "Not Available", "Self-Declared Clear"),
+                    (102, 7, "Family member", None, 1, "Not Available", "Self-Declared Clear"),
+                    (103, 7, "Other family member", None, 0, "Not Available", "Needs Professional Review"),
+                ],
+            )
+            setup.commit()
+            setup.close()
+
+            with patch(
+                "app.get_db_connection",
+                side_effect=lambda: sqlite3.connect(database_path),
+            ):
+                check_donor_eligibility(7, donor_id=101)
+
+            verify = sqlite3.connect(database_path)
+            rows = {
+                row[0]: row[1:]
+                for row in verify.execute(
+                    """
+                    SELECT id, eligible, availability, health_screening_status
+                    FROM donors
+                    ORDER BY id
+                    """
+                ).fetchall()
+            }
+            verify.close()
+
+            self.assertEqual(rows[101], (1, "Available", "Self-Declared Clear"))
+            self.assertEqual(rows[102], (1, "Not Available", "Self-Declared Clear"))
+            self.assertEqual(rows[103], (0, "Not Available", "Needs Professional Review"))
 
 
 class DonorProfileActiveMatchTests(unittest.TestCase):
