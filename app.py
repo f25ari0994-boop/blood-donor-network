@@ -113,6 +113,20 @@ ACTIVE_MATCH_STATUSES = (
     "Donation Reported",
 )
 
+MATCH_NOTIFICATION_TYPES = {
+    "compatible_donor",
+    "match_invitation",
+    "match_acceptance",
+    "match_waiting",
+    "match_confirmed",
+    "match_rejected",
+    "match_cancelled",
+    "match_message",
+    "donation_reported_by_requester",
+    "donation_reported",
+    "receipt_confirmed",
+}
+
 BLOOD_COMPATIBILITY = {
     "O-": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
     "O+": ["O+", "A+", "B+", "AB+"],
@@ -594,6 +608,28 @@ def create_notification(
             related_match_id,
         ),
     )
+
+
+def get_notification_target_url(notification_type, request_id=None, match_id=None):
+    """Route match events to Potential Matches before considering request IDs."""
+    if notification_type == "match_message" and match_id:
+        return url_for("my_matches") + f"#match-chat-{match_id}"
+
+    if notification_type in MATCH_NOTIFICATION_TYPES or match_id:
+        if match_id:
+            return url_for("my_matches") + f"#match-{match_id}"
+        return url_for("my_matches")
+
+    if notification_type in {"blood_request", "match_request_found"}:
+        return url_for("available_requests")
+
+    if notification_type == "eligibility":
+        return url_for("donor")
+
+    if request_id:
+        return url_for("my_requests")
+
+    return url_for("dashboard")
 
 
 def notify_requesters_of_compatible_donor(connection, donor_id):
@@ -1186,6 +1222,108 @@ def expire_overdue_requests(connection):
     connection.commit()
 
 
+def activate_legacy_single_click_matches(connection):
+    """
+    Convert records created by the former two-approval workflow to the
+    current one-action workflow. Expired requests are handled first.
+    """
+    begin_write_transaction(connection)
+    now = get_current_time()
+
+    legacy_matches = connection.execute(
+        """
+        SELECT
+            rm.id, rm.request_id, rm.donor_id, rm.donor_user_id,
+            rm.units_pledged, br.user_id, br.remaining_units, br.needed_by
+        FROM request_matches AS rm
+        JOIN blood_requests AS br ON br.id = rm.request_id
+        WHERE rm.status IN ('Accepted', 'Invited')
+          AND br.status = 'Pending'
+        ORDER BY rm.id ASC
+        """
+    ).fetchall()
+
+    for row in legacy_matches:
+        (
+            match_id, request_id, donor_id, donor_user_id,
+            pledged_units, requester_id, remaining_units, needed_by,
+        ) = row
+
+        if is_request_expired(needed_by):
+            continue
+
+        units = int(pledged_units or 1)
+        reserved_units = get_reserved_units(
+            connection, request_id, exclude_match_id=match_id
+        )
+        donor_already_matched = donor_has_other_active_match(
+            connection, donor_id, match_id
+        )
+
+        if (
+            donor_already_matched
+            or units < 1
+            or units > 8
+            or units > max(int(remaining_units or 0) - reserved_units, 0)
+        ):
+            connection.execute(
+                """
+                UPDATE request_matches
+                SET status = 'Cancelled', updated_at = ?
+                WHERE id = ? AND status IN ('Accepted', 'Invited')
+                """,
+                (now, match_id),
+            )
+            create_notification(
+                connection,
+                requester_id,
+                "A previous pending match could not be activated because the donor or request was no longer available.",
+                "match_cancelled",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+            create_notification(
+                connection,
+                donor_user_id,
+                "A previous pending match could not be activated because the donor or request was no longer available.",
+                "match_cancelled",
+                related_request_id=request_id,
+                related_match_id=match_id,
+            )
+            continue
+
+        connection.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Confirmed',
+                requester_confirmed = 1,
+                accepted_at = COALESCE(accepted_at, updated_at, ?),
+                confirmed_at = COALESCE(confirmed_at, accepted_at, updated_at, ?),
+                updated_at = ?
+            WHERE id = ? AND status IN ('Accepted', 'Invited')
+            """,
+            (now, now, now, match_id),
+        )
+        create_notification(
+            connection,
+            requester_id,
+            "Your previous pending match is now active. Open Potential Matches to coordinate.",
+            "match_confirmed",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+        create_notification(
+            connection,
+            donor_user_id,
+            "Your previous pending match is now active. Open Potential Matches to coordinate.",
+            "match_confirmed",
+            related_request_id=request_id,
+            related_match_id=match_id,
+        )
+
+    connection.commit()
+
+
 def release_unneeded_matches(
     connection,
     request_id,
@@ -1333,8 +1471,9 @@ def get_emergency_page_data(user_id):
             (user_id,),
         ).fetchone()[0]
 
-        # Keep request deadlines and pending acceptances current.
+        # Keep request deadlines current, then migrate old two-step matches.
         expire_overdue_requests(connection)
+        activate_legacy_single_click_matches(connection)
 
         # -------------------------------------------------
         # Donor profiles belonging to this user
@@ -4742,23 +4881,9 @@ def notifications():
             request_id = row[5]
             match_id = row[6]
 
-            if match_id:
-                target_url = url_for("my_matches")
-                if notification_type == "match_message":
-                    target_url += f"#match-chat-{match_id}"
-            elif notification_type in ("blood_request", "match_request_found"):
-                target_url = url_for("available_requests")
-            elif notification_type in (
-                "compatible_donor", "match_invitation", "match_acceptance",
-                "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
-            ):
-                target_url = url_for("my_matches")
-            elif request_id:
-                target_url = url_for("my_requests")
-            elif notification_type == "eligibility":
-                target_url = url_for("donor")
-            else:
-                target_url = url_for("dashboard")
+            target_url = get_notification_target_url(
+                notification_type, request_id=request_id, match_id=match_id
+            )
 
             notifications_view.append({
                 "id": notification_id,
@@ -4852,23 +4977,9 @@ def notification_updates():
         notifications_data = []
         for row in rows:
             notification_id, message, kind, created_at, request_id, match_id = row
-            if match_id:
-                target_url = url_for("my_matches")
-                if kind == "match_message":
-                    target_url += f"#match-chat-{match_id}"
-            elif kind in ("blood_request", "match_request_found"):
-                target_url = url_for("available_requests")
-            elif kind in (
-                "compatible_donor", "match_invitation", "match_acceptance",
-                "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
-            ):
-                target_url = url_for("my_matches")
-            elif request_id:
-                target_url = url_for("my_requests")
-            elif kind == "eligibility":
-                target_url = url_for("donor")
-            else:
-                target_url = url_for("dashboard")
+            target_url = get_notification_target_url(
+                kind, request_id=request_id, match_id=match_id
+            )
             notifications_data.append({
                 "id": notification_id,
                 "message": message,
@@ -4917,23 +5028,9 @@ def open_notification(notification_id):
         connection.commit()
 
         kind, request_id, match_id = notification
-        if match_id:
-            target_url = url_for("my_matches")
-            if kind == "match_message":
-                target_url += f"#match-chat-{match_id}"
-        elif kind in ("blood_request", "match_request_found"):
-            target_url = url_for("available_requests")
-        elif kind in (
-            "compatible_donor", "match_invitation", "match_acceptance",
-            "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
-        ):
-            target_url = url_for("my_matches")
-        elif request_id:
-            target_url = url_for("my_requests")
-        elif kind == "eligibility":
-            target_url = url_for("donor")
-        else:
-            target_url = url_for("dashboard")
+        target_url = get_notification_target_url(
+            kind, request_id=request_id, match_id=match_id
+        )
         return redirect(target_url)
     except Exception:
         connection.rollback()
