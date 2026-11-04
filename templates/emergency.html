@@ -1325,6 +1325,938 @@
                                         {% if req[13] %}
                                             · Requested by {{ req[13] }}
                                         {% endif %}
+                                    </p>
+                                </div>
+
+                            </div>
+
+
+                            <div>
+                                {% if req[2] == "Emergency" %}
+                                    <span class="urgency emergency">Emergency</span>
+                                {% else %}
+                                    <span class="urgency normal">Normal</span>
+                                {% endif %}
+                            </div>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ req[3] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ req[4] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Total Required</strong>
+                                {{ requested }} unit(s)
+                            </div>
+
+                            <div class="detail">
+                                <strong>Units Remaining</strong>
+                                {{ remaining }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Request Created</strong>
+                                {{ req[5] or "Not available" }}
+                            </div>
+
+                            <div class="detail deadline-detail">
+                                <strong>Blood Needed By</strong>
+                                {{ req[11] or "Not specified" }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="progress-area">
+
+                            <div class="progress-label">
+                                <span>Donation progress</span>
+                                <strong>{{ received }} / {{ requested }} units</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    class="progress-fill {% if progress >= 100 %}complete{% endif %}"
+                                    style="width: {{ progress }}%;"
+                                ></div>
+                            </div>
+
+                        </div>
+
+
+                        <div class="button-row">
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('accept_request', request_id=req[0]) }}"
+                                class="action-form"
+                            >
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                {% set profile_options = matching_donor_profiles_by_request.get(req[0], []) %}
+                                {% if profile_options %}
+                                    <div class="form-group">
+                                        <label for="donor-profile-{{ req[0] }}">Select donor profile</label>
+                                        <select id="donor-profile-{{ req[0] }}" name="donor_id" required>
+                                            <option value="">Choose a donor profile</option>
+                                            {% for profile in profile_options %}
+                                                <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endif %}
+                                <div class="form-group">
+                                    <label for="units-{{ req[0] }}">
+                                        Units you can donate
+                                    </label>
+
+                                    <input
+                                        id="units-{{ req[0] }}"
+                                        type="number"
+                                        name="units_pledged"
+                                        min="1"
+                                        max="8"
+                                        value="1"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="btn btn-primary"
+                                        {% if not profile_options %}disabled{% endif %}>
+                                    Accept This Request
+                                </button>
+                            </form>
+
+                        </div>
+
+                        <p class="form-help" style="margin-top: 12px;">
+                            Your acceptance will be sent to the requester.
+                            The match becomes confirmed only after the requester
+                            approves it. Your active match must be completed or
+                            cancelled before accepting another request.
+                        </p>
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m20 20-4-4"/>
+                </svg>
+
+                <h3>No compatible requests available</h3>
+
+                <p>
+                    There are currently no unexpired blood requests matching
+                    your available eligible donor profiles.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    {% endif %}
+
+{% if page_view == 'my_requests' %}
+<!-- =====================================================
+         3. MY BLOOD REQUESTS
+    ====================================================== -->
+
+    <section class="section" id="my-requests">
+
+        <div class="section-heading">
+            <div>
+                <h2>My Blood Requests</h2>
+                <p>Track the requests you have created.</p>
+            </div>
+
+            <span class="section-count">
+                {{ my_requests|length }}
+            </span>
+        </div>
+
+
+        {% if my_requests %}
+
+            <div class="item-list">
+
+                {% for req in my_requests %}
+
+                    {% set requested = req[8]|int %}
+                    {% set received = req[9]|int %}
+                    {% set remaining = req[10]|int %}
+                    {% set progress = ((received / requested * 100)|int) if requested > 0 else 0 %}
+                    {% set progress = [100, [0, progress]|max]|min %}
+                    {% set status_class = (req[6] or "pending")|lower|replace(" ", "-") %}
+
+                    <article class="item-card">
+
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ req[1] }}
+                                </div>
+
+                                <div>
+                                    <h3>{{ req[1] }} Blood Request</h3>
+                                    <p>Request #{{ req[0] }}</p>
+                                </div>
+
+                            </div>
+
+
+                            <div>
+                                <span class="status {{ status_class }}">
+                                    {{ req[6] }}
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ req[3] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ req[4] }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Urgency</strong>
+
+                                {% if req[2] == "Emergency" %}
+                                    <span class="urgency emergency">Emergency</span>
+                                {% else %}
+                                    <span class="urgency normal">Normal</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Created At</strong>
+                                {{ req[5] or "Not available" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Required Units</strong>
+                                {{ requested }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Received Units</strong>
+                                {{ received }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Remaining Units</strong>
+                                {{ remaining }}
+                            </div>
+
+                            <div class="detail deadline-detail">
+                                <strong>Blood Needed By</strong>
+                                {{ req[11] or "Not specified" }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="progress-area">
+
+                            <div class="progress-label">
+                                <span>Request completion</span>
+                                <strong>{{ received }} / {{ requested }} units</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    class="progress-fill {% if progress >= 100 %}complete{% endif %}"
+                                    style="width: {{ progress }}%;"
+                                ></div>
+                            </div>
+
+                        </div>
+
+                    
+                        {% if req[6] == "Pending" and remaining > 0 %}
+                            <div class="button-row">
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('cancel_blood_request', request_id=req[0]) }}"
+                                    onsubmit="return confirm('Cancel this blood request? New matching will stop and pending donor acceptances will be released. Already-confirmed donations remain recorded and can still be completed. This action cannot be undone.');"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+                                    <button type="submit" class="btn btn-danger">
+                                        Cancel My Request
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <path d="M8 4h12v16H4V8z"/>
+                    <path d="M8 4v4H4M8 12h8M8 16h8"/>
+                </svg>
+
+                <h3>You have not created any requests</h3>
+
+                <p>Your blood requests will appear here after you submit them.</p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    {% endif %}
+
+{% if page_view == 'my_matches' %}
+<!-- =====================================================
+         4. MY MATCHES
+    ====================================================== -->
+
+    <section class="section" id="my-matches">
+
+        <div class="section-heading">
+            <div>
+                <h2>My Matches</h2>
+                <p>
+                    View compatible donors and requests, pending responses,
+                    accepted matches, and confirmed donations.
+                </p>
+            </div>
+
+            <span class="section-count">
+                {{ matches|length + potential_matches|length }}
+            </span>
+        </div>
+
+
+        {% if matches or potential_matches %}
+
+            <div class="item-list">
+
+                {% if potential_matches %}
+                    <div class="section-subheading">
+                        <h3>Potential Matches</h3>
+                        <p>These requests and donors match your blood group and city. They are not confirmed yet.</p>
+                    </div>
+
+                    {% for potential in potential_matches %}
+
+                        <article class="item-card">
+
+                            <div class="item-top">
+
+                                <div class="blood-heading">
+                                    <div class="blood-icon">
+                                        {{ potential.blood_type }}
+                                    </div>
+
+                                    <div>
+                                        {% if potential.my_role == "Requester" %}
+                                            <h3>Potential Donor Found</h3>
+                                            <p>
+                                                Request #{{ potential.request_id }}
+                                                · {{ potential.candidate_name or "Registered donor" }}
+                                            </p>
+                                        {% else %}
+                                            <h3>A Compatible Request Is Waiting</h3>
+                                            <p>
+                                                Request #{{ potential.request_id }}
+                                                {% if potential.requester_name %}
+                                                    · Requested by {{ potential.requester_name }}
+                                                {% endif %}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <span class="status pending">
+                                    {{ potential.status_label }}
+                                </span>
+
+                            </div>
+
+                            <div class="item-details">
+
+                                <div class="detail">
+                                    <strong>Required Blood Group</strong>
+                                    {{ potential.blood_type }}
+                                </div>
+
+                                {% if potential.my_role == "Requester" %}
+                                    <div class="detail">
+                                        <strong>Potential Donor Group</strong>
+                                        {{ potential.candidate_blood_type }}
+                                    </div>
+                                {% else %}
+                                    <div class="detail">
+                                        <strong>Your Donor Group</strong>
+                                        {{ potential.candidate_blood_type }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="detail">
+                                    <strong>Location</strong>
+                                    {{ potential.location }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Hospital</strong>
+                                    {{ potential.hospital }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Units Required</strong>
+                                    {{ potential.requested_units }}
+                                </div>
+
+                                <div class="detail">
+                                    <strong>Units Remaining</strong>
+                                    {{ potential.remaining_units }}
+                                </div>
+
+                                <div class="detail deadline-detail">
+                                    <strong>Blood Needed By</strong>
+                                    {{ potential.needed_by }}
+                                </div>
+
+                            </div>
+
+                            {% if potential.my_role == "Requester" %}
+
+                                <div class="privacy-note">
+                                    A compatible, eligible donor is available in your city.
+                                    The donor has not accepted your request yet, so this is
+                                    a potential match—not a confirmed donation. You will be
+                                    asked to confirm after a donor accepts.
+                                </div>
+
+                            {% else %}
+
+                                <div class="privacy-note">
+                                    Your donor profile matches this request by blood group
+                                    and city. Accept once to start the match immediately.
+                                    Private chat and contact actions become available after acceptance.
+                                </div>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('accept_request', request_id=potential.request_id) }}"
+                                    class="button-row"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    {% set profile_options = matching_donor_profiles_by_request.get(potential.request_id, []) %}
+                                    {% if profile_options %}
+                                        <div class="form-group">
+                                            <label for="potential-donor-profile-{{ potential.request_id }}">Select donor profile</label>
+                                            <select id="potential-donor-profile-{{ potential.request_id }}" name="donor_id" required>
+                                                <option value="">Choose a donor profile</option>
+                                                {% for profile in profile_options %}
+                                                    <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-group">
+                                        <label for="potential-units-{{ potential.request_id }}">
+                                            Units you can donate
+                                        </label>
+
+                                        <input
+                                            id="potential-units-{{ potential.request_id }}"
+                                            type="number"
+                                            name="units_pledged"
+                                            min="1"
+                                            max="{{ [8, potential.remaining_units|int]|min }}"
+                                            value="1"
+                                            required
+                                        >
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary"
+                                            {% if not profile_options %}disabled{% endif %}>
+                                        Accept & Start Match
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                        </article>
+
+                    {% endfor %}
+                {% endif %}
+
+                {% for match in matches %}
+
+                    {% set status_class = (match.status or "pending")|lower|replace(" ", "-") %}
+                    {% set confirmed_contact = match_contacts.get(match.id, {}) %}
+
+                    <article class="item-card">
+
+                        <div class="item-top">
+
+                            <div class="blood-heading">
+
+                                <div class="blood-icon">
+                                    {{ match.blood_type }}
+                                </div>
+
+                                <div>
+                                    <h3>Match #{{ match.id }}</h3>
+                                    <p>
+                                        Blood Request #{{ match.request_id }}
+                                    </p>
+
+                                    <div class="match-role">
+                                        Your role: {{ match.my_role }}
+                                    </div>
+                                </div>
+
+                            </div>
+
+
+                            <span class="status {{ status_class }}">
+                                {{ match.status }}
+                            </span>
+
+                        </div>
+
+
+                        <div class="item-details">
+
+                            <div class="detail">
+                                <strong>Blood Group</strong>
+                                {{ match.blood_type }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Units Pledged</strong>
+                                {{ match.units_pledged }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Location</strong>
+                                {{ match.location }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Hospital</strong>
+                                {{ match.hospital }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Requester</strong>
+                                {{ match.requester_name or "Requester" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Donor</strong>
+                                {{ match.donor_name or "Donor" }}
+                            </div>
+
+                            <div class="detail">
+                                <strong>Accepted At</strong>
+                                {{ match.accepted_at or "Not available" }}
+                            </div>
+
+                            {% if match.confirmed_at %}
+                                <div class="detail">
+                                    <strong>Confirmed At</strong>
+                                    {{ match.confirmed_at }}
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- DONOR INVITATION: the donor accepts once to start the match -->
+
+                        {% if match.status == "Invited" and match.my_role == "Requester" %}
+                            <div class="privacy-note">
+                                Your donor request has been sent. The match and private chat will start when the donor accepts.
+                            </div>
+                        {% elif match.status == "Invited" and match.my_role == "Donor" %}
+                            <div class="privacy-note">
+                                This requester has invited you to donate. Accept once to start the match and private chat.
+                            </div>
+                            <form method="POST"
+                                  action="{{ url_for('accept_match_invitation', match_id=match.id) }}"
+                                  class="button-row">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-success">Accept Donor Request</button>
+                            </form>
+                        {% endif %}
+
+
+                        <!-- LEGACY PENDING ACCEPTANCE RECORDS -->
+
+                        {% if match.status == "Accepted" and match.my_role == "Requester" %}
+
+                            <div class="privacy-note">
+                                A donor has accepted your request.
+                                Confirm the match to allow the matched parties
+                                to access their contact actions.
+                            </div>
+
+                            <div class="match-actions">
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('confirm_match', match_id=match.id) }}"
+                                    class="action-form"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <input type="hidden" name="action"
+                                           value="confirm">
+
+                                    <button type="submit" class="btn btn-success">
+                                        Confirm Match
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('confirm_match', match_id=match.id) }}"
+                                    class="action-form"
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+
+                                    <input type="hidden" name="action"
+                                           value="reject">
+
+                                    <button type="submit" class="btn btn-danger">
+                                        Reject Match
+                                    </button>
+                                </form>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- DONOR CANCELLATION BEFORE CONFIRMATION -->
+
+                        {% if match.status == "Accepted" and match.my_role == "Donor" %}
+
+                            <div class="privacy-note">
+                                Your acceptance is waiting for the requester
+                                to confirm. You can cancel it before confirmation.
+                            </div>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('cancel_acceptance', match_id=match.id) }}"
+                                class="button-row"
+                            >
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <button type="submit" class="btn btn-danger">
+                                    Cancel My Acceptance
+                                </button>
+                            </form>
+
+                        {% endif %}
+
+
+                        <!-- CONTACT ACTIONS AFTER REQUESTER CONFIRMATION -->
+
+                        {% if match.requester_confirmed == 1
+                              and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
+
+                            <div class="privacy-note">
+                                <strong>Match confirmed.</strong>
+                                Contact actions are now available to the matched parties.
+                            </div>
+
+                            {% if match.my_role == "Requester" and confirmed_contact.phone %}
+
+                                <div class="match-actions">
+
+                                    <a
+                                        class="btn btn-call"
+                                        href="tel:{{ confirmed_contact.phone }}"
+                                    >
+                                        Call Donor
+                                    </a>
+
+                                    {% if confirmed_contact.whatsapp %}
+                                        <a
+                                            class="btn btn-whatsapp"
+                                            href="https://wa.me/{{ confirmed_contact.whatsapp }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            WhatsApp Donor
+                                        </a>
+                                    {% endif %}
+
+                                </div>
+
+                            {% elif match.my_role == "Donor" and confirmed_contact.phone %}
+
+                                <div class="match-actions">
+
+                                    <a
+                                        class="btn btn-call"
+                                        href="tel:{{ confirmed_contact.phone }}"
+                                    >
+                                        Call Requester
+                                    </a>
+
+                                    {% if confirmed_contact.whatsapp %}
+                                        <a
+                                            class="btn btn-whatsapp"
+                                            href="https://wa.me/{{ confirmed_contact.whatsapp }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            WhatsApp Requester
+                                        </a>
+                                    {% endif %}
+
+                                </div>
+
+                            {% else %}
+
+                                <p class="form-help" style="margin-top: 12px;">
+                                    Contact information is not available.
+                                </p>
+
+                            {% endif %}
+
+                        {% elif match.status == "Accepted" %}
+
+                            <div class="privacy-note">
+                                Contact information remains private until
+                                the requester confirms this match.
+                            </div>
+
+                        {% endif %}
+
+
+                        {% if match.status in ["Accepted", "Confirmed", "Donation Reported", "Completed"] %}
+
+                            <section class="match-chat" id="match-chat-{{ match.id }}"
+                                     data-poll-url="{{ url_for('get_match_messages', match_id=match.id) }}">
+                                <h4>Private Match Chat</h4>
+                                <p class="match-chat-intro">
+                                    Only you and the matched
+                                    {% if match.my_role == "Requester" %}donor{% else %}requester{% endif %}
+                                    can read this conversation.
+                                    {% if match.status == "Accepted" %}
+                                        Discuss the request here while confirmation is pending.
+                                        Phone and WhatsApp details remain private until confirmation.
+                                    {% endif %}
+                                </p>
+
+                                {% if match.chat_messages %}
+                                    <div class="chat-message-list" aria-live="polite" data-chat-list>
+                                        {% for chat_message in match.chat_messages %}
+                                            <article class="chat-message {% if chat_message.is_mine %}mine{% endif %}" data-message-id="{{ chat_message.id }}">
+                                                <strong>
+                                                    {% if chat_message.is_mine %}
+                                                        You
+                                                    {% else %}
+                                                        {{ chat_message.sender_name }}
+                                                    {% endif %}
+                                                </strong>
+                                                <p>{{ chat_message.message }}</p>
+                                                <time>{{ chat_message.created_at }}</time>
+                                            </article>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="chat-empty">
+                                        No messages yet. Start a private conversation with your match.
+                                    </div>
+                                {% endif %}
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('send_match_message', match_id=match.id) }}"
+                                    class="match-chat-form"
+                                    data-chat-form
+                                >
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+                                    <textarea
+                                        name="message"
+                                        maxlength="2000"
+                                        rows="2"
+                                        placeholder="Write a message..."
+                                        aria-label="Message to your match"
+                                        required
+                                    ></textarea>
+                                    <button type="submit" class="btn btn-primary">
+                                        Send
+                                    </button>
+                                </form>
+                            </section>
+
+                        {% endif %}
+
+
+                        <!-- REQUESTER RECORDS THE DONATION RECEIVED -->
+
+                        {% if match.status == "Confirmed"
+                              and match.my_role == "Requester"
+                              and match.requester_confirmed == 1 %}
+
+                            <div class="privacy-note">
+                                After receiving the blood, record the actual units and donation date here.
+                                A confirmed copy will automatically appear in the donor's profile history.
+                            </div>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('report_match_donation', match_id=match.id) }}"
+                                class="inline-form"
+                            >
+
+                                <input type="hidden" name="csrf_token"
+                                       value="{{ csrf_token() }}">
+
+                                <div class="form-group">
+                                    <label for="donation-units-{{ match.id }}">
+                                        Units Received
+                                    </label>
+
+                                    <input
+                                        id="donation-units-{{ match.id }}"
+                                        type="number"
+                                        name="units"
+                                        min="1"
+                                        max="{{ [8, match.units_pledged]|min }}"
+                                        value="1"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="donation-date-{{ match.id }}">
+                                        Donation Date
+                                    </label>
+
+                                    <input
+                                        id="donation-date-{{ match.id }}"
+                                        type="date"
+                                        name="donation_date"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    Record Received Donation
+                                </button>
+
+                            </form>
+
+                        {% endif %}
+
+
+                        {% if match.status == "Donation Reported" %}
+
+                            <div class="privacy-note">
+                                Donation reported. The requester must confirm
+                                receipt before this match is completed.
+                            </div>
+
+                        {% endif %}
+
+
+                        {% if match.status == "Completed" %}
+
+                            <div class="privacy-note">
+                                This match has been completed.
+                                The donation and receipt process is finished.
+                            </div>
+
+                        {% endif %}
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        {% elif not potential_matches %}
+
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.6" stroke-linecap="round">
+                    <circle cx="9" cy="8" r="3"/>
+                    <circle cx="17" cy="8" r="3"/>
+                    <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
+                </svg>
+
+                <h3>No matches yet</h3>
+
+                <p>
+                    No eligible donor or open blood request currently matches
+                    your blood group and city. New potential matches will
+                    appear here when compatible availability is found.
+                </p>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+
+    {% endif %}
+
+
 
     <div class="page-footer">
         Blood Donor &amp; Emergency Request Network
