@@ -4,6 +4,7 @@
     let list = document.querySelector(".notification-list");
     let lastId = list ? Number(list.dataset.lastId || 0) : 0;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+    const notificationsPage = Boolean(list || document.querySelector(".notification-count"));
 
     function updateBadges(count) {
         document.querySelectorAll("a[href]").forEach((anchor) => {
@@ -98,6 +99,17 @@
 
     async function refreshNotifications() {
         try {
+            if (!notificationsPage) {
+                const response = await fetch("/notifications/unread-count", {
+                    credentials: "same-origin",
+                    headers: { "Accept": "application/json" }
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                updateBadges(Number(data.unread_count || 0));
+                return;
+            }
+
             const response = await fetch(endpoint + "?after_id=" + lastId, {
                 credentials: "same-origin",
                 headers: { "Accept": "application/json" }
