@@ -1099,13 +1099,13 @@
             My Matches
         </a>
 
-        <a href="{{ url_for('donation_progress') }}" class="{% if page_view == 'donation_progress' %}active{% endif %}">
+        <a href="{{ url_for('available_requests') }}" class="{% if page_view == 'find' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
-                <path d="M4 19V5M4 19h17"/>
-                <path d="m7 15 4-4 3 2 6-7"/>
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-4-4"/>
             </svg>
-            Donation Progress
+            Available Requests
         </a>
 
     </nav>
@@ -1404,6 +1404,19 @@
                                 <input type="hidden" name="csrf_token"
                                        value="{{ csrf_token() }}">
 
+                                {% set profile_options = matching_donor_profiles_by_request.get(req[0], []) %}
+                                {% if profile_options %}
+                                    <div class="form-group">
+                                        <label for="donor-profile-{{ req[0] }}">Select donor profile</label>
+                                        <select id="donor-profile-{{ req[0] }}" name="donor_id" required>
+                                            <option value="">Choose a donor profile</option>
+                                            {% for profile in profile_options %}
+                                                <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endif %}
+
                                 <div class="form-group">
                                     <label for="units-{{ req[0] }}">
                                         Units you can donate
@@ -1420,7 +1433,8 @@
                                     >
                                 </div>
 
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary"
+                                        {% if not profile_options %}disabled{% endif %}>
                                     Accept This Request
                                 </button>
                             </form>
@@ -1777,6 +1791,19 @@
                                     <input type="hidden" name="csrf_token"
                                            value="{{ csrf_token() }}">
 
+                                    {% set profile_options = matching_donor_profiles_by_request.get(potential.request_id, []) %}
+                                    {% if profile_options %}
+                                        <div class="form-group">
+                                            <label for="potential-donor-profile-{{ potential.request_id }}">Select donor profile</label>
+                                            <select id="potential-donor-profile-{{ potential.request_id }}" name="donor_id" required>
+                                                <option value="">Choose a donor profile</option>
+                                                {% for profile in profile_options %}
+                                                    <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    {% endif %}
+
                                     <div class="form-group">
                                         <label for="potential-units-{{ potential.request_id }}">
                                             Units you can donate
@@ -1793,7 +1820,8 @@
                                         >
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary">
+                                    <button type="submit" class="btn btn-primary"
+                                            {% if not profile_options %}disabled{% endif %}>
                                         Accept & Start Match
                                     </button>
                                 </form>
@@ -2230,54 +2258,7 @@
 
     {% endif %}
 
-{% if page_view == 'donation_progress' %}
-<!-- =====================================================
-         5. DONATION AND RECEIPT PROGRESS
-    ====================================================== -->
 
-    <section class="section" id="donation-progress">
-
-        <div class="section-heading">
-            <div>
-                <h2>Donation and Receipt Progress</h2>
-                <p>
-                    Review reported donations and confirm the units
-                    you have received.
-                </p>
-            </div>
-
-            <span class="section-count">
-                {{ donations|length }}
-            </span>
-        </div>
-
-
-        {% if donations %}
-
-            <div class="item-list">
-
-                {% for donation in donations %}
-
-                    {% set donation_status = (donation[5] or "pending")|lower|replace(" ", "-") %}
-
-                    <article class="item-card">
-
-                        <div class="item-top">
-
-                            <div class="blood-heading">
-
-                                <div class="blood-icon">
-                                    {{ donation[10] }}
-                                </div>
-
-                                <div>
-                                    <h3>Donation #{{ donation[0] }}</h3>
-                                    <p>
-                                        {% if donation[9] %}
-                                            Donor: {{ donation[9] }}
-                                        {% else %}
-                                            Donation record
-                                        {% endif %}
                                     </p>
                                 </div>
 
