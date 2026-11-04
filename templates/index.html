@@ -899,7 +899,13 @@
                 animation-duration: .01ms !important;
             }
         }
-    </style>
+            .community-subheading {
+            margin: 10px 0 8px;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+</style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
     <style>
@@ -1328,7 +1334,8 @@
         <div class="container">
             <div class="section-heading">
                 <span class="eyebrow">OUR COMMUNITY</span>
-                <h2>Registered Donors</h2>
+                <h2>Growing with generosity</h2>
+                <h3 class="community-subheading">Registered Donors</h3>
                 <p>Meet the people who have joined our blood donor network. Names and blood groups are shown to help visitors explore the community; personal contact details remain private.</p>
             </div>
             {% if public_donors %}
