@@ -5,6 +5,9 @@
     let lastId = list ? Number(list.dataset.lastId || 0) : 0;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
     const notificationsPage = Boolean(list || document.querySelector(".notification-count"));
+    const matchWorkspace = document.querySelector("#my-matches[data-notification-cursor]");
+    let matchUpdateCursor = matchWorkspace
+        ? Number(matchWorkspace.dataset.notificationCursor || 0) : 0;
 
     function updateBadges(count) {
         document.querySelectorAll("a[href]").forEach((anchor) => {
@@ -85,6 +88,9 @@
         button.type = "submit";
         button.className = "primary";
         button.textContent = item.type === "match_message" ? "Open Private Chat"
+            : ["compatible_donor", "match_invitation", "match_acceptance", "match_waiting",
+               "match_confirmed", "match_rejected", "match_cancelled"].includes(item.type)
+                ? "View Potential Matches"
             : item.match_id ? "Open My Matches"
             : item.type === "blood_request" ? "View Available Requests"
             : item.request_id ? "View My Requests"
@@ -97,9 +103,38 @@
         targetList.dataset.lastId = String(item.id);
     }
 
+    async function checkMatchUpdates() {
+        if (!matchWorkspace) return;
+        try {
+            const response = await fetch(endpoint + "?after_id=" + matchUpdateCursor, {
+                credentials: "same-origin",
+                headers: { "Accept": "application/json" }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (!data.ok || !Array.isArray(data.notifications)) return;
+            const refreshTypes = new Set([
+                "compatible_donor", "match_invitation", "match_acceptance",
+                "match_waiting", "match_confirmed", "match_rejected",
+                "match_cancelled", "request_cancelled", "request_expired",
+                "request_fulfilled", "donation_reported_by_requester",
+                "donation_reported", "receipt_confirmed"
+            ]);
+            let shouldRefresh = false;
+            data.notifications.forEach((item) => {
+                matchUpdateCursor = Math.max(matchUpdateCursor, Number(item.id || 0));
+                if (refreshTypes.has(item.type)) shouldRefresh = true;
+            });
+            if (shouldRefresh) window.location.reload();
+        } catch (_) {
+            // Background polling must never interrupt the matching workspace.
+        }
+    }
+
     async function refreshNotifications() {
         try {
             if (!notificationsPage) {
+                await checkMatchUpdates();
                 const response = await fetch("/notifications/unread-count", {
                     credentials: "same-origin",
                     headers: { "Accept": "application/json" }
