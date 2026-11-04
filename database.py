@@ -285,37 +285,38 @@ def create_unique_donation_match_index(connection):
 
 
 def create_unique_active_match_index(connection):
+    # Older releases enforced one active match per user account. With
+    # multiple donor profiles per account, the constraint belongs to donor_id.
+    connection.execute(
+        "DROP INDEX IF EXISTS idx_one_active_match_per_donor"
+    )
 
     duplicate = connection.execute(
         """
-        SELECT donor_user_id
+        SELECT donor_id
         FROM request_matches
-        WHERE donor_user_id IS NOT NULL
-          AND status IN ('Accepted', 'Confirmed', 'Donation Reported')
-        GROUP BY donor_user_id
+        WHERE donor_id IS NOT NULL
+          AND status IN ('Accepted', 'Confirmed', 'Donation Reported', 'Invited')
+        GROUP BY donor_id
         HAVING COUNT(*) > 1
         LIMIT 1
         """
     ).fetchone()
 
     if duplicate is None:
-
         connection.execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS
             idx_one_active_match_per_donor
-            ON request_matches(donor_user_id)
-            WHERE donor_user_id IS NOT NULL
-              AND status IN ('Accepted', 'Confirmed', 'Donation Reported')
+            ON request_matches(donor_id)
+            WHERE donor_id IS NOT NULL
+              AND status IN ('Accepted', 'Confirmed', 'Donation Reported', 'Invited')
             """
         )
-
     else:
-
         logger.warning(
-            "A donor has multiple active matches. "
-            "The one-active-match unique index was skipped; "
-            "existing records were left unchanged."
+            "A donor profile has multiple active matches. "
+            "The unique active-match index was skipped to preserve existing records."
         )
 
 
