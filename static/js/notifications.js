@@ -4,7 +4,7 @@
     let list = document.querySelector(".notification-list");
     let lastId = list ? Number(list.dataset.lastId || 0) : 0;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
-    const notificationsPage = Boolean(list || document.querySelector(".notification-count"));
+    const notificationsPage = window.location.pathname.replace(/\/+$/, "") === "/notifications";
     const matchWorkspace = document.querySelector("#my-matches[data-notification-cursor]");
     let matchUpdateCursor = matchWorkspace
         ? Number(matchWorkspace.dataset.notificationCursor || 0) : 0;
@@ -89,9 +89,10 @@
         button.className = "primary";
         button.textContent = item.type === "match_message" ? "Open Private Chat"
             : ["compatible_donor", "match_invitation", "match_acceptance", "match_waiting",
-               "match_confirmed", "match_rejected", "match_cancelled"].includes(item.type)
+               "match_confirmed", "match_rejected", "match_cancelled",
+               "donation_reported_by_requester", "donation_reported", "receipt_confirmed"].includes(item.type)
                 ? "View Potential Matches"
-            : item.match_id ? "Open My Matches"
+            : item.match_id ? "Open Potential Matches"
             : item.type === "blood_request" ? "View Available Requests"
             : item.request_id ? "View My Requests"
             : item.type === "eligibility" ? "View Donor Profile" : "Open Dashboard";
@@ -104,7 +105,7 @@
     }
 
     async function checkMatchUpdates() {
-        if (!matchWorkspace) return;
+        if (!matchWorkspace) return false;
         try {
             const response = await fetch(endpoint + "?after_id=" + matchUpdateCursor, {
                 credentials: "same-origin",
@@ -125,16 +126,23 @@
                 matchUpdateCursor = Math.max(matchUpdateCursor, Number(item.id || 0));
                 if (refreshTypes.has(item.type)) shouldRefresh = true;
             });
-            if (shouldRefresh) window.location.reload();
+            if (shouldRefresh) {
+                window.location.reload();
+                return true;
+            }
+            return false;
         } catch (_) {
             // Background polling must never interrupt the matching workspace.
+            return false;
         }
     }
 
     async function refreshNotifications() {
         try {
+            // Check match changes on every page that contains the matching workspace.
+            if (await checkMatchUpdates()) return;
+
             if (!notificationsPage) {
-                await checkMatchUpdates();
                 const response = await fetch("/notifications/unread-count", {
                     credentials: "same-origin",
                     headers: { "Accept": "application/json" }
