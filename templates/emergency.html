@@ -1889,7 +1889,26 @@
                         </div>
 
 
-                        <!-- REQUESTER CONFIRMATION -->
+                        <!-- DONOR INVITATION: the donor accepts once to start the match -->
+
+                        {% if match.status == "Invited" and match.my_role == "Requester" %}
+                            <div class="privacy-note">
+                                Your donor request has been sent. The match and private chat will start when the donor accepts.
+                            </div>
+                        {% elif match.status == "Invited" and match.my_role == "Donor" %}
+                            <div class="privacy-note">
+                                This requester has invited you to donate. Accept once to start the match and private chat.
+                            </div>
+                            <form method="POST"
+                                  action="{{ url_for('accept_match_invitation', match_id=match.id) }}"
+                                  class="button-row">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-success">Accept Donor Request</button>
+                            </form>
+                        {% endif %}
+
+
+                        <!-- LEGACY PENDING ACCEPTANCE RECORDS -->
 
                         {% if match.status == "Accepted" and match.my_role == "Requester" %}
 
@@ -2042,7 +2061,8 @@
 
                         {% if match.status in ["Accepted", "Confirmed", "Donation Reported", "Completed"] %}
 
-                            <section class="match-chat" id="match-chat-{{ match.id }}">
+                            <section class="match-chat" id="match-chat-{{ match.id }}"
+                                     data-poll-url="{{ url_for('get_match_messages', match_id=match.id) }}">
                                 <h4>Private Match Chat</h4>
                                 <p class="match-chat-intro">
                                     Only you and the matched
@@ -2055,9 +2075,9 @@
                                 </p>
 
                                 {% if match.chat_messages %}
-                                    <div class="chat-message-list" aria-live="polite">
+                                    <div class="chat-message-list" aria-live="polite" data-chat-list>
                                         {% for chat_message in match.chat_messages %}
-                                            <article class="chat-message {% if chat_message.is_mine %}mine{% endif %}">
+                                            <article class="chat-message {% if chat_message.is_mine %}mine{% endif %}" data-message-id="{{ chat_message.id }}">
                                                 <strong>
                                                     {% if chat_message.is_mine %}
                                                         You
@@ -2080,6 +2100,7 @@
                                     method="POST"
                                     action="{{ url_for('send_match_message', match_id=match.id) }}"
                                     class="match-chat-form"
+                                    data-chat-form
                                 >
                                     <input type="hidden" name="csrf_token"
                                            value="{{ csrf_token() }}">
@@ -2100,15 +2121,15 @@
                         {% endif %}
 
 
-                        <!-- DONOR REPORTS DONATION -->
+                        <!-- REQUESTER RECORDS THE DONATION RECEIVED -->
 
                         {% if match.status == "Confirmed"
-                              and match.my_role == "Donor"
+                              and match.my_role == "Requester"
                               and match.requester_confirmed == 1 %}
 
                             <div class="privacy-note">
-                                After donating, report the donation details
-                                so the requester can confirm receipt.
+                                After receiving the blood, record the actual units and donation date here.
+                                A confirmed copy will automatically appear in the donor's profile history.
                             </div>
 
                             <form
@@ -2122,7 +2143,7 @@
 
                                 <div class="form-group">
                                     <label for="donation-units-{{ match.id }}">
-                                        Units Donated
+                                        Units Received
                                     </label>
 
                                     <input
@@ -2150,7 +2171,7 @@
                                 </div>
 
                                 <button type="submit" class="btn btn-primary">
-                                    Report Donation
+                                    Record Received Donation
                                 </button>
 
                             </form>
@@ -2390,7 +2411,7 @@
                 <h3>No donation records yet</h3>
 
                 <p>
-                    Reported donations and receipt confirmations will appear here.
+                    Requester-recorded donations and completed receipt records will appear here.
                 </p>
             </div>
 
@@ -2453,6 +2474,98 @@
         if (window.innerWidth > 1150) {
             closeMenu();
         }
+    });
+
+    // Match chat sends and receives messages in the background without page reloads.
+    document.querySelectorAll(".match-chat").forEach(function (chat) {
+        const form = chat.querySelector("[data-chat-form]");
+        const list = chat.querySelector("[data-chat-list]");
+        const pollUrl = chat.dataset.pollUrl;
+        if (!form || !pollUrl) return;
+
+        let lastId = 0;
+        if (list) {
+            list.querySelectorAll("[data-message-id]").forEach(function (item) {
+                lastId = Math.max(lastId, Number(item.dataset.messageId) || 0);
+            });
+        }
+
+        function appendMessage(message) {
+            if (!message || !message.id || Number(message.id) <= lastId) return;
+            let messageList = chat.querySelector("[data-chat-list]");
+            if (!messageList) {
+                const empty = chat.querySelector(".chat-empty");
+                if (empty) empty.remove();
+                messageList = document.createElement("div");
+                messageList.className = "chat-message-list";
+                messageList.setAttribute("aria-live", "polite");
+                messageList.dataset.chatList = "";
+                chat.insertBefore(messageList, form);
+            }
+            const article = document.createElement("article");
+            article.className = "chat-message" + (message.is_mine ? " mine" : "");
+            article.dataset.messageId = String(message.id);
+            const sender = document.createElement("strong");
+            sender.textContent = message.is_mine ? "You" : (message.sender_name || "Network user");
+            const body = document.createElement("p");
+            body.textContent = message.message || "";
+            const time = document.createElement("time");
+            time.textContent = message.created_at || "";
+            article.append(sender, body, time);
+            messageList.appendChild(article);
+            messageList.scrollTop = messageList.scrollHeight;
+            lastId = Number(message.id);
+        }
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const textarea = form.querySelector('textarea[name="message"]');
+            const button = form.querySelector('button[type="submit"]');
+            if (!textarea || !textarea.value.trim()) return;
+            const originalLabel = button ? button.textContent : "";
+            if (button) {
+                button.disabled = true;
+                button.textContent = "Sending...";
+            }
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: new FormData(form),
+                    credentials: "same-origin",
+                    headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
+                });
+                const result = await response.json();
+                if (!response.ok || !result.ok) throw new Error(result.error || "Message could not be sent.");
+                appendMessage(result.message);
+                textarea.value = "";
+            } catch (error) {
+                alert(error.message || "Message could not be sent. Please try again.");
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalLabel || "Send";
+                }
+            }
+        });
+
+        async function loadNewMessages() {
+            try {
+                const response = await fetch(pollUrl + "?after=" + lastId, {
+                    credentials: "same-origin",
+                    headers: { "Accept": "application/json" }
+                });
+                if (!response.ok) return;
+                const result = await response.json();
+                if (result.ok && Array.isArray(result.messages)) {
+                    result.messages.forEach(appendMessage);
+                }
+            } catch (error) {
+                // Keep the chat usable if a background refresh briefly fails.
+            }
+        }
+
+        loadNewMessages();
+        window.setInterval(loadNewMessages, 4000);
     });
 
 
