@@ -3329,7 +3329,7 @@ def request_donor(donor_id):
         donor = connection.execute(
             """
             SELECT id, user_id, blood_type, location, availability,
-                   eligible, health_screening_status
+                   eligible, health_screening_status, last_donation
             FROM donors WHERE id = ?
             """,
             (donor_id,),
@@ -3344,6 +3344,12 @@ def request_donor(donor_id):
         if (
             donor[4] != AVAILABLE or donor[5] != 1
             or donor[6] != "Self-Declared Clear"
+            or (
+                donor[7]
+                and str(donor[7]) > (
+                    get_pakistan_time().date() - timedelta(days=90)
+                ).isoformat()
+            )
             or not donor_matches_request(
                 donor[2], donor[3], blood_request["blood_type"], blood_request["location"]
             )
