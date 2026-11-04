@@ -1648,6 +1648,7 @@ def get_emergency_page_data(user_id):
                         FROM donors
                         WHERE id = ?
                           AND user_id = ?
+                          AND share_contact = 1
                         """,
                         (match[2], donor_user_id),
                     ).fetchone()
@@ -4096,6 +4097,7 @@ def match_detail(match_id):
                 CASE
                     WHEN rm.requester_confirmed = 1
                      AND rm.status IN ('Confirmed', 'Donation Reported')
+                     AND donor.share_contact = 1
                     THEN donor.contact
                     ELSE NULL
                 END AS donor_contact,
