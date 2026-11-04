@@ -522,12 +522,28 @@ def get_unread_notification_count(user_id):
 @app.context_processor
 def inject_template_values():
     user_id = get_user_id()
+    language_preference = "English"
+
+    if user_id:
+        connection = get_db_connection()
+        try:
+            row = connection.execute(
+                "SELECT language_preference FROM users WHERE id = ?",
+                (user_id,),
+            ).fetchone()
+            if row and row[0] in {"Sindhi", "Urdu", "English"}:
+                language_preference = row[0]
+        except Exception:
+            app.logger.exception("Language preference could not be loaded")
+        finally:
+            connection.close()
 
     return {
         "csrf_token": get_csrf_token,
         "current_user_id": user_id,
         "blood_types": sorted(BLOOD_TYPES),
         "notification_unread_count": get_unread_notification_count(user_id),
+        "language_preference": language_preference,
     }
 
 
