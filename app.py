@@ -2515,11 +2515,11 @@ def search():
                     ORDER BY id DESC
                     """,
                     (
+                        user_id,
                         AVAILABLE,
                         "Self-Declared Clear",
                         cooldown_cutoff,
                         *compatible_donor_groups,
-                        user_id,
                     ),
                 ).fetchall()
 
