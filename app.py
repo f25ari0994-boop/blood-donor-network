@@ -801,6 +801,22 @@ def donor_has_active_match(connection, donor_id):
     return row is not None
 
 
+def donor_has_other_active_match(connection, donor_id, exclude_match_id):
+    """Check active matches for this donor profile, excluding its current invitation."""
+    row = connection.execute(
+        """
+        SELECT id
+        FROM request_matches
+        WHERE donor_id = ?
+          AND id != ?
+          AND (status IN (?, ?, ?) OR status = 'Invited')
+        LIMIT 1
+        """,
+        (donor_id, exclude_match_id, *ACTIVE_MATCH_STATUSES),
+    ).fetchone()
+    return row is not None
+
+
 def get_active_request_count(connection, requester_user_id):
     """Count open requests that still have units outstanding."""
     row = connection.execute(
@@ -3500,16 +3516,9 @@ def accept_match_invitation(match_id):
             connection.commit()
             flash("The blood request has expired or is already fulfilled.", "warning")
             return redirect(url_for("my_matches"))
-        other_active = connection.execute(
-            """
-            SELECT id FROM request_matches
-            WHERE donor_user_id = ? AND id != ?
-              AND (status IN (?, ?, ?) OR status = 'Invited')
-            LIMIT 1
-            """,
-            (user_id, match_id, *ACTIVE_MATCH_STATUSES),
-        ).fetchone()
-        if other_active:
+        # The account may own several donor profiles. Only this donor_id
+        # is restricted to one active match at a time.
+        if donor_has_other_active_match(connection, donor_id, match_id):
             flash("You already have another active match. Complete it before accepting this invitation.", "warning")
             return redirect(url_for("my_matches"))
         reserved = get_reserved_units(connection, request_id, exclude_match_id=match_id)
