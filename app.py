@@ -692,6 +692,14 @@ def notify_requesters_of_compatible_donor(connection, donor_id):
           AND needed_by IS NOT NULL
           AND needed_by > ?
           AND user_id != ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM request_matches AS locked_match
+              WHERE locked_match.request_id = blood_requests.id
+                AND locked_match.status IN (
+                    'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                )
+          )
         ORDER BY id DESC
         """,
         (
@@ -946,6 +954,29 @@ def donor_has_active_match(connection, donor_id):
         ),
     ).fetchone()
 
+    return row is not None
+
+
+def request_has_committed_match(connection, request_id):
+    """
+    A blood request can have only one donor match.
+
+    The lock remains after the requester reports the donation, so a partly
+    fulfilled request cannot silently start matching additional donors.
+    Rejected/cancelled matches do not keep the request locked.
+    """
+    row = connection.execute(
+        """
+        SELECT id
+        FROM request_matches
+        WHERE request_id = ?
+          AND status IN (
+              'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+          )
+        LIMIT 1
+        """,
+        (request_id,),
+    ).fetchone()
     return row is not None
 
 
@@ -1587,6 +1618,14 @@ def get_emergency_page_data(user_id):
               AND br.user_id != ?
               AND br.needed_by IS NOT NULL
               AND br.needed_by > ?
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM request_matches AS locked_match
+                  WHERE locked_match.request_id = br.id
+                    AND locked_match.status IN (
+                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                    )
+              )
             ORDER BY
                 CASE br.urgency
                     WHEN 'Emergency' THEN 1
@@ -1896,6 +1935,14 @@ def get_emergency_page_data(user_id):
                   WHERE reserved.request_id = br.id
                     AND reserved.status IN (?, ?, ?)
               ), 0)
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM request_matches AS locked_match
+                  WHERE locked_match.request_id = br.id
+                    AND locked_match.status IN (
+                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                    )
+              )
               AND d.availability = ?
               AND d.eligible = 1
               AND d.health_screening_status = ?
@@ -2012,6 +2059,14 @@ def get_emergency_page_data(user_id):
                   WHERE reserved.request_id = br.id
                     AND reserved.status IN (?, ?, ?)
               ), 0)
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM request_matches AS locked_match
+                  WHERE locked_match.request_id = br.id
+                    AND locked_match.status IN (
+                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                    )
+              )
               AND NOT EXISTS (
                   SELECT 1
                   FROM request_matches AS rm
@@ -2612,6 +2667,14 @@ def donor():
                 WHERE status = 'Pending'
                   AND remaining_units > 0
                   AND needed_by IS NOT NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM request_matches AS locked_match
+                      WHERE locked_match.request_id = blood_requests.id
+                        AND locked_match.status IN (
+                            'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                        )
+                  )
                 ORDER BY id DESC
                 """
             ).fetchall()
@@ -3541,6 +3604,14 @@ def accept_request(request_id):
             )
             return redirect(url_for("available_requests"))
 
+        if request_has_committed_match(connection, request_id):
+            flash(
+                "This request already has an accepted donor. "
+                "It cannot be matched with another donor.",
+                "warning",
+            )
+            return redirect(url_for("available_requests"))
+
         reserved_units = get_reserved_units(
             connection,
             request_id,
@@ -3733,6 +3804,14 @@ def request_donor(donor_id):
         if not blood_request or is_request_expired(blood_request["needed_by"]):
             flash("Create or select an active blood request before requesting a donor.", "warning")
             return redirect(request.referrer or url_for("donor_list"))
+
+        if request_has_committed_match(connection, blood_request["id"]):
+            flash(
+                "This request already has an accepted donor. "
+                "You cannot accept another donor for the same request.",
+                "warning",
+            )
+            return redirect(url_for("my_matches"))
 
         donor = connection.execute(
             """
