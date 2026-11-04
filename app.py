@@ -3690,9 +3690,10 @@ def accept_request(request_id):
 @app.route("/request-donor/<int:donor_id>", methods=["POST"])
 @login_required
 def request_donor(donor_id):
-    """Send an invitation using the requester's newest active blood request."""
+    """Activate a match immediately when the requester selects a donor."""
     user_id = get_user_id()
     connection = get_db_connection()
+    match_id = None
     try:
         expire_overdue_requests(connection)
         begin_write_transaction(connection)
@@ -3791,11 +3792,12 @@ def request_donor(donor_id):
         flash("Donor selected. Your match is now active.", "success")
     except Exception:
         connection.rollback()
-        app.logger.exception("Donor invitation failed")
-        flash("Unable to send a donor request right now.", "error")
+        match_id = None
+        app.logger.exception("Donor match activation failed")
+        flash("Unable to start this match right now.", "error")
     finally:
         connection.close()
-    if "match_id" in locals() and match_id:
+    if match_id:
         return redirect(url_for("my_matches") + f"#match-{match_id}")
     return redirect(request.referrer or url_for("donor_list"))
 
