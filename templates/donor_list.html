@@ -992,7 +992,23 @@
                                 Open Emergency Request to review compatible requests and manage your matches.
                             </div>
 
-                        {% endif %}</article> {% endfor %}</section>
+                        {% endif %}
+
+                        {% if active_request and donor[9] != current_user_id and donor[6] == "Available" and donor[7] == 1 %}
+                            <form method="POST"
+                                  action="{{ url_for('request_donor', donor_id=donor[0]) }}"
+                                  style="margin-top:12px;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-primary">
+                                    Request This Donor
+                                </button>
+                            </form>
+                        {% elif not active_request and donor[9] != current_user_id %}
+                            <div class="owner-note" style="margin-top:10px;">
+                                Create an active blood request first to request this donor.
+                            </div>
+                        {% endif %}
+                        </article> {% endfor %}</section>
 
 
             <!-- SEARCH EMPTY RESULT -->
