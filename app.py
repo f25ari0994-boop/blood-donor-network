@@ -1227,7 +1227,7 @@ def release_unneeded_matches(
             """
             UPDATE request_matches
             SET status = 'Cancelled', updated_at = ?
-            WHERE id = ? AND status IN ('Accepted', 'Confirmed')
+            WHERE id = ? AND status IN ('Accepted', 'Invited', 'Confirmed')
             """,
             (get_current_time(), match_id),
         )
@@ -1328,6 +1328,10 @@ def get_emergency_page_data(user_id):
 
     try:
         cursor = connection.cursor()
+        notification_cursor = connection.execute(
+            "SELECT COALESCE(MAX(id), 0) FROM notifications WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()[0]
 
         # Keep request deadlines and pending acceptances current.
         expire_overdue_requests(connection)
@@ -1926,6 +1930,7 @@ def get_emergency_page_data(user_id):
             "potential_matches": potential_matches,
             "match_contacts": match_contacts,
             "health_questions": HEALTH_QUESTIONS,
+            "notification_cursor": notification_cursor,
         }
 
     finally:
@@ -3440,10 +3445,10 @@ def accept_request(request_id):
                 UPDATE request_matches
                 SET donor_user_id = ?,
                     units_pledged = ?,
-                    status = 'Confirmed',
-                    requester_confirmed = 1,
+                    status = 'Accepted',
+                    requester_confirmed = 0,
                     accepted_at = ?,
-                    confirmed_at = ?,
+                    confirmed_at = NULL,
                     completed_at = NULL,
                     updated_at = ?
                 WHERE id = ?
@@ -3451,7 +3456,6 @@ def accept_request(request_id):
                 (
                     user_id,
                     units_pledged,
-                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                     old_match_id,
@@ -3475,14 +3479,13 @@ def accept_request(request_id):
                         confirmed_at,
                         updated_at
                     )
-                VALUES (?, ?, ?, ?, 'Confirmed', 1, ?, ?, ?)
+                VALUES (?, ?, ?, ?, 'Accepted', 0, ?, NULL, ?)
                 """,
                 (
                     request_id,
                     donor_id,
                     user_id,
                     units_pledged,
-                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                 ),
@@ -3493,7 +3496,7 @@ def accept_request(request_id):
         create_notification(
             connection,
             requester_id,
-            "A donor accepted your blood request. Your match is active and private chat is ready.",
+            "A donor accepted your blood request. Open Potential Matches to confirm or reject the match.",
             "match_acceptance",
             related_request_id=request_id,
             related_match_id=match_id,
@@ -3502,8 +3505,8 @@ def accept_request(request_id):
         create_notification(
             connection,
             user_id,
-            "You accepted the blood request. Your match is active and private chat is ready.",
-            "match_confirmed",
+            "Your acceptance is waiting for the requester to confirm the match.",
+            "match_waiting",
             related_request_id=request_id,
             related_match_id=match_id,
         )
@@ -3519,7 +3522,7 @@ def accept_request(request_id):
 
         connection.commit()
         flash(
-            "Request accepted. Your match is active. Open My Matches to coordinate the donation.",
+            "Request accepted. The requester must confirm the match before contact details and chat are enabled.",
             "success",
         )
 
@@ -3533,7 +3536,7 @@ def accept_request(request_id):
 
     if match_id:
         return redirect(
-            url_for("my_matches") + f"#match-chat-{match_id}"
+            url_for("my_matches") + f"#match-{match_id}"
         )
 
     return redirect(url_for("available_requests"))
@@ -3607,12 +3610,12 @@ def request_donor(donor_id):
                 """
                 UPDATE request_matches
                 SET donor_user_id = ?, units_pledged = 1,
-                    status = 'Confirmed', requester_confirmed = 1,
-                    accepted_at = ?, confirmed_at = ?,
+                    status = 'Invited', requester_confirmed = 0,
+                    accepted_at = NULL, confirmed_at = NULL,
                     completed_at = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (donor_user_id, now, now, now, match_id),
+                (donor_user_id, now, match_id),
             )
         else:
             cursor = connection.cursor()
@@ -3621,29 +3624,29 @@ def request_donor(donor_id):
                 INSERT INTO request_matches
                     (request_id, donor_id, donor_user_id, units_pledged,
                      status, requester_confirmed, accepted_at, confirmed_at, updated_at)
-                VALUES (?, ?, ?, 1, 'Confirmed', 1, ?, ?, ?)
+                VALUES (?, ?, ?, 1, 'Invited', 0, NULL, NULL, ?)
                 """,
-                (blood_request["id"], donor_id, donor_user_id, now, now, now),
+                (blood_request["id"], donor_id, donor_user_id, now),
             )
             match_id = get_inserted_id(cursor, connection)
 
         create_notification(
             connection, donor_user_id,
-            f"You have been matched for a {blood_request['blood_type']} blood request "
-            f"in {blood_request['location']}. Open My Matches to coordinate the donation.",
-            "match_confirmed", related_request_id=blood_request["id"],
+            f"You have received an invitation for a {blood_request['blood_type']} blood request "
+            f"in {blood_request['location']}. Open Potential Matches to review and accept it.",
+            "match_invitation", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
         create_notification(
             connection, user_id,
-            f"Your request was matched with donor {donor_id}. The match is active and private chat is ready.",
-            "match_confirmed", related_request_id=blood_request["id"],
+            f"Your invitation to donor {donor[2]} was sent. Waiting for donor acceptance.",
+            "match_waiting", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
-        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
-                     f"Requester started a match with donor profile {donor_id} for request {blood_request['id']}.")
+        record_audit(connection, user_id, "match_invitation_sent", "request_match", match_id,
+                     f"Requester invited donor profile {donor_id} for request {blood_request['id']}.")
         connection.commit()
-        flash("Donor requested successfully. Your match is now active.", "success")
+        flash("Donor invitation sent. The donor must accept before you can confirm the match.", "success")
     except Exception:
         connection.rollback()
         app.logger.exception("Donor invitation failed")
@@ -3723,22 +3726,22 @@ def accept_match_invitation(match_id):
         connection.execute(
             """
             UPDATE request_matches
-            SET status = 'Confirmed', requester_confirmed = 1,
-                confirmed_at = ?, updated_at = ?
+            SET status = 'Accepted', requester_confirmed = 0,
+                accepted_at = ?, confirmed_at = NULL, updated_at = ?
             WHERE id = ? AND status = 'Invited'
             """,
             (now, now, match_id),
         )
         create_notification(connection, requester_id,
-            "The donor accepted your invitation. Your match is now active and private chat is ready.",
-            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
+            "The invited donor accepted your request. Open Potential Matches to confirm or reject this match.",
+            "match_acceptance", related_request_id=request_id, related_match_id=match_id)
         create_notification(connection, user_id,
-            "You accepted the request. Your match is now active and private chat is ready.",
-            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
-        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
-                     "Donor accepted the requester's invitation.")
+            "You accepted the invitation. The requester must confirm before contact and chat are enabled.",
+            "match_waiting", related_request_id=request_id, related_match_id=match_id)
+        record_audit(connection, user_id, "match_acceptance", "request_match", match_id,
+                     "Donor accepted the requester's invitation; requester confirmation is pending.")
         connection.commit()
-        flash("Invitation accepted. Your match is now active.", "success")
+        flash("Invitation accepted. Waiting for requester confirmation.", "success")
     except Exception:
         connection.rollback()
         app.logger.exception("Donor invitation acceptance failed")
@@ -4820,6 +4823,8 @@ def notification_updates():
             "blood_request": "New blood request",
             "match_request_found": "Match request found",
             "request_created": "Your blood request was created",
+            "compatible_donor": "Compatible donor found",
+            "match_invitation": "New donor invitation",
             "match_acceptance": "Donor accepted your request",
             "match_waiting": "Your acceptance is waiting",
             "match_confirmed": "Match confirmed",
@@ -4842,6 +4847,11 @@ def notification_updates():
                     target_url += f"#match-chat-{match_id}"
             elif kind in ("blood_request", "match_request_found"):
                 target_url = url_for("available_requests")
+            elif kind in (
+                "compatible_donor", "match_invitation", "match_acceptance",
+                "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
+            ):
+                target_url = url_for("my_matches")
             elif request_id:
                 target_url = url_for("my_requests")
             elif kind == "eligibility":
@@ -4902,6 +4912,11 @@ def open_notification(notification_id):
                 target_url += f"#match-chat-{match_id}"
         elif kind in ("blood_request", "match_request_found"):
             target_url = url_for("available_requests")
+        elif kind in (
+            "compatible_donor", "match_invitation", "match_acceptance",
+            "match_waiting", "match_confirmed", "match_rejected", "match_cancelled",
+        ):
+            target_url = url_for("my_matches")
         elif request_id:
             target_url = url_for("my_requests")
         elif kind == "eligibility":
@@ -5144,7 +5159,6 @@ def profile():
                 created_at
             FROM blood_requests
             WHERE user_id = ?
-              AND status != 'Cancelled'
             ORDER BY id DESC
             """,
             (user_id,),
