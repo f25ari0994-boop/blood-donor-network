@@ -349,9 +349,9 @@ class LegacySingleClickMatchTests(unittest.TestCase):
         from unittest.mock import patch
 
         connection = self.make_connection()
-        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"), \\
-             patch("app.is_request_expired", return_value=False):
-            activate_legacy_single_click_matches(connection)
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"):
+            with patch("app.is_request_expired", return_value=False):
+                activate_legacy_single_click_matches(connection)
 
         rows = connection.execute(
             """
@@ -382,9 +382,9 @@ class LegacySingleClickMatchTests(unittest.TestCase):
             """
         )
         connection.commit()
-        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"), \\
-             patch("app.is_request_expired", return_value=False):
-            activate_legacy_single_click_matches(connection)
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"):
+            with patch("app.is_request_expired", return_value=False):
+                activate_legacy_single_click_matches(connection)
 
         statuses = dict(
             connection.execute(
