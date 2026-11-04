@@ -1693,7 +1693,7 @@ def get_emergency_page_data(user_id):
                       rm.donor_user_id = d.user_id
                       OR matched_donor.user_id = d.user_id
                   )
-                    AND rm.status IN (?, ?, ?)
+                    AND (rm.status IN (?, ?, ?) OR rm.status = 'Invited')
               )
               AND NOT EXISTS (
                   SELECT 1
@@ -2813,7 +2813,7 @@ def blood_request():
                       rm.donor_user_id = d.user_id
                       OR matched_donor.user_id = d.user_id
                   )
-                    AND rm.status IN (?, ?, ?)
+                    AND (rm.status IN (?, ?, ?) OR rm.status = 'Invited')
               )
             ORDER BY d.user_id, d.id
             """,
