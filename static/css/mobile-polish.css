@@ -681,3 +681,98 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* Mobile-only correction: keep all three hamburger strokes visible and
+   force the notification icon + label to render inside the collapsed menu. */
+@media (max-width: 760px) {
+  .dashboard-header > .menu-toggle,
+  .dashboard-header > .mobile-menu-btn,
+  .header-inner > .menu-toggle,
+  header .menu-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 9px !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-header > .menu-toggle span,
+  .dashboard-header > .mobile-menu-btn span,
+  .header-inner > .menu-toggle span,
+  header .menu-toggle span {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 2px !important;
+    min-height: 2px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 2px !important;
+    background: #800020 !important;
+    flex: 0 0 2px !important;
+  }
+
+  .header-inner > .menu-toggle svg,
+  header .menu-toggle svg {
+    display: block !important;
+    visibility: visible !important;
+    width: 23px !important;
+    height: 23px !important;
+    opacity: 1 !important;
+  }
+
+  header.dashboard-header nav.desktop-nav a.notification-nav-link,
+  header .header-inner nav.nav a.notification-nav-link,
+  header .header-inner nav a.notification-nav-link {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 9px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 43px !important;
+    height: auto !important;
+    padding: 10px 13px !important;
+    margin: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    box-sizing: border-box !important;
+  }
+
+  header a.notification-nav-link > svg.notification-bell {
+    display: block !important;
+    visibility: visible !important;
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px !important;
+    opacity: 1 !important;
+  }
+
+  header a.notification-nav-link > span.notification-text {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+  }
+}
