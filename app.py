@@ -960,7 +960,7 @@ def expire_overdue_requests(connection):
             SELECT id, donor_user_id
             FROM request_matches
             WHERE request_id = ?
-              AND status = 'Accepted'
+              AND status IN ('Accepted', 'Invited')
               AND requester_confirmed = 0
             """,
             (request_id,),
@@ -987,7 +987,7 @@ def expire_overdue_requests(connection):
                 SET status = 'Cancelled',
                     updated_at = ?
                 WHERE id = ?
-                  AND status = 'Accepted'
+                  AND status IN ('Accepted', 'Invited')
                   AND requester_confirmed = 0
                 """,
                 (now, match_id),
@@ -1045,7 +1045,7 @@ def release_unneeded_matches(
         FROM request_matches AS rm
         WHERE rm.request_id = ?
           AND (
-              (rm.status = 'Accepted' AND rm.requester_confirmed = 0)
+              (rm.status IN ('Accepted', 'Invited') AND rm.requester_confirmed = 0)
               OR (
                   ? = 1
                   AND rm.status = 'Confirmed'
@@ -3906,11 +3906,6 @@ def match_detail(match_id):
 # 23. MATCH CHAT
 # =========================================================
 
-@app.route(
-    "/match-chat/<int:match_id>",
-    methods=["POST"],
-)
-@login_required
 @app.route("/match/<int:match_id>/messages", methods=["GET"])
 @login_required
 def get_match_messages(match_id):
