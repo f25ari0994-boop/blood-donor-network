@@ -61,3 +61,64 @@
     cursor: not-allowed; opacity: .6;
   }
 }
+/* Dashboard-identical desktop header alignment on every authenticated page. */
+@media (min-width: 761px) {
+ .dashboard-header { width:100%; min-height:82px!important; height:82px; padding:10px max(3%,calc((100% - 1440px)/2))!important; display:grid!important; grid-template-columns:minmax(230px,1fr) auto!important; align-items:center!important; gap:22px!important; box-sizing:border-box; }
+ .dashboard-header>.brand { display:flex!important; align-items:center!important; gap:11px!important; min-width:0!important; flex-shrink:1!important; text-decoration:none; }
+ .dashboard-header>.brand img { width:46px!important; height:46px!important; flex:0 0 46px!important; object-fit:contain; }
+ .dashboard-header>.brand strong { display:block; max-width:270px; font-size:13px!important; line-height:1.4!important; }
+ .dashboard-header>.brand span, .dashboard-header>.brand .brand-copy>span { display:block; margin-top:3px; font-size:10px!important; line-height:1.3; }
+ .dashboard-header>.desktop-nav, .header-inner>.nav { display:flex!important; align-items:center!important; justify-content:flex-end!important; gap:5px!important; min-width:0; flex-wrap:nowrap!important; white-space:nowrap; }
+ .dashboard-header>.desktop-nav a, .header-inner>.nav a { min-height:40px!important; height:40px; padding:0 9px!important; display:inline-flex!important; align-items:center!important; justify-content:center!important; border:1px solid transparent; border-radius:8px; background:transparent; color:#555d6b; font-size:11px!important; line-height:1.2; font-weight:700; white-space:nowrap!important; text-decoration:none; box-sizing:border-box; }
+ .dashboard-header>.desktop-nav a:hover, .header-inner>.nav a:hover, .dashboard-header>.desktop-nav a.active, .header-inner>.nav a.active { color:#800020; background:#fff0f3; }
+ .dashboard-header .notification-nav-link { width:38px; min-width:38px; height:38px; padding:0!important; margin-left:4px; position:relative; flex:0 0 38px; }
+ .dashboard-header .notification-nav-link .notification-text { display:none; }
+ .dashboard-header>.menu-toggle, .dashboard-header>.mobile-menu-toggle, .dashboard-header>.mobile-menu-btn, .header-inner>.menu-toggle { display:none!important; }
+ .container>.hero, .container>.dashboard-hero { min-height:190px; height:190px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:30px 40px!important; margin-bottom:24px; }
+ .container>.hero .hero-content, .container>.dashboard-hero .hero-content { width:100%; max-width:760px; margin:0 auto; }
+ .container>.hero h1, .container>.dashboard-hero h1 { line-height:1.2; margin-top:0; }
+ .directory-panel>.toolbar { display:grid!important; grid-template-columns:minmax(0,1fr) minmax(250px,320px); align-items:center; gap:20px; }
+ .directory-panel .toolbar-title { display:flex; align-items:center; gap:12px; min-width:0; }
+ .directory-panel .toolbar-title>div:last-child { min-width:0; }
+ .directory-panel .toolbar-icon { width:43px; height:43px; flex:0 0 43px; display:grid; place-items:center; }
+ .directory-panel .toolbar .search-box { position:relative; width:100%!important; max-width:320px!important; min-width:0; margin:0!important; justify-self:end; }
+ .directory-panel .filter-status { display:block; width:100%; margin:13px 0 0!important; line-height:1.5; clear:both; }
+}
+/* Notifications: improved visual hierarchy and responsive spacing. */
+body.notifications-page .page-wrapper { padding:30px 20px 48px; }
+body.notifications-page .container { width:min(1000px,calc(100% - 40px)); max-width:1000px; }
+body.notifications-page .page-header { min-height:112px; align-items:center; padding:25px 28px; border-radius:16px; }
+body.notifications-page .page-header h1 { color:#20242c; font-size:clamp(24px,2.5vw,30px); line-height:1.2; }
+body.notifications-page .section-heading { min-height:48px; margin:8px 0 16px; padding:0 2px; }
+body.notifications-page .section-heading h2 { font-size:19px; font-weight:800; }
+body.notifications-page .notification-count { padding:7px 11px; border:1px solid #f0d5dc; border-radius:999px; white-space:nowrap; }
+body.notifications-page .notification-list { gap:12px; }
+body.notifications-page .notification-card { gap:16px; padding:20px 22px; border-radius:14px; box-shadow:0 4px 16px rgba(25,35,55,.045); }
+body.notifications-page .notification-card.unread { border-left-width:4px; background:linear-gradient(90deg,#fffafb 0%,#fff 34%); }
+body.notifications-page .notification-content h3 { color:#20242c; font-size:14px; font-weight:700; line-height:1.55; }
+body.notifications-page .notification-content p { color:#667085; font-size:12px; line-height:1.65; }
+body.notifications-page .notification-meta { gap:8px 12px; }
+body.notifications-page .type-badge { border-radius:999px; font-weight:700; }
+body.notifications-page .notification-actions { gap:8px; margin-top:14px; }
+body.notifications-page .notification-actions form { width:auto; margin:0; }
+body.notifications-page .notification-actions button { min-height:38px; padding:0 13px; font-size:11px; }
+body.notifications-page .empty-state { padding:60px 28px; border-radius:16px; background:#fff; }
+body.notifications-page .back-link { display:flex; flex-wrap:wrap; gap:10px; }
+body.notifications-page .back-link a { margin-left:0!important; }
+@media(max-width:760px) {
+ body.notifications-page .page-wrapper { padding:18px 0 32px; }
+ body.notifications-page .container { width:calc(100% - 28px)!important; max-width:none; }
+ body.notifications-page .page-header { min-height:0; padding:17px 16px; gap:12px; }
+ body.notifications-page .page-header h1 { font-size:22px; }
+ body.notifications-page .page-header p { font-size:12px; }
+ body.notifications-page .section-heading { align-items:flex-start; flex-direction:column; gap:8px; margin:18px 0 12px; }
+ body.notifications-page .notification-count { white-space:normal; }
+ body.notifications-page .notification-card { padding:15px 13px; gap:10px; }
+ body.notifications-page .notification-icon { width:36px; height:36px; flex:0 0 36px; }
+ body.notifications-page .notification-content h3 { font-size:13px; }
+ body.notifications-page .notification-actions { align-items:stretch; flex-direction:column; }
+ body.notifications-page .notification-actions form, body.notifications-page .notification-actions button { width:100%; }
+ body.notifications-page .notification-actions button { min-height:42px; }
+ body.notifications-page .back-link { flex-direction:column; }
+ body.notifications-page .back-link a { width:100%; }
+}
