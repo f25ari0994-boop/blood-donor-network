@@ -3795,6 +3795,8 @@ def request_donor(donor_id):
         flash("Unable to send a donor request right now.", "error")
     finally:
         connection.close()
+    if "match_id" in locals() and match_id:
+        return redirect(url_for("my_matches") + f"#match-{match_id}")
     return redirect(request.referrer or url_for("donor_list"))
 
 
