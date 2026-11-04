@@ -417,6 +417,14 @@ class NotificationDestinationTests(unittest.TestCase):
                 ),
                 "/my-matches#match-chat-42",
             )
+            self.assertEqual(
+                get_notification_target_url("blood_request", request_id=7),
+                "/available-requests",
+            )
+            self.assertEqual(
+                get_notification_target_url("match_request_found", request_id=7),
+                "/available-requests",
+            )
 
 
 if __name__ == "__main__":
