@@ -3134,12 +3134,6 @@ def my_matches():
     return render_emergency_view("my_matches")
 
 
-@app.route("/donation-progress")
-@login_required
-def donation_progress():
-    return render_emergency_view("donation_progress")
-
-
 # 19. ACCEPT A REQUEST
 # =========================================================
 @app.route(
@@ -4314,7 +4308,7 @@ def confirm_receipt(donation_id):
 
     if not 1 <= received_units <= 8:
         flash("Enter the actual number of units received.")
-        return redirect(url_for("donation_progress"))
+        return redirect(url_for("my_matches"))
 
     connection = get_db_connection()
 
@@ -4349,7 +4343,7 @@ def confirm_receipt(donation_id):
 
         if not donation:
             flash("Donation record not found.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         request_id = donation[1]
         match_id = donation[2]
@@ -4365,27 +4359,27 @@ def confirm_receipt(donation_id):
 
         if requester_id != user_id:
             flash("Only the requester can confirm receipt.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         if already_confirmed or donation_status == "Confirmed":
             flash("This donation has already been confirmed.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         if match_status != "Donation Reported":
             flash("This match is not awaiting receipt confirmation.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         if received_units > reported_units:
             flash("You cannot confirm more units than the donor reported.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         if received_units > remaining_units:
             flash(f"Only {remaining_units} units remain on this request.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         if received_units <= 0:
             flash("The confirmed quantity must be greater than zero.")
-            return redirect(url_for("donation_progress"))
+            return redirect(url_for("my_matches"))
 
         cursor.execute(
             """
@@ -4484,7 +4478,7 @@ def confirm_receipt(donation_id):
     finally:
         connection.close()
 
-    return redirect(url_for("donation_progress"))
+    return redirect(url_for("my_matches"))
 
 
 # =========================================================
