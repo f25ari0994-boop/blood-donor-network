@@ -417,10 +417,10 @@
                                 <button type="submit" class="primary">
                                     {% if notification.type == "match_message" %}
                                         Open Private Chat
-                                    {% elif notification.match_id %}
-                                        Open My Matches
-                                    {% elif notification.type in ["compatible_donor", "match_invitation", "match_acceptance", "match_waiting", "match_confirmed", "match_rejected", "match_cancelled"] %}
+                                    {% elif notification.type in ["compatible_donor", "match_invitation", "match_acceptance", "match_waiting", "match_confirmed", "match_rejected", "match_cancelled", "donation_reported_by_requester", "donation_reported", "receipt_confirmed"] %}
                                         View Potential Matches
+                                    {% elif notification.match_id %}
+                                        Open Potential Matches
                                     {% elif notification.type == "blood_request" %}
                                         View Available Requests
                                     {% elif notification.request_id %}
