@@ -998,19 +998,39 @@ def expire_overdue_requests(connection):
     connection.commit()
 
 
-def release_unneeded_matches(connection, request_id, reason, notification_type):
-    """Release matches without donation records; retain reported donations."""
+def release_unneeded_matches(
+    connection,
+    request_id,
+    reason,
+    notification_type,
+    release_confirmed=False,
+):
+    """
+    Release pending acceptances when a request closes.
+
+    Requester-confirmed matches remain active when a requester cancels a
+    request, so the agreed donation can still be completed. If the request
+    becomes fully fulfilled by other donations, confirmed matches with no
+    donation record are released because no units are still needed.
+    """
     matches = connection.execute(
         """
         SELECT rm.id, rm.donor_user_id
         FROM request_matches AS rm
         WHERE rm.request_id = ?
-          AND rm.status IN ('Accepted', 'Confirmed')
+          AND (
+              (rm.status = 'Accepted' AND rm.requester_confirmed = 0)
+              OR (
+                  ? = 1
+                  AND rm.status = 'Confirmed'
+                  AND rm.requester_confirmed = 1
+              )
+          )
           AND NOT EXISTS (
               SELECT 1 FROM donations AS d WHERE d.match_id = rm.id
           )
         """,
-        (request_id,),
+        (request_id, 1 if release_confirmed else 0),
     ).fetchall()
 
     for match in matches:
@@ -1097,6 +1117,7 @@ def update_request_units(connection, request_id):
                 "donation(s). Your undonated match has been released."
             ),
             "request_fulfilled",
+            release_confirmed=True,
         )
 
 
@@ -3585,7 +3606,7 @@ def match_detail(match_id):
                 br.hospital,
                 CASE
                     WHEN rm.requester_confirmed = 1
-                     AND rm.status IN ('Confirmed', 'Donation Reported')
+                     AND rm.status IN ('Confirmed', 'Donation Reported', 'Completed')
                     THEN br.contact
                     ELSE NULL
                 END AS requester_contact,
@@ -3625,7 +3646,7 @@ def match_detail(match_id):
             abort(404)
 
         confirmed = (
-            match[5] in {"Confirmed", "Donation Reported"}
+            match[5] in {"Confirmed", "Donation Reported", "Completed"}
             and match[6] == 1
         )
 
