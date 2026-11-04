@@ -722,6 +722,7 @@
     flex: 0 0 2px !important;
   }
 
+  .dashboard-header > .mobile-menu-btn svg,
   .header-inner > .menu-toggle svg,
   header .menu-toggle svg {
     display: block !important;
