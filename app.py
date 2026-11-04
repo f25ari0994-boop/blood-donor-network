@@ -2215,6 +2215,68 @@ def donor():
 
             message = "Your donor profile has been registered successfully."
 
+        # Notify a newly registered donor about existing open requests
+        # that match their blood group and city. Profile edits do not resend alerts.
+        if not existing_donor and eligible == 1 and availability == AVAILABLE:
+            open_requests = cursor.execute(
+                """
+                SELECT
+                    id, user_id, blood_type, urgency, location,
+                    remaining_units, needed_by
+                FROM blood_requests
+                WHERE status = 'Pending'
+                  AND remaining_units > 0
+                  AND needed_by IS NOT NULL
+                ORDER BY id DESC
+                """
+            ).fetchall()
+
+            now = get_pakistan_time()
+
+            for open_request in open_requests:
+                (
+                    open_request_id,
+                    requester_user_id,
+                    request_blood_type,
+                    request_urgency,
+                    request_location,
+                    remaining_units,
+                    request_deadline_value,
+                ) = open_request
+
+                if requester_user_id == user_id:
+                    continue
+
+                request_deadline = parse_stored_deadline(
+                    request_deadline_value
+                )
+                if request_deadline is None or request_deadline <= now:
+                    continue
+
+                if not donor_matches_request(
+                    blood_type,
+                    location,
+                    request_blood_type,
+                    request_location,
+                ):
+                    continue
+
+                deadline_display = request_deadline.strftime(
+                    "%d %b %Y at %I:%M %p"
+                )
+                create_notification(
+                    connection,
+                    user_id,
+                    (
+                        f"Match Request Found: {request_blood_type} blood "
+                        f"request needs {int(remaining_units)} unit(s) in "
+                        f"{request_location}. Urgency: {request_urgency}. "
+                        f"Deadline: {deadline_display} (Pakistan time)."
+                    ),
+                    "match_request_found",
+                    related_request_id=open_request_id,
+                )
+
         connection.commit()
 
         flash(message, "success")
@@ -4145,6 +4207,7 @@ def notifications():
 
     notification_labels = {
         "blood_request": "New blood request",
+        "match_request_found": "Match request found",
         "request_created": "Your blood request was created",
         "match_acceptance": "Donor accepted your request",
         "match_waiting": "Your acceptance is waiting",
@@ -4185,7 +4248,7 @@ def notifications():
                 target_url = url_for("my_matches")
                 if notification_type == "match_message":
                     target_url += f"#match-chat-{match_id}"
-            elif notification_type == "blood_request":
+            elif notification_type in ("blood_request", "match_request_found"):
                 target_url = url_for("available_requests")
             elif request_id:
                 target_url = url_for("my_requests")
