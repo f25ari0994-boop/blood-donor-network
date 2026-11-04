@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#800020">
     <meta name="description" content="Browse registered blood donors and check their availability.">
@@ -1152,5 +1153,6 @@
 </script>
 
 <script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
