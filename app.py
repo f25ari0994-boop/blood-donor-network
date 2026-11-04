@@ -1205,13 +1205,12 @@ def update_request_units(connection, request_id):
 # =========================================================
 def get_emergency_page_data(user_id):
     """
-    Supplies all five sections of emergency.html:
+    Supplies the emergency workspace sections:
 
     1. Create Blood Request
     2. Available Blood Requests
     3. My Blood Requests
     4. My Matches
-    5. Donation and receipt progress
     """
 
     check_donor_eligibility(user_id)
@@ -1809,39 +1808,6 @@ def get_emergency_page_data(user_id):
                 "status_label": "Awaiting your response",
             })
 
-        # -------------------------------------------------
-        # Donation and receipt progress
-        # -------------------------------------------------
-
-        cursor.execute(
-            """
-            SELECT
-                d.id,
-                d.donation_date,
-                d.hospital,
-                d.location,
-                d.units,
-                d.status,
-                d.requester_confirmed,
-                d.request_id,
-                d.match_id,
-                donor.name,
-                donor.blood_type,
-                rm.donor_user_id,
-                br.user_id
-            FROM donations AS d
-            JOIN donors AS donor ON donor.id = d.donor_id
-            LEFT JOIN request_matches AS rm ON rm.id = d.match_id
-            LEFT JOIN blood_requests AS br ON br.id = d.request_id
-            WHERE donor.user_id = ?
-               OR br.user_id = ?
-            ORDER BY d.id DESC
-            """,
-            (user_id, user_id),
-        )
-
-        donations = cursor.fetchall()
-
         return {
             "donor_profiles": donor_profiles,
             "available_requests": available_requests_list,
@@ -1849,7 +1815,6 @@ def get_emergency_page_data(user_id):
             "my_requests": my_requests_list,
             "matches": matches,
             "potential_matches": potential_matches,
-            "donations": donations,
             "match_contacts": match_contacts,
             "health_questions": HEALTH_QUESTIONS,
         }
