@@ -4675,6 +4675,134 @@ def unread_notification_count():
     )
 
 
+@app.route("/notifications/updates")
+@login_required
+def notification_updates():
+    user_id = get_user_id()
+    try:
+        after_id = max(int(request.args.get("after_id", 0)), 0)
+    except (TypeError, ValueError):
+        after_id = 0
+
+    connection = get_db_connection()
+    try:
+        rows = connection.execute(
+            """
+            SELECT id, message, notification_type, created_at,
+                   related_request_id, related_match_id
+            FROM notifications
+            WHERE user_id = ? AND id > ?
+            ORDER BY id ASC
+            LIMIT 50
+            """,
+            (user_id, after_id),
+        ).fetchall()
+        unread_count = get_unread_notification_count(user_id)
+        total_count = connection.execute(
+            "SELECT COUNT(*) FROM notifications WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()[0]
+
+        labels = {
+            "blood_request": "New blood request",
+            "match_request_found": "Match request found",
+            "request_created": "Your blood request was created",
+            "match_acceptance": "Donor accepted your request",
+            "match_waiting": "Your acceptance is waiting",
+            "match_confirmed": "Match confirmed",
+            "match_message": "Private chat message",
+            "match_rejected": "Match rejected",
+            "match_cancelled": "Donor cancelled acceptance",
+            "request_cancelled": "Blood request cancelled",
+            "request_expired": "Blood request expired",
+            "request_fulfilled": "Blood request fulfilled",
+            "donation_reported": "Donation reported",
+            "receipt_confirmed": "Donation receipt confirmed",
+            "eligibility": "Donor eligibility update",
+        }
+        notifications_data = []
+        for row in rows:
+            notification_id, message, kind, created_at, request_id, match_id = row
+            if match_id:
+                target_url = url_for("my_matches")
+                if kind == "match_message":
+                    target_url += f"#match-chat-{match_id}"
+            elif kind in ("blood_request", "match_request_found"):
+                target_url = url_for("available_requests")
+            elif request_id:
+                target_url = url_for("my_requests")
+            elif kind == "eligibility":
+                target_url = url_for("donor")
+            else:
+                target_url = url_for("dashboard")
+            notifications_data.append({
+                "id": notification_id,
+                "message": message,
+                "type": kind,
+                "label": labels.get(kind, (kind or "update").replace("_", " ").title()),
+                "created_at": created_at,
+                "target_url": target_url,
+            })
+
+        return jsonify({
+            "ok": True,
+            "unread_count": unread_count,
+            "total_count": total_count,
+            "notifications": notifications_data,
+        })
+    finally:
+        connection.close()
+
+
+@app.route(
+    "/notification/open/<int:notification_id>",
+    methods=["POST"],
+)
+@login_required
+def open_notification(notification_id):
+    user_id = get_user_id()
+    connection = get_db_connection()
+    try:
+        notification = connection.execute(
+            """
+            SELECT notification_type, related_request_id, related_match_id
+            FROM notifications
+            WHERE id = ? AND user_id = ?
+            """,
+            (notification_id, user_id),
+        ).fetchone()
+        if not notification:
+            abort(404)
+
+        connection.execute(
+            "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?",
+            (notification_id, user_id),
+        )
+        connection.commit()
+
+        kind, request_id, match_id = notification
+        if match_id:
+            target_url = url_for("my_matches")
+            if kind == "match_message":
+                target_url += f"#match-chat-{match_id}"
+        elif kind in ("blood_request", "match_request_found"):
+            target_url = url_for("available_requests")
+        elif request_id:
+            target_url = url_for("my_requests")
+        elif kind == "eligibility":
+            target_url = url_for("donor")
+        else:
+            target_url = url_for("dashboard")
+        return redirect(target_url)
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Notification could not be opened")
+        flash("Unable to open this notification.", "error")
+        return redirect(url_for("notifications"))
+    finally:
+        connection.close()
+
+
 @app.route(
     "/notification/read/<int:notification_id>",
     methods=["POST"],
