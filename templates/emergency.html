@@ -129,18 +129,6 @@
             color: var(--primary);
         }
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: auto;
-            margin-right: 8px;
-        }
-
-        .header-actions a {
-            flex: 0 0 auto;
-        }
-
         .menu-toggle {
             display: none;
             width: 43px;
@@ -995,28 +983,6 @@
             </span>
         </a>
 
-        <div class="header-actions">
-<a
-    href="{{ url_for('notifications') }}"
-    aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
-    title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; vertical-align:middle;"
->
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
-         stroke="currentColor" stroke-width="1.8"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
-        <path d="M10 21h4"/>
-    </svg>
-    {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
-            {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
-        </span>
-    {% endif %}
-</a>
-        </div>
-
         <button
             class="menu-toggle"
             id="menuToggle"
@@ -1039,7 +1005,25 @@
             <a href="{{ url_for('request_blood') }}" class="active">Emergency Request</a>
             <a href="{{ url_for('donor_list') }}">Donor Directory</a>
 <a href="{{ url_for('profile') }}">Profile</a>
-
+<a
+    href="{{ url_for('notifications') }}"
+    aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
+    title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
+    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
+>
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+         stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+        <path d="M10 21h4"/>
+    </svg>
+    {% if notification_unread_count > 0 %}
+        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+            {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
+        </span>
+    {% endif %}
+</a>
         </nav>
 
     </div>
