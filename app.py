@@ -1946,6 +1946,7 @@ def get_emergency_page_data(user_id):
                 "remaining_units": remaining_units,
                 "needed_by": needed_by,
                 "candidate_name": donor_name,
+                "candidate_donor_id": donor_id,
                 "candidate_blood_type": donor_blood_type,
                 "candidate_location": donor_location,
                 "status_label": "Waiting for donor acceptance",
@@ -3697,9 +3698,25 @@ def request_donor(donor_id):
     try:
         expire_overdue_requests(connection)
         begin_write_transaction(connection)
-        blood_request = get_latest_active_request(connection, user_id)
-        if not blood_request:
-            flash("Create an active blood request before requesting a donor.", "warning")
+        requested_request_id = request.form.get("request_id", type=int)
+        if requested_request_id:
+            # Honour the exact request selected in My Matches.
+            blood_request = connection.execute(
+                """
+                SELECT id, blood_type, location, remaining_units, needed_by
+                FROM blood_requests
+                WHERE id = ?
+                  AND user_id = ?
+                  AND status = 'Pending'
+                  AND remaining_units > 0
+                """,
+                (requested_request_id, user_id),
+            ).fetchone()
+        else:
+            blood_request = get_latest_active_request(connection, user_id)
+
+        if not blood_request or is_request_expired(blood_request["needed_by"]):
+            flash("Create or select an active blood request before requesting a donor.", "warning")
             return redirect(request.referrer or url_for("donor_list"))
 
         donor = connection.execute(
