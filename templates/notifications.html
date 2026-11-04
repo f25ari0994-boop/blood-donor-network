@@ -419,6 +419,8 @@
                                         Open Private Chat
                                     {% elif notification.match_id %}
                                         Open My Matches
+                                    {% elif notification.type in ["compatible_donor", "match_invitation", "match_acceptance", "match_waiting", "match_confirmed", "match_rejected", "match_cancelled"] %}
+                                        View Potential Matches
                                     {% elif notification.type == "blood_request" %}
                                         View Available Requests
                                     {% elif notification.request_id %}
