@@ -3417,6 +3417,7 @@ def request_donor(donor_id):
 @login_required
 def accept_match_invitation(match_id):
     user_id = get_user_id()
+    check_donor_eligibility(user_id)
     connection = get_db_connection()
     try:
         expire_overdue_requests(connection)
@@ -3437,6 +3438,29 @@ def accept_match_invitation(match_id):
         request_id, donor_id, donor_user_id, status, requester_id, remaining, request_status, needed_by = row
         if donor_user_id != user_id or status != "Invited":
             flash("This invitation is no longer available to you.", "warning")
+            return redirect(url_for("my_matches"))
+        donor_profile = connection.execute(
+            """
+            SELECT availability, eligible, health_screening_status, last_donation
+            FROM donors
+            WHERE id = ? AND user_id = ?
+            """,
+            (donor_id, user_id),
+        ).fetchone()
+        cooldown_cutoff = (
+            get_pakistan_time().date() - timedelta(days=90)
+        ).isoformat()
+        if (
+            not donor_profile
+            or donor_profile[0] != AVAILABLE
+            or donor_profile[1] != 1
+            or donor_profile[2] != "Self-Declared Clear"
+            or (
+                donor_profile[3]
+                and str(donor_profile[3]) > cooldown_cutoff
+            )
+        ):
+            flash("Your donor profile is not currently eligible to accept this invitation.", "warning")
             return redirect(url_for("my_matches"))
         if request_status != "Pending" or int(remaining or 0) < 1 or is_request_expired(needed_by):
             connection.execute(
