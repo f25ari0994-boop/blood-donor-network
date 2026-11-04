@@ -596,6 +596,115 @@ def create_notification(
     )
 
 
+def notify_requesters_of_compatible_donor(connection, donor_id):
+    """
+    Notify request owners when this donor profile becomes a live potential match.
+    Duplicate alerts for the same donor profile/request are suppressed by message.
+    """
+    donor = connection.execute(
+        """
+        SELECT id, user_id, name, blood_type, location,
+               availability, eligible, health_screening_status, last_donation
+        FROM donors
+        WHERE id = ?
+        """,
+        (donor_id,),
+    ).fetchone()
+
+    if not donor:
+        return
+
+    (
+        donor_profile_id, donor_user_id, donor_name, donor_blood_type,
+        donor_location, availability, eligible, health_status, last_donation,
+    ) = donor
+
+    if (
+        not donor_user_id
+        or availability != AVAILABLE
+        or eligible != 1
+        or health_status != "Self-Declared Clear"
+    ):
+        return
+
+    cooldown_cutoff = (
+        get_pakistan_time().date() - timedelta(days=90)
+    ).isoformat()
+    if last_donation and str(last_donation) > cooldown_cutoff:
+        return
+
+    active_match = connection.execute(
+        """
+        SELECT 1
+        FROM request_matches
+        WHERE donor_id = ?
+          AND (status IN (?, ?, ?) OR status = 'Invited')
+        LIMIT 1
+        """,
+        (donor_profile_id, *ACTIVE_MATCH_STATUSES),
+    ).fetchone()
+    if active_match:
+        return
+
+    now = get_pakistan_time()
+    open_requests = connection.execute(
+        """
+        SELECT id, user_id, blood_type, location, needed_by
+        FROM blood_requests
+        WHERE status = 'Pending'
+          AND remaining_units > 0
+          AND needed_by IS NOT NULL
+          AND needed_by > ?
+          AND user_id != ?
+        ORDER BY id DESC
+        """,
+        (
+            now.strftime("%Y-%m-%d %H:%M:%S"),
+            donor_user_id,
+        ),
+    ).fetchall()
+
+    for blood_request in open_requests:
+        request_id, requester_id, request_blood_type, request_location, needed_by = blood_request
+
+        if not donor_matches_request(
+            donor_blood_type,
+            donor_location,
+            request_blood_type,
+            request_location,
+        ):
+            continue
+
+        message = (
+            f"A compatible donor has arrived: {donor_name} "
+            f"({donor_blood_type}) is available for your "
+            f"{request_blood_type} blood request #{request_id}. "
+            "Open Potential Matches to review."
+        )
+
+        already_notified = connection.execute(
+            """
+            SELECT 1
+            FROM notifications
+            WHERE user_id = ?
+              AND related_request_id = ?
+              AND notification_type = 'compatible_donor'
+              AND message = ?
+            LIMIT 1
+            """,
+            (requester_id, request_id, message),
+        ).fetchone()
+
+        if not already_notified:
+            create_notification(
+                connection,
+                requester_id,
+                message,
+                "compatible_donor",
+                related_request_id=request_id,
+            )
+
+
 # =========================================================
 # 8. DONOR ELIGIBILITY
 # =========================================================
@@ -2384,6 +2493,20 @@ def donor():
                     related_request_id=open_request_id,
                 )
 
+        if eligible == 1 and availability == AVAILABLE:
+            saved_donor_id = (
+                existing_donor["id"]
+                if existing_donor and hasattr(existing_donor, "keys")
+                else existing_donor[0]
+                if existing_donor
+                else get_inserted_id(connection.cursor(), connection)
+            )
+            if saved_donor_id:
+                notify_requesters_of_compatible_donor(
+                    connection,
+                    saved_donor_id,
+                )
+
         connection.commit()
 
         flash(message, "success")
@@ -2729,6 +2852,9 @@ def toggle_availability(donor_id):
             (new_availability, donor_id, user_id),
         )
 
+        if new_availability == AVAILABLE:
+            notify_requesters_of_compatible_donor(connection, donor_id)
+
         connection.commit()
 
         flash(
@@ -2953,6 +3079,22 @@ def blood_request():
                 notification_message,
                 "blood_request",
                 related_request_id=request_id,
+            )
+
+        available_donor_ids = cursor.execute(
+            """
+            SELECT id
+            FROM donors
+            WHERE availability = ?
+              AND eligible = 1
+              AND health_screening_status = ?
+            """,
+            (AVAILABLE, "Self-Declared Clear"),
+        ).fetchall()
+        for donor_row in available_donor_ids:
+            notify_requesters_of_compatible_donor(
+                connection,
+                donor_row[0],
             )
 
         record_audit(
