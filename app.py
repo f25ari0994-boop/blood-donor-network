@@ -2218,7 +2218,7 @@ def donor():
         # Notify a newly registered donor about existing open requests
         # that match their blood group and city. Profile edits do not resend alerts.
         if not existing_donor and eligible == 1 and availability == AVAILABLE:
-            open_requests = cursor.execute(
+            open_requests = connection.execute(
                 """
                 SELECT
                     id, user_id, blood_type, urgency, location,
