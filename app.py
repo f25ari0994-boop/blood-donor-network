@@ -307,7 +307,8 @@ def get_notification_recipient_user_ids(
     recipient_ids = []
     seen_user_ids = set()
 
-    for donor_user_id, donor_blood_type, donor_location in donor_rows:
+    for donor_row in donor_rows:
+        donor_user_id, donor_blood_type, donor_location = donor_row[:3]
         if (
             not donor_user_id
             or donor_user_id == excluded_user_id
@@ -1485,12 +1486,10 @@ def get_emergency_page_data(user_id):
 
             # Private chat starts once a donor has accepted the request.
             # Contact details remain hidden until requester confirmation.
-            chat_available = match_status in {
-                "Accepted",
-                "Confirmed",
-                "Donation Reported",
-                "Completed",
-            }
+            chat_available = (
+                requester_confirmed == 1
+                and match_status in {"Confirmed", "Donation Reported", "Completed"}
+            )
 
             if chat_available:
                 chat_rows = connection.execute(
@@ -2497,7 +2496,16 @@ def search():
                         eligible,
                         last_donation,
                         user_id,
-                        share_contact
+                        share_contact,
+                        CASE WHEN EXISTS (
+                            SELECT 1
+                            FROM request_matches AS rm
+                            JOIN blood_requests AS br ON br.id = rm.request_id
+                            WHERE rm.donor_id = donors.id
+                              AND br.user_id = ?
+                              AND rm.requester_confirmed = 1
+                              AND rm.status IN ('Confirmed', 'Donation Reported', 'Completed')
+                        ) THEN 1 ELSE 0 END AS confirmed_match
                     FROM donors
                     WHERE availability = ?
                       AND eligible = 1
@@ -2511,6 +2519,7 @@ def search():
                         "Self-Declared Clear",
                         cooldown_cutoff,
                         *compatible_donor_groups,
+                        user_id,
                     ),
                 ).fetchall()
 
@@ -2518,6 +2527,7 @@ def search():
                     "id", "name", "age", "contact", "blood_type",
                     "location", "hospital", "availability", "eligible",
                     "last_donation", "user_id", "share_contact",
+                    "confirmed_match",
                 )
 
                 donors = []
@@ -2528,6 +2538,7 @@ def search():
                     contact_is_shared = (
                         donor_data["share_contact"] == 1
                         and not donor_is_owner
+                        and donor_data["confirmed_match"] == 1
                     )
 
                     if not locations_match(
@@ -2593,6 +2604,15 @@ def donor_list():
                 CASE
                     WHEN d.share_contact = 1
                      AND d.user_id != ?
+                     AND EXISTS (
+                         SELECT 1
+                         FROM request_matches AS rm
+                         JOIN blood_requests AS br ON br.id = rm.request_id
+                         WHERE rm.donor_id = d.id
+                           AND br.user_id = ?
+                           AND rm.requester_confirmed = 1
+                           AND rm.status IN ('Confirmed', 'Donation Reported', 'Completed')
+                     )
                      AND d.availability = ?
                      AND d.eligible = 1
                      AND d.health_screening_status = ?
@@ -2629,6 +2649,7 @@ def donor_list():
             ORDER BY d.id DESC
             """,
             (
+                get_user_id(),
                 get_user_id(),
                 AVAILABLE,
                 "Self-Declared Clear",
@@ -2902,7 +2923,7 @@ def blood_request():
 
         donor_notification_candidates = cursor.execute(
             """
-            SELECT d.user_id, d.blood_type, d.location
+            SELECT d.user_id, d.blood_type, d.location, d.name
             FROM donors AS d
             WHERE d.user_id IS NOT NULL
               AND d.user_id != ?
@@ -2934,15 +2955,28 @@ def blood_request():
             excluded_user_id=user_id,
         )
 
-        notification_message = (
-            f"New {urgency.lower()} blood request: "
-            f"{blood_type}, {requested_units} unit(s), "
-            f"location: {location}. "
-            f"Blood needed by: {deadline_display} "
-            f"(Pakistan time)."
-        )
+        compatible_profile_labels = {}
+        for donor_row in donor_notification_candidates:
+            donor_user_id, donor_blood_type, donor_location, donor_name = donor_row
+            if donor_matches_request(
+                donor_blood_type, donor_location, blood_type, location
+            ):
+                compatible_profile_labels.setdefault(donor_user_id, [])
+                label = f"{donor_name} ({donor_blood_type})"
+                if label not in compatible_profile_labels[donor_user_id]:
+                    compatible_profile_labels[donor_user_id].append(label)
 
         for recipient_user_id in notification_recipient_ids:
+            profile_text = ", ".join(
+                compatible_profile_labels.get(recipient_user_id, [])
+            )
+            notification_message = (
+                f"New {urgency.lower()} blood request: "
+                f"{blood_type}, {requested_units} unit(s), "
+                f"location: {location}. "
+                f"Blood needed by: {deadline_display} (Pakistan time). "
+                f"Compatible donor profile(s): {profile_text}."
+            )
             create_notification(
                 connection,
                 recipient_user_id,
@@ -4028,14 +4062,19 @@ def get_match_messages(match_id):
     try:
         match = connection.execute(
             """
-            SELECT rm.status, br.user_id, rm.donor_user_id
+            SELECT rm.status, br.user_id, rm.donor_user_id,
+                   rm.requester_confirmed
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             WHERE rm.id = ? AND (br.user_id = ? OR rm.donor_user_id = ?)
             """,
             (match_id, user_id, user_id),
         ).fetchone()
-        if not match or match[0] not in {"Confirmed", "Donation Reported", "Completed", "Accepted"}:
+        if (
+            not match
+            or match[3] != 1
+            or match[0] not in {"Confirmed", "Donation Reported", "Completed"}
+        ):
             return jsonify({"ok": False, "messages": []}), 403
         rows = connection.execute(
             """
@@ -4095,7 +4134,10 @@ def send_match_message(match_id):
                 return jsonify({"ok": False, "error": "This match is unavailable."}), 403
             flash("This match is unavailable or you do not have access.", "error")
             return redirect(url_for("my_matches"))
-        if match[2] not in {"Accepted", "Confirmed", "Donation Reported", "Completed"}:
+        if (
+            match[2] not in {"Confirmed", "Donation Reported", "Completed"}
+            or match[3] != 1
+        ):
             if request.headers.get("Accept") == "application/json":
                 return jsonify({"ok": False, "error": "Chat is not available for this match."}), 403
             flash("Chat is available only while this match is active.", "warning")
