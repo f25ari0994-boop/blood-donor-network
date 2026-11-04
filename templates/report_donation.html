@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#a71930">
     <title>Report Blood Donation | Blood Donor Network</title>
@@ -375,5 +376,6 @@
 
 </main>
 </div>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
