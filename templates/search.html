@@ -882,14 +882,13 @@
                                   action="{{ url_for('request_donor', donor_id=donor.id) }}"
                                   style="margin-top:12px;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="privacy-note" style="margin-bottom:8px;">
+                                    Using your latest active request: #{{ active_request.id }} — {{ active_request.blood_type }}.
+                                </div>
                                 <button type="submit" class="donor-action-btn call-btn">
                                     Request This Donor
                                 </button>
                             </form>
-                        {% elif not active_request and not donor.is_owner %}
-                            <div class="privacy-note" style="margin-top:10px;">
-                                Create an active blood request first to request this donor.
-                            </div>
                         {% endif %}
 
                     </article> {% endfor %}</section> {% else %}<section class="empty-state" aria-live="polite">
