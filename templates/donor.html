@@ -591,6 +591,9 @@
                     name="csrf_token"
                     value="{{ csrf_token() }}"
                 >
+                {% if donor_form and donor_form.id %}
+                    <input type="hidden" name="donor_id" value="{{ donor_form.id }}">
+                {% endif %}
 
                 <div class="form-grid">
 
