@@ -1285,14 +1285,15 @@
          2. AVAILABLE BLOOD REQUESTS
     ====================================================== -->
 
-    <section class="section" id="available-requests">
+    <section class="section" id="available-requests"
+             data-notification-cursor="{{ notification_cursor }}">
 
         <div class="section-heading">
             <div>
                 <h2>Available Blood Requests</h2>
                 <p>
-                    Requests compatible with your available donor profiles.
-                    You can accept a request if you meet the eligibility rules.
+                    All active blood requests posted by other users. Accept a request
+                    when one of your donor profiles is compatible and eligible.
                 </p>
             </div>
 
@@ -1667,10 +1668,10 @@
 
         <div class="section-heading">
             <div>
-                <h2>Potential Matches</h2>
+                <h2>My Matches</h2>
                 <p>
-                    Review compatible donors and blood requests, pending responses,
-                    accepted matches, and confirmed donations.
+                    Compatible donors, accepted matches, private chat, and the complete
+                    donation coordination process are managed here.
                 </p>
             </div>
 
@@ -1770,11 +1771,21 @@
                             {% if potential.my_role == "Requester" %}
 
                                 <div class="privacy-note">
-                                    A compatible, eligible donor is available in your city. You can request this
-                                    donor from the Donor Directory. Once either side starts
-                                    the match, it becomes active immediately; no second
-                                    approval is required.
+                                    This donor is compatible and eligible for your request.
+                                    Accept once to activate the match. The donor will see the
+                                    same active match and can coordinate with you in this chat.
                                 </div>
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('request_donor', donor_id=potential.candidate_donor_id) }}"
+                                    class="button-row"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="request_id" value="{{ potential.request_id }}">
+                                    <button type="submit" class="btn btn-primary">
+                                        Accept This Donor &amp; Start Match
+                                    </button>
+                                </form>
 
                             {% else %}
 
@@ -2016,8 +2027,8 @@
                               and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
 
                             <div class="privacy-note">
-                                <strong>Match confirmed.</strong>
-                                Contact actions are now available to the matched parties.
+                                <strong>Match active.</strong>
+                                Contact actions are available according to the donor's contact-sharing setting.
                             </div>
 
                             {% if match.my_role == "Requester" and confirmed_contact.phone %}
