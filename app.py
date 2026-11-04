@@ -3446,10 +3446,10 @@ def accept_request(request_id):
                 UPDATE request_matches
                 SET donor_user_id = ?,
                     units_pledged = ?,
-                    status = 'Accepted',
-                    requester_confirmed = 0,
+                    status = 'Confirmed',
+                    requester_confirmed = 1,
                     accepted_at = ?,
-                    confirmed_at = NULL,
+                    confirmed_at = ?,
                     completed_at = NULL,
                     updated_at = ?
                 WHERE id = ?
@@ -3457,6 +3457,7 @@ def accept_request(request_id):
                 (
                     user_id,
                     units_pledged,
+                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                     old_match_id,
@@ -3480,13 +3481,14 @@ def accept_request(request_id):
                         confirmed_at,
                         updated_at
                     )
-                VALUES (?, ?, ?, ?, 'Accepted', 0, ?, NULL, ?)
+                VALUES (?, ?, ?, ?, 'Confirmed', 1, ?, ?, ?)
                 """,
                 (
                     request_id,
                     donor_id,
                     user_id,
                     units_pledged,
+                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                 ),
@@ -3497,8 +3499,8 @@ def accept_request(request_id):
         create_notification(
             connection,
             requester_id,
-            "A donor accepted your blood request. Open Potential Matches to confirm or reject the match.",
-            "match_acceptance",
+            "A donor accepted your blood request. Your match is active; open Potential Matches to coordinate.",
+            "match_confirmed",
             related_request_id=request_id,
             related_match_id=match_id,
         )
@@ -3506,8 +3508,8 @@ def accept_request(request_id):
         create_notification(
             connection,
             user_id,
-            "Your acceptance is waiting for the requester to confirm the match.",
-            "match_waiting",
+            "You accepted the blood request. Your match is active; open Potential Matches to coordinate.",
+            "match_confirmed",
             related_request_id=request_id,
             related_match_id=match_id,
         )
@@ -3523,7 +3525,7 @@ def accept_request(request_id):
 
         connection.commit()
         flash(
-            "Request accepted. The requester must confirm the match before contact details and chat are enabled.",
+            "Request accepted. Your match is active and ready for coordination.",
             "success",
         )
 
@@ -3611,12 +3613,12 @@ def request_donor(donor_id):
                 """
                 UPDATE request_matches
                 SET donor_user_id = ?, units_pledged = 1,
-                    status = 'Invited', requester_confirmed = 0,
-                    accepted_at = NULL, confirmed_at = NULL,
+                    status = 'Confirmed', requester_confirmed = 1,
+                    accepted_at = ?, confirmed_at = ?,
                     completed_at = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (donor_user_id, now, match_id),
+                (donor_user_id, now, now, now, match_id),
             )
         else:
             cursor = connection.cursor()
@@ -3625,29 +3627,29 @@ def request_donor(donor_id):
                 INSERT INTO request_matches
                     (request_id, donor_id, donor_user_id, units_pledged,
                      status, requester_confirmed, accepted_at, confirmed_at, updated_at)
-                VALUES (?, ?, ?, 1, 'Invited', 0, NULL, NULL, ?)
+                VALUES (?, ?, ?, 1, 'Confirmed', 1, ?, ?, ?)
                 """,
-                (blood_request["id"], donor_id, donor_user_id, now),
+                (blood_request["id"], donor_id, donor_user_id, now, now, now),
             )
             match_id = get_inserted_id(cursor, connection)
 
         create_notification(
             connection, donor_user_id,
-            f"You have received an invitation for a {blood_request['blood_type']} blood request "
-            f"in {blood_request['location']}. Open Potential Matches to review and accept it.",
-            "match_invitation", related_request_id=blood_request["id"],
+            f"A requester selected your donor profile for a {blood_request['blood_type']} blood request "
+            f"in {blood_request['location']}. Open Potential Matches to coordinate the donation.",
+            "match_confirmed", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
         create_notification(
             connection, user_id,
-            f"Your invitation to donor {donor[2]} was sent. Waiting for donor acceptance.",
-            "match_waiting", related_request_id=blood_request["id"],
+            f"Your request is now matched with donor {donor[2]}. The match is active and ready for coordination.",
+            "match_confirmed", related_request_id=blood_request["id"],
             related_match_id=match_id,
         )
-        record_audit(connection, user_id, "match_invitation_sent", "request_match", match_id,
-                     f"Requester invited donor profile {donor_id} for request {blood_request['id']}.")
+        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
+                     f"Requester activated match with donor profile {donor_id} for request {blood_request['id']}.")
         connection.commit()
-        flash("Donor invitation sent. The donor must accept before you can confirm the match.", "success")
+        flash("Donor selected. Your match is now active.", "success")
     except Exception:
         connection.rollback()
         app.logger.exception("Donor invitation failed")
@@ -3727,22 +3729,22 @@ def accept_match_invitation(match_id):
         connection.execute(
             """
             UPDATE request_matches
-            SET status = 'Accepted', requester_confirmed = 0,
-                accepted_at = ?, confirmed_at = NULL, updated_at = ?
+            SET status = 'Confirmed', requester_confirmed = 1,
+                accepted_at = ?, confirmed_at = ?, updated_at = ?
             WHERE id = ? AND status = 'Invited'
             """,
-            (now, now, match_id),
+            (now, now, now, match_id),
         )
         create_notification(connection, requester_id,
-            "The invited donor accepted your request. Open Potential Matches to confirm or reject this match.",
-            "match_acceptance", related_request_id=request_id, related_match_id=match_id)
+            "The donor accepted your invitation. The match is active and ready for coordination.",
+            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
         create_notification(connection, user_id,
-            "You accepted the invitation. The requester must confirm before contact and chat are enabled.",
-            "match_waiting", related_request_id=request_id, related_match_id=match_id)
-        record_audit(connection, user_id, "match_acceptance", "request_match", match_id,
-                     "Donor accepted the requester's invitation; requester confirmation is pending.")
+            "You accepted the invitation. Your match is active and ready for coordination.",
+            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
+        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
+                     "Donor accepted the invitation and activated the match.")
         connection.commit()
-        flash("Invitation accepted. Waiting for requester confirmation.", "success")
+        flash("Invitation accepted. Your match is now active.", "success")
     except Exception:
         connection.rollback()
         app.logger.exception("Donor invitation acceptance failed")
