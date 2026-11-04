@@ -394,7 +394,13 @@
 
         /* BUTTONS */
 
-        .btn {
+    .btn-accept {
+        min-height: 38px;
+        padding: 9px 15px;
+        font-size: 12px;
+    }
+
+    .btn {
             min-height: 40px;
             display: inline-flex;
             justify-content: center;
@@ -1432,7 +1438,7 @@
                                     >
                                 </div>
 
-                                <button type="submit" class="btn btn-primary"
+                                <button type="submit" class="btn btn-primary btn-accept"
                                         {% if not profile_options %}disabled{% endif %}>
                                     Accept This Request
                                 </button>
