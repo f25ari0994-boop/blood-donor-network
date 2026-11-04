@@ -1605,7 +1605,7 @@ def get_emergency_page_data(user_id):
                     SELECT SUM(rm.units_pledged)
                     FROM request_matches AS rm
                     WHERE rm.request_id = br.id
-                      AND rm.status IN (?, ?, ?)
+                      AND rm.status IN (?, ?, ?, 'Invited')
                 ), 0) AS reserved_units,
                 u.name
             FROM blood_requests AS br
@@ -1615,14 +1615,6 @@ def get_emergency_page_data(user_id):
               AND br.user_id != ?
               AND br.needed_by IS NOT NULL
               AND br.needed_by > ?
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM request_matches AS locked_match
-                  WHERE locked_match.request_id = br.id
-                    AND locked_match.status IN (
-                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
-                    )
-              )
             ORDER BY
                 CASE br.urgency
                     WHEN 'Emergency' THEN 1
@@ -1932,14 +1924,6 @@ def get_emergency_page_data(user_id):
                   WHERE reserved.request_id = br.id
                     AND reserved.status IN (?, ?, ?)
               ), 0)
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM request_matches AS locked_match
-                  WHERE locked_match.request_id = br.id
-                    AND locked_match.status IN (
-                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
-                    )
-              )
               AND d.availability = ?
               AND d.eligible = 1
               AND d.health_screening_status = ?
@@ -2056,14 +2040,6 @@ def get_emergency_page_data(user_id):
                   WHERE reserved.request_id = br.id
                     AND reserved.status IN (?, ?, ?)
               ), 0)
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM request_matches AS locked_match
-                  WHERE locked_match.request_id = br.id
-                    AND locked_match.status IN (
-                        'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
-                    )
-              )
               AND NOT EXISTS (
                   SELECT 1
                   FROM request_matches AS rm
