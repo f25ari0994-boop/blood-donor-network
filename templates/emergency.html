@@ -1070,6 +1070,15 @@
 
     <nav class="section-nav" aria-label="Emergency request sections">
 
+        <a href="{{ url_for('available_requests') }}" class="{% if page_view == 'find' %}active{% endif %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round">
+                <circle cx="10.8" cy="10.8" r="7"/>
+                <path d="m16 16 5 5"/>
+            </svg>
+            Available Requests
+        </a>
+
         <a href="{{ url_for('request_blood') }}" class="{% if page_view == 'create' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
