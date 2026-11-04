@@ -308,7 +308,9 @@ def get_notification_recipient_user_ids(
     seen_user_ids = set()
 
     for donor_row in donor_rows:
-        donor_user_id, donor_blood_type, donor_location = donor_row[:3]
+        donor_user_id = donor_row[0]
+        donor_blood_type = donor_row[1]
+        donor_location = donor_row[2]
         if (
             not donor_user_id
             or donor_user_id == excluded_user_id
@@ -1874,13 +1876,8 @@ def home():
             """
             SELECT name, blood_type
             FROM donors
-            WHERE availability = ?
-              AND eligible = 1
-              AND health_screening_status = ?
-              AND (last_donation IS NULL OR last_donation <= ?)
             ORDER BY name
-            """,
-            (AVAILABLE, "Self-Declared Clear", cooldown_cutoff),
+            """
         ).fetchall()
         public_requests = connection.execute(
             """
