@@ -152,16 +152,22 @@
     color: #800020;
   }
   .notification-nav-link {
-    justify-content: space-between !important;
-    gap: 10px;
+    justify-content: flex-start !important;
+    gap: 9px;
     width: 100% !important;
     height: auto !important;
     min-height: 43px !important;
     margin: 0 !important;
     padding: 10px 13px !important;
   }
-  .notification-nav-link .notification-bell { display: none !important; }
+  .notification-nav-link .notification-bell {
+    display: block !important;
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px;
+  }
   .notification-nav-link .notification-text { display: inline !important; }
+  .notification-nav-link .notification-count-badge { margin-left: auto; }
   .notification-nav-link .notification-count-badge {
     position: static;
     min-width: 21px;
@@ -484,4 +490,194 @@
 @media (prefers-reduced-motion: reduce) {
   .donor-public-grid.mobile-ticker .mobile-ticker-track { animation: none; }
   .donor-public-grid.mobile-ticker { overflow-x: auto; }
+}
+
+
+/* Profile page: align its mobile structure with the accepted Dashboard design. */
+@media (max-width: 760px) {
+  .profile-container {
+    width: calc(100% - 28px) !important;
+    max-width: 1180px;
+    padding: 19px 0 34px !important;
+  }
+  .profile-container .page-heading {
+    margin: 0 0 13px;
+    padding: 17px 16px;
+    border: 1px solid #e5e8ef;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(25,35,55,.04);
+  }
+  .profile-container .page-heading h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    line-height: 1.25;
+  }
+  .profile-container .page-heading p { font-size: 12px; line-height: 1.5; }
+  .profile-container .profile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+  .profile-container .panel {
+    min-width: 0;
+    padding: 17px 15px !important;
+    border: 1px solid #e5e8ef;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(25,35,55,.04);
+  }
+  .profile-container .panel h2 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    line-height: 1.35;
+  }
+  .profile-container .profile-name {
+    margin-bottom: 4px;
+    font-size: 19px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .profile-container .profile-subtitle { margin-bottom: 12px; font-size: 11px; }
+  .profile-container .detail-row {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    padding: 10px 0;
+  }
+  .profile-container .detail-label { min-width: 0; color: #737b8c; font-size: 11px; }
+  .profile-container .detail-value {
+    min-width: 0;
+    color: #20242c;
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .profile-container .edit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    margin-top: 13px;
+    padding: 9px 13px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .profile-container .edit-form { margin-top: 15px; padding-top: 15px; }
+  .profile-container .form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+  }
+  .profile-container .form-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px;
+  }
+  .profile-container .form-actions > *,
+  .profile-container .form-actions button {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+  .profile-container .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px;
+  }
+  .profile-container .stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-width: 0;
+    min-height: 116px !important;
+    padding: 12px !important;
+    border-radius: 11px;
+    text-align: left;
+  }
+  .profile-container .stat-label {
+    margin-bottom: 8px;
+    font-size: 10px !important;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .profile-container .stat-number {
+    margin-bottom: 7px;
+    font-size: 26px !important;
+    line-height: 1.1;
+  }
+  .profile-container .stat-action { font-size: 10px; line-height: 1.35; }
+  .profile-container .donor-panel { margin-bottom: 13px; }
+  .profile-container .donor-panel .item-list { display: grid; gap: 11px; }
+  .profile-container .donor-panel .history-item {
+    min-width: 0;
+    padding: 14px !important;
+    border-radius: 11px;
+  }
+  .profile-container .donor-panel .history-item-top {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .profile-container .donor-panel .history-item-top strong {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .profile-container .donor-panel .donor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 11px 10px;
+  }
+  .profile-container .donor-panel .donor-item { min-width: 0; padding-bottom: 8px; }
+  .profile-container .donor-panel .donor-item small { margin-bottom: 5px; font-size: 10px; }
+  .profile-container .donor-panel .donor-item strong {
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .profile-container .history-panel {
+    margin-bottom: 13px;
+    padding: 15px !important;
+    scroll-margin-top: 90px;
+  }
+  .profile-container .history-heading { align-items: center; margin-bottom: 13px; }
+  .profile-container .history-heading h2 { margin: 0; font-size: 16px; }
+  .profile-container .close-history { min-height: 38px; padding: 8px 11px; font-size: 11px; }
+  .profile-container .history-list { display: grid; gap: 10px; }
+  .profile-container .history-panel .history-item { min-width: 0; padding: 13px !important; }
+  .profile-container .history-panel .history-item-top {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .profile-container .history-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 9px 10px;
+    font-size: 11px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .profile-container .empty-state { padding: 19px 14px; font-size: 12px; line-height: 1.55; }
+}
+@media (max-width: 380px) {
+  .profile-container .detail-row { grid-template-columns: 68px minmax(0, 1fr); }
+  .profile-container .stat-card { min-height: 108px !important; padding: 10px !important; }
+  .profile-container .stat-number { font-size: 23px !important; }
+  .profile-container .donor-panel .donor-grid,
+  .profile-container .history-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
