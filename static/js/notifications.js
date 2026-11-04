@@ -6,8 +6,10 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
     const notificationsPage = window.location.pathname.replace(/\/+$/, "") === "/notifications";
     const matchWorkspace = document.querySelector("#my-matches[data-notification-cursor]");
-    let matchUpdateCursor = matchWorkspace
-        ? Number(matchWorkspace.dataset.notificationCursor || 0) : 0;
+    const availableRequestsWorkspace = document.querySelector("#available-requests[data-notification-cursor]");
+    const updateWorkspace = matchWorkspace || availableRequestsWorkspace;
+    let matchUpdateCursor = updateWorkspace
+        ? Number(updateWorkspace.dataset.notificationCursor || 0) : 0;
 
     function updateBadges(count) {
         document.querySelectorAll("a[href]").forEach((anchor) => {
@@ -93,7 +95,7 @@
                "donation_reported_by_requester", "donation_reported", "receipt_confirmed"].includes(item.type)
                 ? "View Potential Matches"
             : item.match_id ? "Open Potential Matches"
-            : item.type === "blood_request" ? "View Available Requests"
+            : ["blood_request", "match_request_found"].includes(item.type) ? "View Available Requests"
             : item.request_id ? "View My Requests"
             : item.type === "eligibility" ? "View Donor Profile" : "Open Dashboard";
         form.append(token, button);
@@ -105,7 +107,7 @@
     }
 
     async function checkMatchUpdates() {
-        if (!matchWorkspace) return false;
+        if (!updateWorkspace) return false;
         try {
             const response = await fetch(endpoint + "?after_id=" + matchUpdateCursor, {
                 credentials: "same-origin",
@@ -115,8 +117,9 @@
             const data = await response.json();
             if (!data.ok || !Array.isArray(data.notifications)) return;
             const refreshTypes = new Set([
-                "compatible_donor", "match_invitation", "match_acceptance",
-                "match_waiting", "match_confirmed", "match_rejected",
+                "compatible_donor", "blood_request", "match_request_found",
+                "match_invitation", "match_acceptance", "match_waiting",
+                "match_confirmed", "match_rejected",
                 "match_cancelled", "request_cancelled", "request_expired",
                 "request_fulfilled", "donation_reported_by_requester",
                 "donation_reported", "receipt_confirmed"
