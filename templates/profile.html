@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>My Profile | Blood Donor & Emergency Request Network</title>
@@ -1108,5 +1109,6 @@
 })();
 </script>
 
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
