@@ -877,6 +877,21 @@
                             </div>
                         {% endif %}
 
+                        {% if active_request and not donor.is_owner %}
+                            <form method="POST"
+                                  action="{{ url_for('request_donor', donor_id=donor.id) }}"
+                                  style="margin-top:12px;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="donor-action-btn call-btn">
+                                    Request This Donor
+                                </button>
+                            </form>
+                        {% elif not active_request and not donor.is_owner %}
+                            <div class="privacy-note" style="margin-top:10px;">
+                                Create an active blood request first to request this donor.
+                            </div>
+                        {% endif %}
+
                     </article> {% endfor %}</section> {% else %}<section class="empty-state" aria-live="polite">
                 <h3>No Matching Donors Found</h3>
 
