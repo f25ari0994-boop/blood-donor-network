@@ -2497,9 +2497,10 @@ def donor():
             saved_donor_id = (
                 existing_donor["id"]
                 if existing_donor and hasattr(existing_donor, "keys")
-                else existing_donor[0]
-                if existing_donor
-                else get_inserted_id(connection.cursor(), connection)
+                else connection.execute(
+                    "SELECT id FROM donors WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+                    (user_id,),
+                ).fetchone()[0]
             )
             if saved_donor_id:
                 notify_requesters_of_compatible_donor(
