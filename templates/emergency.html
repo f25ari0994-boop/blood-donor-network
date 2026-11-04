@@ -1838,7 +1838,7 @@
                     {% set status_class = (match.status or "pending")|lower|replace(" ", "-") %}
                     {% set confirmed_contact = match_contacts.get(match.id, {}) %}
 
-                    <article class="item-card">
+                    <article class="item-card" id="match-{{ match.id }}">
 
                         <div class="item-top">
 
