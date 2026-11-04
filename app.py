@@ -597,22 +597,40 @@ def create_notification(
 # 8. DONOR ELIGIBILITY
 # =========================================================
 
-def check_donor_eligibility(user_id):
+def check_donor_eligibility(user_id, donor_id=None):
+    """
+    Recalculate eligibility for this account's donor profiles.
+
+    When donor_id is supplied, only that owned donor profile is evaluated.
+    This is used by profile-specific actions such as availability toggling.
+    """
     connection = get_db_connection()
 
     try:
         cursor = connection.cursor()
 
-        cursor.execute(
-            """
-            SELECT
-                id, name, last_donation, eligible,
-                availability, health_screening_status
-            FROM donors
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
+        if donor_id is None:
+            cursor.execute(
+                """
+                SELECT
+                    id, name, last_donation, eligible,
+                    availability, health_screening_status
+                FROM donors
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    id, name, last_donation, eligible,
+                    availability, health_screening_status
+                FROM donors
+                WHERE user_id = ? AND id = ?
+                """,
+                (user_id, donor_id),
+            )
 
         for donor in cursor.fetchall():
             (
@@ -2591,7 +2609,8 @@ def donor_list():
 def toggle_availability(donor_id):
 
     user_id = get_user_id()
-    check_donor_eligibility(user_id)
+    # Recalculate only the selected donor profile; sibling profiles must remain independent.
+    check_donor_eligibility(user_id, donor_id=donor_id)
     connection = get_db_connection()
 
     try:
