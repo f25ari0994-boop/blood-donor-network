@@ -1336,6 +1336,53 @@
     </section>
 
 
+    <!-- PUBLIC DONOR AND REQUEST DISCOVERY -->
+    <section class="section section-white">
+        <div class="container">
+            <div class="section-heading">
+                <span class="eyebrow">DONOR DIRECTORY</span>
+                <h2>Registered Donors</h2>
+                <p>View available donor names and blood groups. Contact information remains private.</p>
+            </div>
+            {% if public_donors %}
+                <div class="donor-public-grid">
+                    {% for donor in public_donors %}
+                        <article class="donor-stat-card">
+                            <strong>{{ donor[0] }}</strong>
+                            <span class="donor-stat-label">{{ donor[1] }}</span>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="donor-stat-description">No eligible and available donor profiles are currently listed.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-heading">
+                <span class="eyebrow">OPEN REQUESTS</span>
+                <h2>Active Blood Requests</h2>
+                <p>Current requests that still need blood donations.</p>
+            </div>
+            {% if public_requests %}
+                <div class="donor-public-grid">
+                    {% for item in public_requests %}
+                        <article class="donor-stat-card">
+                            <strong>{{ item[0] }} Blood Required</strong>
+                            <span class="donor-stat-label">{{ item[2] }} · {{ item[5] }} unit(s) remaining</span>
+                            <p class="donor-stat-description">{{ item[1] }} · {{ item[3] }} unit(s) requested</p>
+                            <p class="donor-stat-description">Needed by: {{ item[6] }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="donor-stat-description">There are no active blood requests at the moment.</p>
+            {% endif %}
+        </div>
+    </section>
+
     <!-- MEDICAL SAFETY INFORMATION -->
 
     <section class="section section-white">
