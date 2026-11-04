@@ -692,14 +692,14 @@ def notify_requesters_of_compatible_donor(connection, donor_id):
           AND needed_by IS NOT NULL
           AND needed_by > ?
           AND user_id != ?
-          AND NOT EXISTS (
-              SELECT 1
-              FROM request_matches AS locked_match
-              WHERE locked_match.request_id = blood_requests.id
-                AND locked_match.status IN (
-                    'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+          AND remaining_units > COALESCE((
+              SELECT SUM(reserved.units_pledged)
+              FROM request_matches AS reserved
+              WHERE reserved.request_id = blood_requests.id
+                AND reserved.status IN (
+                    'Accepted', 'Confirmed', 'Donation Reported', 'Invited'
                 )
-          )
+          ), 0)
         ORDER BY id DESC
         """,
         (
@@ -912,7 +912,7 @@ def get_reserved_units(connection, request_id, exclude_match_id=None):
             SELECT COALESCE(SUM(units_pledged), 0)
             FROM request_matches
             WHERE request_id = ?
-              AND status IN (?, ?, ?)
+              AND status IN (?, ?, ?, 'Invited')
             """,
             (
                 request_id,
@@ -925,7 +925,7 @@ def get_reserved_units(connection, request_id, exclude_match_id=None):
             SELECT COALESCE(SUM(units_pledged), 0)
             FROM request_matches
             WHERE request_id = ?
-              AND status IN (?, ?, ?)
+              AND status IN (?, ?, ?, 'Invited')
               AND id != ?
             """,
             (
@@ -959,25 +959,22 @@ def donor_has_active_match(connection, donor_id):
 
 def request_has_committed_match(connection, request_id):
     """
-    A blood request can have only one donor match.
-
-    The lock remains after the requester reports the donation, so a partly
-    fulfilled request cannot silently start matching additional donors.
-    Rejected/cancelled matches do not keep the request locked.
+    Return True only when all outstanding units are reserved by active matches.
+    Completed matches do not reserve units because received units have already
+    reduced blood_requests.remaining_units.
     """
     row = connection.execute(
-        """
-        SELECT id
-        FROM request_matches
-        WHERE request_id = ?
-          AND status IN (
-              'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
-          )
-        LIMIT 1
-        """,
+        "SELECT remaining_units FROM blood_requests WHERE id = ?",
         (request_id,),
     ).fetchone()
-    return row is not None
+    if not row:
+        return False
+
+    remaining_units = int(row[0] or 0)
+    if remaining_units <= 0:
+        return True
+
+    return get_reserved_units(connection, request_id) >= remaining_units
 
 
 def donor_has_other_active_match(connection, donor_id, exclude_match_id):
@@ -2667,14 +2664,14 @@ def donor():
                 WHERE status = 'Pending'
                   AND remaining_units > 0
                   AND needed_by IS NOT NULL
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM request_matches AS locked_match
-                      WHERE locked_match.request_id = blood_requests.id
-                        AND locked_match.status IN (
-                            'Accepted', 'Confirmed', 'Donation Reported', 'Completed', 'Invited'
+                  AND remaining_units > COALESCE((
+                      SELECT SUM(reserved.units_pledged)
+                      FROM request_matches AS reserved
+                      WHERE reserved.request_id = blood_requests.id
+                        AND reserved.status IN (
+                            'Accepted', 'Confirmed', 'Donation Reported', 'Invited'
                         )
-                  )
+                  ), 0)
                 ORDER BY id DESC
                 """
             ).fetchall()
@@ -3604,14 +3601,6 @@ def accept_request(request_id):
             )
             return redirect(url_for("available_requests"))
 
-        if request_has_committed_match(connection, request_id):
-            flash(
-                "This request already has an accepted donor. "
-                "It cannot be matched with another donor.",
-                "warning",
-            )
-            return redirect(url_for("available_requests"))
-
         reserved_units = get_reserved_units(
             connection,
             request_id,
@@ -3804,14 +3793,6 @@ def request_donor(donor_id):
         if not blood_request or is_request_expired(blood_request["needed_by"]):
             flash("Create or select an active blood request before requesting a donor.", "warning")
             return redirect(request.referrer or url_for("donor_list"))
-
-        if request_has_committed_match(connection, blood_request["id"]):
-            flash(
-                "This request already has an accepted donor. "
-                "You cannot accept another donor for the same request.",
-                "warning",
-            )
-            return redirect(url_for("my_matches"))
 
         donor = connection.execute(
             """
