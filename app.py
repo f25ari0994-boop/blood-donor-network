@@ -1005,6 +1005,29 @@ def get_latest_active_request(connection, requester_user_id):
         "needed_by": row[5],
     }
 
+def get_active_request_by_id(connection, requester_user_id, request_id):
+    """Return one specific open request as a portable mapping for SQLite/PostgreSQL."""
+    row = connection.execute(
+        """
+        SELECT id, blood_type, location, remaining_units, needed_by
+        FROM blood_requests
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'Pending'
+          AND remaining_units > 0
+        """,
+        (request_id, requester_user_id),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "blood_type": row[1],
+        "location": row[2],
+        "remaining_units": int(row[3] or 0),
+        "needed_by": row[4],
+    }
+
 
 def process_due_request_notifications(connection, now=None):
     """Create one-time donor reminders and overdue notifications."""
@@ -3701,17 +3724,9 @@ def request_donor(donor_id):
         requested_request_id = request.form.get("request_id", type=int)
         if requested_request_id:
             # Honour the exact request selected in My Matches.
-            blood_request = connection.execute(
-                """
-                SELECT id, blood_type, location, remaining_units, needed_by
-                FROM blood_requests
-                WHERE id = ?
-                  AND user_id = ?
-                  AND status = 'Pending'
-                  AND remaining_units > 0
-                """,
-                (requested_request_id, user_id),
-            ).fetchone()
+            blood_request = get_active_request_by_id(
+                connection, user_id, requested_request_id
+            )
         else:
             blood_request = get_latest_active_request(connection, user_id)
 
