@@ -1017,8 +1017,15 @@
     href="{{ url_for('notifications') }}"
     class="notification-nav-link"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
+    title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
 >
-    <span>Notifications</span>
+    <svg class="notification-bell" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+        <path d="M10 21h4"/>
+    </svg>
+    <span class="notification-text">Notifications</span>
     {% if notification_unread_count > 0 %}
         <span class="notification-count-badge">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
