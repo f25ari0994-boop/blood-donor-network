@@ -11,7 +11,7 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import (
     Flask, render_template, request, flash, redirect,
-    session, abort, url_for
+    session, abort, url_for, jsonify
 )
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -770,7 +770,7 @@ def donor_has_active_match(connection, donor_user_id):
         SELECT id
         FROM request_matches
         WHERE donor_user_id = ?
-          AND status IN (?, ?, ?)
+          AND (status IN (?, ?, ?) OR status = 'Invited')
         LIMIT 1
         """,
         (
@@ -780,6 +780,32 @@ def donor_has_active_match(connection, donor_user_id):
     ).fetchone()
 
     return row is not None
+
+
+def get_latest_active_request(connection, requester_user_id):
+    """Return the newest open, non-expired request for this requester."""
+    now = get_pakistan_time().strftime("%Y-%m-%d %H:%M:%S")
+    row = connection.execute(
+        """
+        SELECT id, blood_type, location, hospital, remaining_units, needed_by
+        FROM blood_requests
+        WHERE user_id = ?
+          AND status = 'Pending'
+          AND remaining_units > 0
+          AND needed_by IS NOT NULL
+          AND needed_by > ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (requester_user_id, now),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0], "blood_type": row[1], "location": row[2],
+        "hospital": row[3], "remaining_units": int(row[4] or 0),
+        "needed_by": row[5],
+    }
 
 
 def process_due_request_notifications(connection, now=None):
@@ -1550,7 +1576,7 @@ def get_emergency_page_data(user_id):
                       rm.donor_user_id = d.user_id
                       OR matched_donor.user_id = d.user_id
                   )
-                    AND rm.status IN (?, ?, ?)
+                    AND (rm.status IN (?, ?, ?) OR rm.status = 'Invited')
               )
               AND NOT EXISTS (
                   SELECT 1
@@ -2438,12 +2464,19 @@ def search():
             finally:
                 connection.close()
 
+    connection = get_db_connection()
+    try:
+        active_request = get_latest_active_request(connection, user_id)
+    finally:
+        connection.close()
+
     return render_template(
         "search.html",
         donors=donors,
         selected_blood_type=selected_blood_type,
         selected_location=selected_location,
         compatible_donor_groups=compatible_donor_groups,
+        active_request=active_request,
     )
 
 
@@ -2540,9 +2573,16 @@ def donor_list():
     finally:
         connection.close()
 
+    connection = get_db_connection()
+    try:
+        active_request = get_latest_active_request(connection, get_user_id())
+    finally:
+        connection.close()
+
     return render_template(
         "donor_list.html",
         donors=donors,
+        active_request=active_request,
     )
     # =========================================================
 # DONOR AVAILABILITY TOGGLE
@@ -3170,10 +3210,10 @@ def accept_request(request_id):
                 UPDATE request_matches
                 SET donor_user_id = ?,
                     units_pledged = ?,
-                    status = 'Accepted',
-                    requester_confirmed = 0,
+                    status = 'Confirmed',
+                    requester_confirmed = 1,
                     accepted_at = ?,
-                    confirmed_at = NULL,
+                    confirmed_at = ?,
                     completed_at = NULL,
                     updated_at = ?
                 WHERE id = ?
@@ -3181,6 +3221,7 @@ def accept_request(request_id):
                 (
                     user_id,
                     units_pledged,
+                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                     old_match_id,
@@ -3201,15 +3242,17 @@ def accept_request(request_id):
                         status,
                         requester_confirmed,
                         accepted_at,
+                        confirmed_at,
                         updated_at
                     )
-                VALUES (?, ?, ?, ?, 'Accepted', 0, ?, ?)
+                VALUES (?, ?, ?, ?, 'Confirmed', 1, ?, ?, ?)
                 """,
                 (
                     request_id,
                     donor_id,
                     user_id,
                     units_pledged,
+                    get_current_time(),
                     get_current_time(),
                     get_current_time(),
                 ),
@@ -3220,7 +3263,7 @@ def accept_request(request_id):
         create_notification(
             connection,
             requester_id,
-            "A donor has accepted your blood request. Please review the match.",
+            "A donor accepted your blood request. Your match is active and private chat is ready.",
             "match_acceptance",
             related_request_id=request_id,
             related_match_id=match_id,
@@ -3229,8 +3272,8 @@ def accept_request(request_id):
         create_notification(
             connection,
             user_id,
-            "Your acceptance has been sent to the requester for confirmation.",
-            "match_waiting",
+            "You accepted the blood request. Your match is active and private chat is ready.",
+            "match_confirmed",
             related_request_id=request_id,
             related_match_id=match_id,
         )
@@ -3246,8 +3289,7 @@ def accept_request(request_id):
 
         connection.commit()
         flash(
-            "Request accepted. Your private chat with the requester is now available "
-            "in My Matches.",
+            "Request accepted. Your match is active. Open My Matches to coordinate the donation.",
             "success",
         )
 
@@ -3269,6 +3311,185 @@ def accept_request(request_id):
 # =========================================================
 # 20. DONOR CANCELS PENDING ACCEPTANCE
 # =========================================================
+
+@app.route("/request-donor/<int:donor_id>", methods=["POST"])
+@login_required
+def request_donor(donor_id):
+    """Send an invitation using the requester's newest active blood request."""
+    user_id = get_user_id()
+    connection = get_db_connection()
+    try:
+        expire_overdue_requests(connection)
+        begin_write_transaction(connection)
+        blood_request = get_latest_active_request(connection, user_id)
+        if not blood_request:
+            flash("Create an active blood request before requesting a donor.", "warning")
+            return redirect(request.referrer or url_for("donor_list"))
+
+        donor = connection.execute(
+            """
+            SELECT id, user_id, blood_type, location, availability,
+                   eligible, health_screening_status
+            FROM donors WHERE id = ?
+            """,
+            (donor_id,),
+        ).fetchone()
+        if not donor or not donor[1] or donor[1] == user_id:
+            flash("This donor profile is unavailable.", "error")
+            return redirect(request.referrer or url_for("donor_list"))
+        donor_user_id = donor[1]
+        if donor_has_active_match(connection, donor_user_id):
+            flash("This donor already has an active match or invitation.", "warning")
+            return redirect(request.referrer or url_for("donor_list"))
+        if (
+            donor[4] != AVAILABLE or donor[5] != 1
+            or donor[6] != "Self-Declared Clear"
+            or not donor_matches_request(
+                donor[2], donor[3], blood_request["blood_type"], blood_request["location"]
+            )
+        ):
+            flash("This donor is no longer eligible or compatible with your active request.", "warning")
+            return redirect(request.referrer or url_for("donor_list"))
+
+        old = connection.execute(
+            "SELECT id, status FROM request_matches WHERE request_id = ? AND donor_id = ?",
+            (blood_request["id"], donor_id),
+        ).fetchone()
+        if old and old[1] not in {"Rejected", "Cancelled"}:
+            flash("You have already requested this donor for this blood request.", "warning")
+            return redirect(request.referrer or url_for("donor_list"))
+
+        now = get_current_time()
+        if old:
+            match_id = old[0]
+            connection.execute(
+                """
+                UPDATE request_matches
+                SET donor_user_id = ?, units_pledged = 1,
+                    status = 'Invited', requester_confirmed = 0,
+                    accepted_at = ?, confirmed_at = NULL,
+                    completed_at = NULL, updated_at = ?
+                WHERE id = ?
+                """,
+                (donor_user_id, now, now, match_id),
+            )
+        else:
+            cursor = connection.cursor()
+            cursor.execute(
+                """
+                INSERT INTO request_matches
+                    (request_id, donor_id, donor_user_id, units_pledged,
+                     status, requester_confirmed, accepted_at, updated_at)
+                VALUES (?, ?, ?, 1, 'Invited', 0, ?, ?)
+                """,
+                (blood_request["id"], donor_id, donor_user_id, now, now),
+            )
+            match_id = get_inserted_id(cursor, connection)
+
+        create_notification(
+            connection, donor_user_id,
+            f"You have a blood donation invitation for {blood_request['blood_type']} "
+            f"({blood_request['remaining_units']} unit(s)) in {blood_request['location']}. "
+            "Open My Matches and accept it to start coordinating.",
+            "donor_invitation", related_request_id=blood_request["id"],
+            related_match_id=match_id,
+        )
+        create_notification(
+            connection, user_id,
+            f"Your request was sent to donor {donor_id}. The match starts when the donor accepts.",
+            "donor_invitation_sent", related_request_id=blood_request["id"],
+            related_match_id=match_id,
+        )
+        record_audit(connection, user_id, "donor_invited", "request_match", match_id,
+                     f"Invited donor profile {donor_id} for request {blood_request['id']}.")
+        connection.commit()
+        flash("Donor request sent. The match will start when the donor accepts.", "success")
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Donor invitation failed")
+        flash("Unable to send a donor request right now.", "error")
+    finally:
+        connection.close()
+    return redirect(request.referrer or url_for("donor_list"))
+
+
+@app.route("/accept-match-invitation/<int:match_id>", methods=["POST"])
+@login_required
+def accept_match_invitation(match_id):
+    user_id = get_user_id()
+    connection = get_db_connection()
+    try:
+        expire_overdue_requests(connection)
+        begin_write_transaction(connection)
+        row = connection.execute(
+            """
+            SELECT rm.request_id, rm.donor_id, rm.donor_user_id, rm.status,
+                   br.user_id, br.remaining_units, br.status, br.needed_by
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ?
+            """,
+            (match_id,),
+        ).fetchone()
+        if not row:
+            flash("Donor invitation not found.", "error")
+            return redirect(url_for("my_matches"))
+        request_id, donor_id, donor_user_id, status, requester_id, remaining, request_status, needed_by = row
+        if donor_user_id != user_id or status != "Invited":
+            flash("This invitation is no longer available to you.", "warning")
+            return redirect(url_for("my_matches"))
+        if request_status != "Pending" or int(remaining or 0) < 1 or is_request_expired(needed_by):
+            connection.execute(
+                "UPDATE request_matches SET status = 'Cancelled', updated_at = ? WHERE id = ? AND status = 'Invited'",
+                (get_current_time(), match_id),
+            )
+            connection.commit()
+            flash("The blood request has expired or is already fulfilled.", "warning")
+            return redirect(url_for("my_matches"))
+        other_active = connection.execute(
+            """
+            SELECT id FROM request_matches
+            WHERE donor_user_id = ? AND id != ?
+              AND (status IN (?, ?, ?) OR status = 'Invited')
+            LIMIT 1
+            """,
+            (user_id, match_id, *ACTIVE_MATCH_STATUSES),
+        ).fetchone()
+        if other_active:
+            flash("You already have another active match. Complete it before accepting this invitation.", "warning")
+            return redirect(url_for("my_matches"))
+        reserved = get_reserved_units(connection, request_id, exclude_match_id=match_id)
+        if 1 > max(int(remaining or 0) - reserved, 0):
+            flash("No unreserved units remain for this request.", "warning")
+            return redirect(url_for("my_matches"))
+        now = get_current_time()
+        connection.execute(
+            """
+            UPDATE request_matches
+            SET status = 'Confirmed', requester_confirmed = 1,
+                confirmed_at = ?, updated_at = ?
+            WHERE id = ? AND status = 'Invited'
+            """,
+            (now, now, match_id),
+        )
+        create_notification(connection, requester_id,
+            "The donor accepted your invitation. Your match is now active and private chat is ready.",
+            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
+        create_notification(connection, user_id,
+            "You accepted the request. Your match is now active and private chat is ready.",
+            "match_confirmed", related_request_id=request_id, related_match_id=match_id)
+        record_audit(connection, user_id, "match_confirmed", "request_match", match_id,
+                     "Donor accepted the requester's invitation.")
+        connection.commit()
+        flash("Invitation accepted. Your match is now active.", "success")
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Donor invitation acceptance failed")
+        flash("Unable to accept this invitation.", "error")
+    finally:
+        connection.close()
+    return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
+
 
 @app.route(
     "/cancel-acceptance/<int:match_id>",
@@ -3690,107 +3911,129 @@ def match_detail(match_id):
     methods=["POST"],
 )
 @login_required
+@app.route("/match/<int:match_id>/messages", methods=["GET"])
+@login_required
+def get_match_messages(match_id):
+    user_id = get_user_id()
+    try:
+        after_id = max(int(request.args.get("after", 0)), 0)
+    except (TypeError, ValueError):
+        after_id = 0
+    connection = get_db_connection()
+    try:
+        match = connection.execute(
+            """
+            SELECT rm.status, br.user_id, rm.donor_user_id
+            FROM request_matches AS rm
+            JOIN blood_requests AS br ON br.id = rm.request_id
+            WHERE rm.id = ? AND (br.user_id = ? OR rm.donor_user_id = ?)
+            """,
+            (match_id, user_id, user_id),
+        ).fetchone()
+        if not match or match[0] not in {"Confirmed", "Donation Reported", "Completed", "Accepted"}:
+            return jsonify({"ok": False, "messages": []}), 403
+        rows = connection.execute(
+            """
+            SELECT mm.id, mm.message, mm.created_at, mm.sender_user_id,
+                   COALESCE(u.name, 'Network user')
+            FROM match_messages AS mm
+            LEFT JOIN users AS u ON u.id = mm.sender_user_id
+            WHERE mm.match_id = ? AND mm.id > ?
+            ORDER BY mm.id ASC LIMIT 100
+            """,
+            (match_id, after_id),
+        ).fetchall()
+        return jsonify({
+            "ok": True,
+            "messages": [
+                {"id": row[0], "message": row[1], "created_at": row[2],
+                 "sender_user_id": row[3], "sender_name": row[4],
+                 "is_mine": row[3] == user_id}
+                for row in rows
+            ],
+        })
+    finally:
+        connection.close()
+
+
+@app.route(
+    "/send-match-message/<int:match_id>",
+    methods=["POST"],
+)
+@login_required
 def send_match_message(match_id):
     user_id = get_user_id()
     message_text = form_text("message", 2000)
-
     if not message_text:
+        if request.headers.get("Accept") == "application/json":
+            return jsonify({"ok": False, "error": "Write a message before sending."}), 400
         flash("Write a message before sending.", "error")
         return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
 
     connection = get_db_connection()
-
+    saved_message = None
     try:
         begin_write_transaction(connection)
-
         match = connection.execute(
             """
-            SELECT
-                rm.request_id,
-                rm.donor_user_id,
-                rm.status,
-                rm.requester_confirmed,
-                br.user_id
+            SELECT rm.request_id, rm.donor_user_id, rm.status,
+                   rm.requester_confirmed, br.user_id
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             WHERE rm.id = ?
-              AND (
-                    br.user_id = ?
-                    OR rm.donor_user_id = ?
-              )
+              AND (br.user_id = ? OR rm.donor_user_id = ?)
             """,
             (match_id, user_id, user_id),
         ).fetchone()
-
         if not match:
+            if request.headers.get("Accept") == "application/json":
+                return jsonify({"ok": False, "error": "This match is unavailable."}), 403
             flash("This match is unavailable or you do not have access.", "error")
             return redirect(url_for("my_matches"))
-
-        requester_id = match[4]
-        donor_user_id = match[1]
-        match_status = match[2]
-        requester_confirmed = match[3]
-
-        if match_status not in {
-            "Accepted",
-            "Confirmed",
-            "Donation Reported",
-            "Completed",
-        }:
-            flash(
-                "Chat is available only while this match is active.",
-                "warning",
-            )
+        if match[2] not in {"Accepted", "Confirmed", "Donation Reported", "Completed"}:
+            if request.headers.get("Accept") == "application/json":
+                return jsonify({"ok": False, "error": "Chat is not available for this match."}), 403
+            flash("Chat is available only while this match is active.", "warning")
             return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
 
-        recipient_id = (
-            donor_user_id
-            if user_id == requester_id
-            else requester_id
-        )
-
-        connection.execute(
+        requester_id = match[4]
+        recipient_id = match[1] if user_id == requester_id else requester_id
+        cursor = connection.cursor()
+        cursor.execute(
             """
-            INSERT INTO match_messages
-                (match_id, sender_user_id, message, created_at)
+            INSERT INTO match_messages (match_id, sender_user_id, message, created_at)
             VALUES (?, ?, ?, ?)
             """,
-            (
-                match_id,
-                user_id,
-                message_text,
-                get_current_time(),
-            ),
+            (match_id, user_id, message_text, get_current_time()),
         )
-
+        message_id = get_inserted_id(cursor, connection)
+        saved_message = {
+            "id": message_id,
+            "message": message_text,
+            "created_at": get_current_time(),
+            "sender_name": session.get("user_name", "You"),
+            "sender_user_id": user_id,
+            "is_mine": True,
+        }
         create_notification(
-            connection,
-            recipient_id,
+            connection, recipient_id,
             "You have a new private message in your blood request match.",
-            "match_message",
-            related_request_id=match[0],
-            related_match_id=match_id,
+            "match_message", related_request_id=match[0], related_match_id=match_id,
         )
-
-        record_audit(
-            connection,
-            user_id,
-            "match_message_sent",
-            "request_match",
-            match_id,
-            "A private message was sent in the confirmed match chat.",
-        )
-
+        record_audit(connection, user_id, "match_message_sent", "request_match",
+                     match_id, "A private message was sent in the match chat.")
         connection.commit()
-
     except Exception:
         connection.rollback()
         app.logger.exception("Match chat message could not be sent")
+        if request.headers.get("Accept") == "application/json":
+            return jsonify({"ok": False, "error": "Unable to send your message."}), 500
         flash("Unable to send your message. Please try again.", "error")
-
     finally:
         connection.close()
 
+    if request.headers.get("Accept") == "application/json":
+        return jsonify({"ok": True, "message": saved_message})
     return redirect(url_for("my_matches") + f"#match-chat-{match_id}")
 
 
@@ -3804,174 +4047,91 @@ def send_match_message(match_id):
 )
 @login_required
 def report_match_donation(match_id):
+    """Requester records the donation actually received; donor gets a profile copy."""
     user_id = get_user_id()
-
     try:
         units = int(request.form.get("units") or "1")
     except (ValueError, TypeError):
         units = 0
-
-    donation_date_text = (
-        request.form.get("donation_date") or ""
-    ).strip()
-
-    parsed_date = parse_date(donation_date_text)
-
-    if (
-        not 1 <= units <= 8
-        or parsed_date is None
-        or parsed_date > get_pakistan_time().date()
-    ):
-        flash("Enter a valid donation date and number of units.")
+    parsed_date = parse_date((request.form.get("donation_date") or "").strip())
+    if not 1 <= units <= 8 or parsed_date is None or parsed_date > get_pakistan_time().date():
+        flash("Enter a valid donation date and number of units.", "error")
         return redirect(url_for("my_matches"))
 
     connection = get_db_connection()
-
     try:
         begin_write_transaction(connection)
-        cursor = connection.cursor()
-
-        cursor.execute(
+        match = connection.execute(
             """
-            SELECT
-                rm.id,
-                rm.request_id,
-                rm.donor_id,
-                rm.donor_user_id,
-                rm.units_pledged,
-                rm.status,
-                rm.requester_confirmed,
-                br.remaining_units,
-                br.user_id,
-                br.hospital,
-                br.location
+            SELECT rm.request_id, rm.donor_id, rm.donor_user_id,
+                   rm.units_pledged, rm.status, rm.requester_confirmed,
+                   br.remaining_units, br.user_id, br.hospital, br.location
             FROM request_matches AS rm
             JOIN blood_requests AS br ON br.id = rm.request_id
             WHERE rm.id = ?
             """,
             (match_id,),
-        )
-
-        match = cursor.fetchone()
-
-        if not match:
-            flash("Match not found.")
-            return redirect(url_for("donation_progress"))
-
-        request_id = match[1]
-        donor_id = match[2]
-        donor_user_id = match[3]
-        units_pledged = int(match[4] or 0)
-        match_status = match[5]
-        requester_confirmed = match[6]
-        remaining_units = int(match[7] or 0)
-        requester_id = match[8]
-        hospital = match[9]
-        location = match[10]
-
-        if donor_user_id != user_id:
-            flash("Only the matched donor can report this donation.")
-            return redirect(url_for("donation_progress"))
-
-        if match_status != "Confirmed" or requester_confirmed != 1:
-            flash("The requester must confirm the match first.")
-            return redirect(url_for("donation_progress"))
-
-        if units > units_pledged:
-            flash("Reported units cannot exceed your pledged units.")
-            return redirect(url_for("my_matches"))
-
-        if units > remaining_units:
-            flash(f"Only {remaining_units} units remain on this request.")
-            return redirect(url_for("my_matches"))
-
-        existing = connection.execute(
-            "SELECT id FROM donations WHERE match_id = ?",
-            (match_id,),
         ).fetchone()
-
-        if existing:
-            flash("A donation has already been reported for this match.")
+        if not match:
+            flash("Match not found.", "error")
+            return redirect(url_for("my_matches"))
+        request_id, donor_id, donor_user_id, pledged, status, confirmed, remaining, requester_id, hospital, location = match
+        if requester_id != user_id:
+            flash("Only the requester can report the donation received.", "error")
+            return redirect(url_for("my_matches"))
+        if status != "Confirmed" or confirmed != 1:
+            flash("Only an active confirmed match can have a donation report.", "warning")
+            return redirect(url_for("my_matches"))
+        if units > int(pledged or 0) or units > int(remaining or 0):
+            flash("Reported units exceed the pledged or remaining units.", "error")
+            return redirect(url_for("my_matches"))
+        if connection.execute("SELECT id FROM donations WHERE match_id = ?", (match_id,)).fetchone():
+            flash("A donation report already exists for this match.", "warning")
             return redirect(url_for("my_matches"))
 
+        cursor = connection.cursor()
+        now = get_current_time()
         cursor.execute(
             """
             INSERT INTO donations
-                (
-                    donor_id, donation_date, hospital, location,
-                    request_id, match_id, units, status,
-                    requester_confirmed
-                )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Reported', 0)
+                (donor_id, donation_date, hospital, location,
+                 request_id, match_id, units, status, requester_confirmed, confirmed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Confirmed', 1, ?)
             """,
-            (
-                donor_id,
-                parsed_date.isoformat(),
-                hospital,
-                location,
-                request_id,
-                match_id,
-                units,
-            ),
+            (donor_id, parsed_date.isoformat(), hospital, location,
+             request_id, match_id, units, now),
         )
-
         donation_id = get_inserted_id(cursor, connection)
-
-        cursor.execute(
-            """
-            UPDATE request_matches
-            SET status = 'Donation Reported',
-                updated_at = ?
-            WHERE id = ?
-            """,
-            (get_current_time(), match_id),
+        connection.execute(
+            "UPDATE request_matches SET status = 'Completed', completed_at = ?, updated_at = ? WHERE id = ?",
+            (now, now, match_id),
         )
-
-        # Do not start donor cooldown here.
-        # It starts only after the requester confirms receipt.
-
-        create_notification(
-            connection,
-            requester_id,
-            (
-                "A donor has reported a donation for your request. "
-                "Please confirm the units you actually received."
-            ),
-            "donation_reported",
-            related_request_id=request_id,
-            related_match_id=match_id,
+        connection.execute(
+            "UPDATE blood_requests SET received_units = received_units + ? WHERE id = ?",
+            (units, request_id),
         )
-
-        create_notification(
-            connection,
-            user_id,
-            "Your donation report has been sent to the requester.",
-            "donation_reported",
-            related_request_id=request_id,
-            related_match_id=match_id,
+        connection.execute(
+            "UPDATE donors SET last_donation = ?, eligible = 0, availability = ? WHERE id = ?",
+            (get_pakistan_time().date().isoformat(), UNAVAILABLE, donor_id),
         )
-
-        record_audit(
-            connection,
-            user_id,
-            "donation_reported",
-            "donation",
-            donation_id,
-            f"Reported {units} units for match {match_id}.",
-        )
-
+        update_request_units(connection, request_id)
+        create_notification(connection, donor_user_id,
+            f"The requester recorded receipt of {units} unit(s). A copy is saved in your donation history.",
+            "donation_reported_by_requester", related_request_id=request_id, related_match_id=match_id)
+        create_notification(connection, requester_id,
+            f"You recorded receipt of {units} unit(s) from your donor. The match is complete.",
+            "donation_reported_by_requester", related_request_id=request_id, related_match_id=match_id)
+        record_audit(connection, user_id, "donation_reported_by_requester", "donation", donation_id,
+                     f"Requester recorded {units} received unit(s) for match {match_id}.")
         connection.commit()
-        flash("Donation report submitted. Awaiting receipt confirmation.")
-
+        flash("Donation recorded. A copy is now saved in the donor's profile history.", "success")
     except Exception:
         connection.rollback()
-        app.logger.exception("Match donation report failed")
-        flash("Unable to report this donation.")
-
+        app.logger.exception("Requester donation report failed")
+        flash("Unable to record this donation right now.", "error")
     finally:
         connection.close()
-
-    return redirect(url_for("donation_progress"))
+    return redirect(url_for("my_matches"))
 
 
 # =========================================================
