@@ -2040,7 +2040,7 @@ def donor():
                 SELECT
                     id, name, age, contact, blood_type, location,
                     hospital, last_donation, health_screening_answers,
-                    share_contact
+                    share_contact, availability
                 FROM donors
                 WHERE id = ? AND user_id = ?
                 """,
@@ -2057,7 +2057,7 @@ def donor():
             donor_columns = (
                 "id", "name", "age", "contact", "blood_type",
                 "location", "hospital", "last_donation",
-                "health_screening_answers", "share_contact",
+                "health_screening_answers", "share_contact", "availability",
             )
 
             donor_form = (
@@ -2216,11 +2216,19 @@ def donor():
         if health_status != "Self-Declared Clear":
             eligible = 0
 
-        availability = (
-            "Available"
-            if eligible == 1
-            else "Not Available"
-        )
+        if existing_donor:
+            previous_availability = (
+                existing_donor["availability"]
+                if hasattr(existing_donor, "keys")
+                else existing_donor[10]
+            )
+            availability = (
+                AVAILABLE
+                if eligible == 1 and previous_availability == AVAILABLE
+                else UNAVAILABLE
+            )
+        else:
+            availability = AVAILABLE if eligible == 1 else UNAVAILABLE
 
         # -------------------------------
         # Save donor profile
