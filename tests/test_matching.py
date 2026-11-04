@@ -3,7 +3,10 @@ import unittest
 from datetime import datetime
 
 from app import (
+    app as flask_app,
     PAKISTAN_TZ,
+    activate_legacy_single_click_matches,
+    get_notification_target_url,
     donor_has_active_match,
     donor_has_other_active_match,
     get_active_request_count,
@@ -282,6 +285,138 @@ class DonorProfileActiveMatchTests(unittest.TestCase):
         self.assertTrue(donor_has_active_match(connection, 101))
         self.assertFalse(donor_has_active_match(connection, 102))
         connection.close()
+
+
+class LegacySingleClickMatchTests(unittest.TestCase):
+    def make_connection(self):
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                remaining_units INTEGER,
+                status TEXT,
+                needed_by TEXT
+            );
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                request_id INTEGER,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                units_pledged INTEGER,
+                status TEXT,
+                requester_confirmed INTEGER,
+                accepted_at TEXT,
+                confirmed_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE notifications (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                message TEXT,
+                notification_type TEXT,
+                created_at TEXT,
+                related_request_id INTEGER,
+                related_match_id INTEGER
+            );
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests
+                (id, user_id, remaining_units, status, needed_by)
+            VALUES (?, ?, ?, 'Pending', '2026-11-06 12:00:00')
+            """,
+            [(1, 10, 2), (2, 20, 1)],
+        )
+        connection.executemany(
+            """
+            INSERT INTO request_matches
+                (id, request_id, donor_id, donor_user_id, units_pledged,
+                 status, requester_confirmed, accepted_at, confirmed_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL, '2026-11-04 12:00:00')
+            """,
+            [
+                (101, 1, 501, 50, 1, "Accepted"),
+                (102, 2, 502, 51, 1, "Invited"),
+            ],
+        )
+        connection.commit()
+        return connection
+
+    def test_legacy_accepted_and_invited_matches_become_active_once(self):
+        from unittest.mock import patch
+
+        connection = self.make_connection()
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"), \\
+             patch("app.is_request_expired", return_value=False):
+            activate_legacy_single_click_matches(connection)
+
+        rows = connection.execute(
+            """
+            SELECT id, status, requester_confirmed, confirmed_at
+            FROM request_matches
+            ORDER BY id
+            """
+        ).fetchall()
+        self.assertEqual([row[1] for row in rows], ["Confirmed", "Confirmed"])
+        self.assertEqual([row[2] for row in rows], [1, 1])
+        self.assertTrue(all(row[3] for row in rows))
+        self.assertEqual(
+            connection.execute("SELECT COUNT(*) FROM notifications").fetchone()[0],
+            4,
+        )
+        connection.close()
+
+    def test_legacy_matches_do_not_overbook_request_units(self):
+        from unittest.mock import patch
+
+        connection = self.make_connection()
+        connection.execute(
+            """
+            INSERT INTO request_matches
+                (id, request_id, donor_id, donor_user_id, units_pledged,
+                 status, requester_confirmed, updated_at)
+            VALUES (103, 1, 503, 53, 2, 'Invited', 0, '2026-11-04 12:00:00')
+            """
+        )
+        connection.commit()
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"), \\
+             patch("app.is_request_expired", return_value=False):
+            activate_legacy_single_click_matches(connection)
+
+        statuses = dict(
+            connection.execute(
+                "SELECT id, status FROM request_matches"
+            ).fetchall()
+        )
+        self.assertEqual(statuses[101], "Confirmed")
+        self.assertEqual(statuses[103], "Cancelled")
+        connection.close()
+
+
+class NotificationDestinationTests(unittest.TestCase):
+    def test_match_notifications_prefer_potential_matches_over_request_history(self):
+        with flask_app.test_request_context():
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_confirmed", request_id=7, match_id=None
+                ),
+                "/my-matches",
+            )
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_confirmed", request_id=7, match_id=42
+                ),
+                "/my-matches#match-42",
+            )
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_message", request_id=7, match_id=42
+                ),
+                "/my-matches#match-chat-42",
+            )
 
 
 if __name__ == "__main__":
