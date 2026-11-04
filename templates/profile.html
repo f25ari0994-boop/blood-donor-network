@@ -778,7 +778,7 @@
                     >
 
                         <span class="stat-label">
-                            Blood Requests Created
+                            Completed Blood Requests
                         </span>
 
                         <span class="stat-number">
@@ -849,7 +849,7 @@
 
             <div class="history-heading">
 
-                <h2>My Donation History</h2>
+                <h2>Completed Donations</h2>
 
                 <button
                     type="button"
@@ -897,6 +897,12 @@
                                 <span>
                                     Request ID: {{ donation[7] or 'Not linked' }}
                                 </span>
+                                <span>
+                                    Donor Profile: {{ donation[9] or 'Unknown' }} ({{ donation[10] or 'N/A' }})
+                                </span>
+                                <span>
+                                    Your role: {{ 'Donor' if donation[11] == current_user_id else 'Requester' }}
+                                </span>
 
                                 <span>
                                     Receipt:
@@ -921,7 +927,7 @@
 
             <div class="history-heading">
 
-                <h2>My Blood Request History</h2>
+                <h2>Request History</h2>
 
                 <button
                     type="button"
@@ -931,7 +937,18 @@
                     Close
                 </button>
 
-            </div> {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
+            </div>
+            <div class="stats-grid" style="margin-bottom:18px;">
+                <div class="stat-card" style="min-height:auto;cursor:default;">
+                    <span class="stat-label">Active Requests</span>
+                    <span class="stat-number">{{ active_request_count }}</span>
+                </div>
+                <div class="stat-card" style="min-height:auto;cursor:default;">
+                    <span class="stat-label">Completed Requests</span>
+                    <span class="stat-number">{{ request_count }}</span>
+                </div>
+            </div>
+            {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
 
                         <article class="history-item">
 
