@@ -1,8 +1,11 @@
+import sqlite3
 import unittest
 from datetime import datetime
 
 from app import (
     PAKISTAN_TZ,
+    donor_has_active_match,
+    get_active_request_count,
     calculate_request_reminder_time,
     donor_matches_request,
     get_compatible_donor_groups,
@@ -116,6 +119,64 @@ class BloodCompatibilityTests(unittest.TestCase):
             get_compatible_donor_groups("AB+"),
             ["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-"],
         )
+
+
+
+
+class ActiveRequestLimitTests(unittest.TestCase):
+    def test_counts_only_pending_requests_with_units_remaining(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                status TEXT,
+                remaining_units INTEGER
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests (user_id, status, remaining_units)
+            VALUES (?, ?, ?)
+            """,
+            [
+                (7, "Pending", 2),
+                (7, "Pending", 1),
+                (7, "Fulfilled", 0),
+                (7, "Cancelled", 3),
+                (7, "Pending", 0),
+                (8, "Pending", 4),
+            ],
+        )
+        self.assertEqual(get_active_request_count(connection, 7), 2)
+        self.assertEqual(get_active_request_count(connection, 8), 1)
+        connection.close()
+
+
+class DonorProfileActiveMatchTests(unittest.TestCase):
+    def test_active_match_is_scoped_to_donor_profile_not_account(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                status TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO request_matches (donor_id, donor_user_id, status)
+            VALUES (101, 7, 'Confirmed')
+            """
+        )
+        self.assertTrue(donor_has_active_match(connection, 101))
+        self.assertFalse(donor_has_active_match(connection, 102))
+        connection.close()
 
 
 if __name__ == "__main__":
