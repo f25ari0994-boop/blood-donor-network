@@ -4741,6 +4741,8 @@ def notification_updates():
                 "type": kind,
                 "label": labels.get(kind, (kind or "update").replace("_", " ").title()),
                 "created_at": created_at,
+                "request_id": request_id,
+                "match_id": match_id,
                 "target_url": target_url,
             })
 
@@ -4971,6 +4973,18 @@ def profile():
         )
         request_count = cursor.fetchone()[0]
 
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM blood_requests
+            WHERE user_id = ?
+              AND status = 'Pending'
+              AND remaining_units > 0
+            """,
+            (user_id,),
+        )
+        active_request_count = cursor.fetchone()[0]
+
         # This user's complete donation history, including donations
         # made through any donor profile and donations received as requester.
         cursor.execute(
@@ -4983,7 +4997,12 @@ def profile():
                 d.units,
                 d.status,
                 d.requester_confirmed,
-                d.request_id
+                d.request_id,
+                donor.id,
+                donor.name,
+                donor.blood_type,
+                donor.user_id,
+                br.user_id
             FROM donations AS d
             LEFT JOIN donors AS donor ON donor.id = d.donor_id
             LEFT JOIN blood_requests AS br ON br.id = d.request_id
@@ -5033,6 +5052,7 @@ def profile():
         donor_profiles=donor_profiles,
         donation_count=donation_count,
         request_count=request_count,
+        active_request_count=active_request_count,
         donations=donations,
         my_requests=my_requests,
     )
