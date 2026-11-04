@@ -1,0 +1,63 @@
+/* Desktop consistency layer: non-dashboard pages only; mobile is unchanged. */
+@media (min-width: 761px) {
+  html { scroll-behavior: smooth; }
+  body { min-width: 0; }
+  .dashboard-content, .profile-container, .emergency-container,
+  .directory-panel, .search-box, .notifications-container,
+  .page > main, body > .page-wrapper > .container,
+  body > .page-wrapper > main.container, body > main.simple-page,
+  .simple-page { box-sizing: border-box; }
+
+  .dashboard-content, .profile-container, .emergency-container,
+  .directory-panel, .search-box, .notifications-container {
+    width: min(1180px, calc(100% - 64px));
+    margin-left: auto; margin-right: auto;
+  }
+  .site-nav {
+    width: min(1440px, calc(100% - 64px));
+    margin-left: auto; margin-right: auto;
+  }
+  .hero .container, .section .container, .bottom-cta .container,
+  body > .container {
+    width: min(1180px, calc(100% - 64px));
+    max-width: 1180px;
+    margin-left: auto; margin-right: auto;
+  }
+  .simple-page {
+    width: min(1040px, calc(100% - 64px));
+    max-width: 1040px;
+    margin: 36px auto; padding: 34px;
+  }
+  .page {
+    width: min(1180px, calc(100% - 64px));
+    max-width: 1180px;
+    margin-left: auto; margin-right: auto;
+  }
+  .page > main { width: 100%; }
+  .page-wrapper > .container, .page-wrapper > main.container {
+    width: min(850px, calc(100% - 64px));
+    max-width: 850px;
+    margin: 0 auto 32px;
+  }
+  body > main[style*="max-width:850px"] {
+    width: min(850px, calc(100% - 64px));
+    max-width: 850px !important;
+    margin: 36px auto !important;
+    padding: 28px !important;
+    box-sizing: border-box;
+  }
+  .dashboard-content, .profile-container, .emergency-container {
+    padding-top: 32px; padding-bottom: 40px;
+  }
+  .simple-page h1, .page-heading h1, .dashboard-hero h1, .hero h1 {
+    line-height: 1.2;
+  }
+  a, button, input[type="submit"], input[type="button"], input[type="reset"],
+  .stat-card, .donor-card, .notification-card, .item-card, .simple-card {
+    transition: color .18s ease, background-color .18s ease,
+      border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  button:disabled, input[type="submit"]:disabled, a[aria-disabled="true"] {
+    cursor: not-allowed; opacity: .6;
+  }
+}
