@@ -15,6 +15,7 @@ from app import (
     donor_matches_request,
     get_compatible_donor_groups,
     get_notification_recipient_user_ids,
+    request_has_committed_match,
     check_donor_eligibility,
     locations_match,
 )
@@ -158,6 +159,42 @@ class ActiveRequestLimitTests(unittest.TestCase):
         )
         self.assertEqual(get_active_request_count(connection, 7), 2)
         self.assertEqual(get_active_request_count(connection, 8), 1)
+        connection.close()
+
+
+class RequestMatchLockTests(unittest.TestCase):
+    def make_connection(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                request_id INTEGER,
+                status TEXT
+            )
+            """
+        )
+        return connection
+
+    def test_any_accepted_or_completed_match_locks_the_whole_request(self):
+        for status in ("Accepted", "Confirmed", "Donation Reported", "Completed", "Invited"):
+            with self.subTest(status=status):
+                connection = self.make_connection()
+                connection.execute(
+                    "INSERT INTO request_matches (request_id, status) VALUES (?, ?)",
+                    (25, status),
+                )
+                self.assertTrue(request_has_committed_match(connection, 25))
+                self.assertFalse(request_has_committed_match(connection, 26))
+                connection.close()
+
+    def test_rejected_and_cancelled_matches_release_the_request(self):
+        connection = self.make_connection()
+        connection.executemany(
+            "INSERT INTO request_matches (request_id, status) VALUES (?, ?)",
+            [(25, "Rejected"), (25, "Cancelled")],
+        )
+        self.assertFalse(request_has_committed_match(connection, 25))
         connection.close()
 
 
