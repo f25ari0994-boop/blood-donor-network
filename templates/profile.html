@@ -804,74 +804,37 @@
 
         <section class="panel donor-panel">
 
-            <h2>My Donor Profile</h2> {% if donor %}
-
-                <div class="donor-grid">
-
-
-                    <div class="donor-item">
-                        <small>Blood Group</small>
-                        <strong>{{ donor[3] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Age</small>
-                        <strong>{{ donor[2] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Location</small>
-                        <strong>{{ donor[4] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Availability</small>
-                        <strong>{{ donor[5] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Donation Eligibility</small>
-
-                        <strong>
-                            {{ 'Eligible' if donor[6] == 1 else 'Not Eligible' }}
-                        </strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Last Donation</small>
-
-                        <strong>
-                            {{ donor[7] or 'No previous donation recorded' }}
-                        </strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Health Screening</small>
-
-                        <strong>
-                            {{ donor[8] or 'Not Assessed' }}</strong>
-                    </div>
-
-
-                </div> {% else %}
-
+            <h2>My Donor Profiles</h2>
+            {% if donor_profiles %}
+                <div class="item-list">
+                    {% for donor in donor_profiles %}
+                        <article class="history-item">
+                            <div class="history-item-top">
+                                <strong>{{ donor[1] }} — {{ donor[3] }}</strong>
+                                <span class="status {{ 'completed' if donor[6] == 1 else 'pending' }}">
+                                    {{ 'Eligible' if donor[6] == 1 else 'Not Eligible' }}
+                                </span>
+                            </div>
+                            <div class="donor-grid">
+                                <div class="donor-item"><small>Age</small><strong>{{ donor[2] }}</strong></div>
+                                <div class="donor-item"><small>Blood Group</small><strong>{{ donor[3] }}</strong></div>
+                                <div class="donor-item"><small>Location</small><strong>{{ donor[4] }}</strong></div>
+                                <div class="donor-item"><small>Availability</small><strong>{{ donor[5] }}</strong></div>
+                                <div class="donor-item"><small>Last Donation</small><strong>{{ donor[7] or 'No previous donation recorded' }}</strong></div>
+                                <div class="donor-item"><small>Health Screening</small><strong>{{ donor[8] or 'Not Assessed' }}</strong></div>
+                            </div>
+                            <a class="edit-button" href="{{ url_for('donor', edit_id=donor[0]) }}">Edit This Donor Profile</a>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
                 <div class="empty-state">
-
                     You have not registered as a blood donor yet.
-
                     <br><br>
-
-                    <a href="{{ url_for('donor') }}">
-                        Create your donor profile
-                    </a>
-
-                </div> {% endif %}</section>
+                    <a href="{{ url_for('donor') }}">Create your donor profile</a>
+                </div>
+            {% endif %}
+        </section>
 
 
 
@@ -1068,6 +1031,17 @@
         }
 
     </script>
+
+    <div class="profile-container" style="padding-top:0;">
+        <form method="POST" action="{{ url_for('logout') }}"
+              onsubmit="return confirm('Are you sure you want to log out?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger"
+                    style="min-height:44px;padding:11px 22px;">
+                Logout
+            </button>
+        </form>
+    </div>
 
 </body>
 </html>
