@@ -7,6 +7,7 @@ from app import (
     PAKISTAN_TZ,
     activate_legacy_single_click_matches,
     get_notification_target_url,
+    get_active_request_by_id,
     donor_has_active_match,
     donor_has_other_active_match,
     get_active_request_count,
@@ -393,6 +394,53 @@ class LegacySingleClickMatchTests(unittest.TestCase):
         )
         self.assertEqual(statuses[101], "Confirmed")
         self.assertEqual(statuses[103], "Cancelled")
+        connection.close()
+
+
+class SpecificActiveRequestLookupTests(unittest.TestCase):
+    def test_returns_only_the_selected_open_request_owned_by_requester(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                blood_type TEXT,
+                location TEXT,
+                remaining_units INTEGER,
+                needed_by TEXT,
+                status TEXT
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests
+                (id, user_id, blood_type, location, remaining_units, needed_by, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (1, 10, "A+", "Sukkur", 2, "2026-11-06 10:00:00", "Pending"),
+                (2, 10, "B+", "Sukkur", 1, "2026-11-06 11:00:00", "Pending"),
+                (3, 11, "O+", "Sukkur", 1, "2026-11-06 12:00:00", "Pending"),
+                (4, 10, "AB+", "Sukkur", 0, "2026-11-06 13:00:00", "Pending"),
+                (5, 10, "O-", "Sukkur", 1, "2026-11-06 14:00:00", "Cancelled"),
+            ],
+        )
+        selected = get_active_request_by_id(connection, 10, 2)
+        self.assertEqual(
+            selected,
+            {
+                "id": 2,
+                "blood_type": "B+",
+                "location": "Sukkur",
+                "remaining_units": 1,
+                "needed_by": "2026-11-06 11:00:00",
+            },
+        )
+        self.assertIsNone(get_active_request_by_id(connection, 10, 3))
+        self.assertIsNone(get_active_request_by_id(connection, 10, 4))
+        self.assertIsNone(get_active_request_by_id(connection, 10, 5))
         connection.close()
 
 
