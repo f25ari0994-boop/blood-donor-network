@@ -898,42 +898,37 @@ def begin_write_transaction(connection):
         connection.execute("BEGIN IMMEDIATE")
 
 
-def get_reserved_units(connection, request_id, exclude_match_id=None):
+def get_reserved_units(
+    connection,
+    request_id,
+    exclude_match_id=None,
+    include_invited=True,
+):
     """
-    Units reserved by active matches.
-
-    These units are not counted as received units.
-    They only prevent over-acceptance.
+    Units pledged by active matches, excluding completed/rejected/cancelled
+    records. Legacy invitations can be excluded while they are migrated in
+    order so the earliest valid acceptance gets the available reservation.
     """
+    status_filter = (
+        "status IN (?, ?, ?, 'Invited')"
+        if include_invited
+        else "status IN (?, ?, ?)"
+    )
+    parameters = [request_id, *ACTIVE_MATCH_STATUSES]
 
-    if exclude_match_id is None:
-        row = connection.execute(
-            """
-            SELECT COALESCE(SUM(units_pledged), 0)
-            FROM request_matches
-            WHERE request_id = ?
-              AND status IN (?, ?, ?, 'Invited')
-            """,
-            (
-                request_id,
-                *ACTIVE_MATCH_STATUSES,
-            ),
-        ).fetchone()
-    else:
-        row = connection.execute(
-            """
-            SELECT COALESCE(SUM(units_pledged), 0)
-            FROM request_matches
-            WHERE request_id = ?
-              AND status IN (?, ?, ?, 'Invited')
-              AND id != ?
-            """,
-            (
-                request_id,
-                *ACTIVE_MATCH_STATUSES,
-                exclude_match_id,
-            ),
-        ).fetchone()
+    if exclude_match_id is not None:
+        status_filter += " AND id != ?"
+        parameters.append(exclude_match_id)
+
+    row = connection.execute(
+        f"""
+        SELECT COALESCE(SUM(units_pledged), 0)
+        FROM request_matches
+        WHERE request_id = ?
+          AND {status_filter}
+        """,
+        tuple(parameters),
+    ).fetchone()
 
     return int(row[0] or 0)
 
@@ -1305,7 +1300,10 @@ def activate_legacy_single_click_matches(connection):
 
         units = int(pledged_units or 1)
         reserved_units = get_reserved_units(
-            connection, request_id, exclude_match_id=match_id
+            connection,
+            request_id,
+            exclude_match_id=match_id,
+            include_invited=False,
         )
         donor_already_matched = donor_has_other_active_match(
             connection, donor_id, match_id
