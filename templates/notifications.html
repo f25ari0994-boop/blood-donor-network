@@ -421,7 +421,7 @@
                                         View Potential Matches
                                     {% elif notification.match_id %}
                                         Open Potential Matches
-                                    {% elif notification.type == "blood_request" %}
+                                    {% elif notification.type in ["blood_request", "match_request_found"] %}
                                         View Available Requests
                                     {% elif notification.request_id %}
                                         View My Requests
