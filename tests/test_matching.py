@@ -193,6 +193,90 @@ class RequestCreationNotificationIntegrationTests(unittest.TestCase):
             self.assertTrue(all("Blood needed by:" in row[2] for row in alerts))
 
 
+class MatchDetailRequesterActionTests(unittest.TestCase):
+    def test_only_requester_sees_donation_report_form(self):
+        import os
+        import tempfile
+        from datetime import timedelta
+        from unittest.mock import patch
+        from database import create_sqlite_tables, migrate_sqlite_database
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "match-detail.db")
+            setup = sqlite3.connect(database_path)
+            setup.row_factory = sqlite3.Row
+            create_sqlite_tables(setup)
+            migrate_sqlite_database(setup)
+
+            setup.executemany(
+                """
+                INSERT INTO users (id, name, email, phone, password, cnic)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (1, "Requester", "requester@example.com", "03001111111", "hash", "1111111111111"),
+                    (2, "Donor", "donor@example.com", "03002222222", "hash", "2222222222222"),
+                ],
+            )
+            now = datetime.now(PAKISTAN_TZ)
+            needed_by = (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+            setup.execute(
+                """
+                INSERT INTO donors
+                    (id, name, age, contact, blood_type, location, hospital,
+                     availability, eligible, user_id, health_screening_status,
+                     share_contact)
+                VALUES (1, 'Donor profile', 25, '03002222222', 'O-', 'Sukkur',
+                        'Civil Hospital', 'Available', 1, 2, 'Self-Declared Clear', 1)
+                """
+            )
+            setup.execute(
+                """
+                INSERT INTO blood_requests
+                    (id, blood_type, urgency, location, hospital, contact,
+                     needed_by, status, user_id, requested_units, received_units,
+                     remaining_units, created_at, updated_at)
+                VALUES (1, 'A+', 'Normal', 'Sukkur', 'Civil Hospital',
+                        '03001111111', ?, 'Pending', 1, 1, 0, 1, ?, ?)
+                """,
+                (needed_by, timestamp, timestamp),
+            )
+            setup.execute(
+                """
+                INSERT INTO request_matches
+                    (id, request_id, donor_id, donor_user_id, units_pledged,
+                     status, requester_confirmed, accepted_at, confirmed_at, updated_at)
+                VALUES (1, 1, 1, 2, 1, 'Confirmed', 1, ?, ?, ?)
+                """,
+                (timestamp, timestamp, timestamp),
+            )
+            setup.commit()
+            setup.close()
+
+            def connect_test_database():
+                connection = sqlite3.connect(database_path, timeout=10)
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA foreign_keys = ON")
+                return connection
+
+            with patch("app.get_db_connection", side_effect=connect_test_database):
+                requester_client = flask_app.test_client()
+                with requester_client.session_transaction() as session_data:
+                    session_data["user_id"] = 1
+                requester_response = requester_client.get("/match/1")
+
+                donor_client = flask_app.test_client()
+                with donor_client.session_transaction() as session_data:
+                    session_data["user_id"] = 2
+                donor_response = donor_client.get("/match/1")
+
+            self.assertEqual(requester_response.status_code, 200)
+            self.assertIn(b"Report donation", requester_response.data)
+            self.assertEqual(donor_response.status_code, 200)
+            self.assertNotIn(b"Report donation", donor_response.data)
+
+
 class BloodCompatibilityTests(unittest.TestCase):
     def test_a_positive_recipient_has_expected_donor_groups(self):
         self.assertEqual(
