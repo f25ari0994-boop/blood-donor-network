@@ -17,7 +17,10 @@
             try { path = new URL(anchor.href, window.location.href).pathname; }
             catch (_) { return; }
             if (!path.endsWith("/notifications")) return;
-            let badge = anchor.querySelector("[data-notification-badge]") || anchor.querySelector("span");
+            // Never reuse the notification label span as the unread badge.
+            let badge = anchor.querySelector(
+                "[data-notification-badge], .notification-count-badge"
+            );
             if (count > 0) {
                 if (!badge) {
                     badge = document.createElement("span");
