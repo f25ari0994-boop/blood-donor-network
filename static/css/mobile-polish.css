@@ -431,66 +431,9 @@
     line-height: 1.3;
   }
 
-  /* Compact, automatically rotating informational cards on the landing page. */
-  .section { padding: 38px 0 !important; }
-  .section-heading { margin-bottom: 17px !important; }
-  .section-heading h2 { font-size: 23px !important; line-height: 1.22; }
-  .section-heading p { font-size: 12px !important; line-height: 1.5; }
-  .community-subheading { margin: 7px 0 5px !important; font-size: 14px !important; }
-  .donor-public-grid {
-    display: block !important;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    padding: 2px 0 6px;
-  }
-  .donor-public-grid.mobile-ticker .mobile-ticker-track {
-    display: flex;
-    align-items: stretch;
-    gap: 10px;
-    width: max-content;
-    animation: mobileDonorTicker var(--ticker-duration, 22s) linear infinite;
-    will-change: transform;
-  }
-  .donor-public-grid .donor-stat-card {
-    flex: 0 0 154px;
-    width: 154px;
-    min-width: 154px;
-    min-height: 96px !important;
-    margin: 0 !important;
-    padding: 12px !important;
-    text-align: left;
-    border-radius: 12px;
-    box-shadow: 0 3px 12px rgba(25,35,55,.05);
-  }
-  .donor-public-grid .donor-stat-card strong {
-    display: block;
-    margin: 0 0 6px !important;
-    font-size: 13px !important;
-    line-height: 1.3;
-    overflow-wrap: anywhere;
-  }
-  .donor-public-grid .donor-stat-label {
-    padding: 4px 7px !important;
-    font-size: 10px !important;
-    line-height: 1.3;
-  }
-  .donor-public-grid .donor-stat-description {
-    margin: 5px 0 0 !important;
-    font-size: 10px !important;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-  }
-  @keyframes mobileDonorTicker {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
+
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .donor-public-grid.mobile-ticker .mobile-ticker-track { animation: none; }
-  .donor-public-grid.mobile-ticker { overflow-x: auto; }
-}
 
 
 /* Profile page: align its mobile structure with the accepted Dashboard design. */
@@ -1064,4 +1007,58 @@
   body.profile-page .detail-row { grid-template-columns: 68px minmax(0, 1fr) !important; }
   body.profile-page .stat-card { min-height: 104px !important; padding: 10px !important; }
   body.profile-page .stat-number { font-size: 23px !important; }
+}
+
+
+/* Shared public donor/request ticker: consistent leftward motion on every screen. */
+.donor-public-grid.mobile-ticker {
+  display: block !important;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 0 8px;
+  box-sizing: border-box;
+}
+.donor-public-grid.mobile-ticker .mobile-ticker-track {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(10px, 1.2vw, 16px);
+  width: max-content;
+  animation: publicCardsTicker var(--ticker-duration, 22s) linear infinite;
+  will-change: transform;
+}
+.donor-public-grid.mobile-ticker .donor-stat-card {
+  flex: 0 0 clamp(154px, 25vw, 300px);
+  width: clamp(154px, 25vw, 300px);
+  min-width: 0;
+  min-height: 120px;
+  margin: 0 !important;
+  padding: clamp(12px, 1.6vw, 20px) !important;
+  box-sizing: border-box;
+  text-align: left;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(25,35,55,.05);
+}
+.donor-public-grid.mobile-ticker .donor-stat-card strong {
+  display: block;
+  margin: 0 0 7px !important;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.donor-public-grid.mobile-ticker .donor-stat-label {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.donor-public-grid.mobile-ticker .donor-stat-description {
+  margin: 6px 0 0 !important;
+  overflow-wrap: anywhere;
+}
+@keyframes publicCardsTicker {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .donor-public-grid.mobile-ticker .mobile-ticker-track { animation: none !important; }
+  .donor-public-grid.mobile-ticker { overflow-x: auto; }
 }
