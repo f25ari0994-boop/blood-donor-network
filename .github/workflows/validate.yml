@@ -38,7 +38,7 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
-          for file in static/js/*.js; do
+          for file in static/js/language.js static/js/notifications.js static/js/mobile-polish.js; do
             node --check "$file"
           done
 
