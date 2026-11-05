@@ -119,6 +119,83 @@ class BloodRequestNotificationTargetTests(unittest.TestCase):
         )
 
 
+class RequestCreationNotificationIntegrationTests(unittest.TestCase):
+    def test_new_request_notifies_every_other_registered_account(self):
+        import os
+        import tempfile
+        from datetime import timedelta
+        from unittest.mock import patch
+        from database import create_sqlite_tables, migrate_sqlite_database
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "request-notifications.db")
+            setup = sqlite3.connect(database_path)
+            setup.row_factory = sqlite3.Row
+            create_sqlite_tables(setup)
+            migrate_sqlite_database(setup)
+            setup.executemany(
+                """
+                INSERT INTO users (name, email, phone, password, cnic)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [
+                    ("Requester", "requester@example.com", "03001111111", "hash", "1111111111111"),
+                    ("Registered user", "user@example.com", "03002222222", "hash", "2222222222222"),
+                    ("No donor profile", "other@example.com", "03003333333", "hash", "3333333333333"),
+                ],
+            )
+            setup.commit()
+            setup.close()
+
+            def connect_test_database():
+                connection = sqlite3.connect(database_path, timeout=10)
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA foreign_keys = ON")
+                return connection
+
+            deadline = (
+                flask_app.config.get("TEST_NOW")
+                or __import__("datetime").datetime.now(PAKISTAN_TZ)
+            ) + timedelta(days=2)
+
+            with patch("app.get_db_connection", side_effect=connect_test_database):
+                client = flask_app.test_client()
+                with client.session_transaction() as session_data:
+                    session_data["user_id"] = 1
+                    session_data["_csrf_token"] = "test-csrf-token"
+
+                response = client.post(
+                    "/request",
+                    data={
+                        "csrf_token": "test-csrf-token",
+                        "blood_type": "A+",
+                        "location": "Sukkur",
+                        "hospital": "Civil Hospital",
+                        "contact": "03004444444",
+                        "requested_units": "2",
+                        "needed_by": deadline.strftime("%Y-%m-%dT%H:%M"),
+                    },
+                )
+
+            self.assertEqual(response.status_code, 302)
+            verify = sqlite3.connect(database_path)
+            alerts = verify.execute(
+                """
+                SELECT user_id, notification_type, message
+                FROM notifications
+                WHERE notification_type = 'blood_request'
+                ORDER BY user_id
+                """
+            ).fetchall()
+            verify.close()
+
+            self.assertEqual([row[0] for row in alerts], [2, 3])
+            self.assertTrue(all("A+" in row[2] for row in alerts))
+            self.assertTrue(all("2 unit(s)" in row[2] for row in alerts))
+            self.assertTrue(all("Sukkur" in row[2] for row in alerts))
+            self.assertTrue(all("Blood needed by:" in row[2] for row in alerts))
+
+
 class BloodCompatibilityTests(unittest.TestCase):
     def test_a_positive_recipient_has_expected_donor_groups(self):
         self.assertEqual(
