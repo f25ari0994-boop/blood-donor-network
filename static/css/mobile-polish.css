@@ -1022,7 +1022,8 @@
 .donor-public-grid.mobile-ticker .mobile-ticker-track {
   display: flex;
   align-items: stretch;
-  gap: clamp(10px, 1.2vw, 16px);
+  --ticker-gap: clamp(10px, 1.2vw, 16px);
+  gap: 0;
   width: max-content;
   animation: publicCardsTicker var(--ticker-duration, 22s) linear infinite;
   will-change: transform;
@@ -1032,7 +1033,7 @@
   width: clamp(154px, 25vw, 300px);
   min-width: 0;
   min-height: 120px;
-  margin: 0 !important;
+  margin: 0 var(--ticker-gap) 0 0 !important;
   padding: clamp(12px, 1.6vw, 20px) !important;
   box-sizing: border-box;
   text-align: left;
