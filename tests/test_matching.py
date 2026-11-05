@@ -92,25 +92,30 @@ class DonorRequestMatchingTests(unittest.TestCase):
 
 
 class BloodRequestNotificationTargetTests(unittest.TestCase):
-    def test_only_compatible_donors_in_same_city_are_notified_once(self):
-        donor_rows = [
-            (11, "A+", "Sukkur"),
-            (12, "AB+", "Sukkur"),
-            (13, "O-", "Rohri"),
-            (14, "O-", "Sukkur, Sindh"),
-            (11, "O-", "Sukkur"),
-            (15, "A+", "Sukkur"),
-            (None, "O-", "Sukkur"),
+    def test_every_registered_user_is_notified_once_except_request_creator(self):
+        registered_users = [
+            (11,),
+            (12,),
+            (13,),
+            (11,),
+            (15,),
+            (None,),
         ]
 
         self.assertEqual(
             get_notification_recipient_user_ids(
-                donor_rows,
-                "A+",
-                "Sukkur City",
+                registered_users,
                 excluded_user_id=15,
             ),
-            [11, 14],
+            [11, 12, 13],
+        )
+
+    def test_registered_user_without_a_donor_profile_can_receive_alerts(self):
+        registered_users = [(21,), (22,)]
+
+        self.assertEqual(
+            get_notification_recipient_user_ids(registered_users),
+            [21, 22],
         )
 
 
