@@ -153,10 +153,7 @@ class RequestCreationNotificationIntegrationTests(unittest.TestCase):
                 connection.execute("PRAGMA foreign_keys = ON")
                 return connection
 
-            deadline = (
-                flask_app.config.get("TEST_NOW")
-                or __import__("datetime").datetime.now(PAKISTAN_TZ)
-            ) + timedelta(days=2)
+            deadline = datetime.now(PAKISTAN_TZ) + timedelta(days=2)
 
             with patch("app.get_db_connection", side_effect=connect_test_database):
                 client = flask_app.test_client()
