@@ -312,34 +312,24 @@ def donor_matches_request(
 
 
 def get_notification_recipient_user_ids(
-    donor_rows,
-    request_blood_type,
-    request_location,
+    user_rows,
     excluded_user_id=None,
 ):
-    """Return unique user IDs for donors compatible with a blood request."""
+    """Return each registered user's ID once, excluding the request creator."""
     recipient_ids = []
     seen_user_ids = set()
 
-    for donor_row in donor_rows:
-        donor_user_id = donor_row[0]
-        donor_blood_type = donor_row[1]
-        donor_location = donor_row[2]
+    for user_row in user_rows:
+        recipient_user_id = user_row[0]
         if (
-            not donor_user_id
-            or donor_user_id == excluded_user_id
-            or donor_user_id in seen_user_ids
+            not recipient_user_id
+            or recipient_user_id == excluded_user_id
+            or recipient_user_id in seen_user_ids
         ):
             continue
 
-        if donor_matches_request(
-            donor_blood_type,
-            donor_location,
-            request_blood_type,
-            request_location,
-        ):
-            recipient_ids.append(donor_user_id)
-            seen_user_ids.add(donor_user_id)
+        recipient_ids.append(recipient_user_id)
+        seen_user_ids.add(recipient_user_id)
 
     return recipient_ids
 
@@ -3238,69 +3228,31 @@ def blood_request():
             "%d %b %Y at %I:%M %p"
         )
 
-        # Notify only donors who can potentially fulfil this request.
-        # Users without an eligible, available and cleared donor profile,
-        # donors from other cities, and donors with an active match are skipped.
-        cooldown_cutoff = (
-            get_pakistan_time().date() - timedelta(days=90)
-        ).isoformat()
-
-        donor_notification_candidates = cursor.execute(
+        # Every other registered account receives the new request alert.
+        # Donor eligibility and compatibility are evaluated separately in
+        # Potential Matches; they must not prevent users from seeing requests.
+        registered_user_rows = cursor.execute(
             """
-            SELECT d.user_id, d.blood_type, d.location, d.name
-            FROM donors AS d
-            WHERE d.user_id IS NOT NULL
-              AND d.user_id != ?
-              AND d.availability = ?
-              AND d.eligible = 1
-              AND d.health_screening_status = ?
-              AND (d.last_donation IS NULL OR d.last_donation <= ?)
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM request_matches AS rm
-                      WHERE rm.donor_id = d.id
-                    AND (rm.status IN (?, ?, ?) OR rm.status = 'Invited')
-              )
-            ORDER BY d.user_id, d.id
+            SELECT id
+            FROM users
+            WHERE id != ?
+            ORDER BY id
             """,
-            (
-                user_id,
-                AVAILABLE,
-                "Self-Declared Clear",
-                cooldown_cutoff,
-                *ACTIVE_MATCH_STATUSES,
-            ),
+            (user_id,),
         ).fetchall()
 
         notification_recipient_ids = get_notification_recipient_user_ids(
-            donor_notification_candidates,
-            blood_type,
-            location,
+            registered_user_rows,
             excluded_user_id=user_id,
         )
 
-        compatible_profile_labels = {}
-        for donor_row in donor_notification_candidates:
-            donor_user_id, donor_blood_type, donor_location, donor_name = donor_row
-            if donor_matches_request(
-                donor_blood_type, donor_location, blood_type, location
-            ):
-                compatible_profile_labels.setdefault(donor_user_id, [])
-                label = f"{donor_name} ({donor_blood_type})"
-                if label not in compatible_profile_labels[donor_user_id]:
-                    compatible_profile_labels[donor_user_id].append(label)
-
+        notification_message = (
+            f"New {urgency.lower()} blood request: "
+            f"{blood_type}, {requested_units} unit(s), "
+            f"location: {location}. "
+            f"Blood needed by: {deadline_display} (Pakistan time)."
+        )
         for recipient_user_id in notification_recipient_ids:
-            profile_text = ", ".join(
-                compatible_profile_labels.get(recipient_user_id, [])
-            )
-            notification_message = (
-                f"New {urgency.lower()} blood request: "
-                f"{blood_type}, {requested_units} unit(s), "
-                f"location: {location}. "
-                f"Blood needed by: {deadline_display} (Pakistan time). "
-                f"Compatible donor profile(s): {profile_text}."
-            )
             create_notification(
                 connection,
                 recipient_user_id,
