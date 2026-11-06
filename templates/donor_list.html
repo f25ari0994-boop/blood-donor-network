@@ -1110,16 +1110,22 @@
 
                         {% endif %}
 
-                        {% if active_request and donor[9] != current_user_id and donor[6] == "Available" and donor[7] == 1 %}
+                        {% if donor[9] and donor[9] != current_user_id and donor[6] == "Available" and donor[7] == 1 %}
                             <form method="POST"
                                   action="{{ url_for('request_donor', donor_id=donor[0]) }}"
                                   style="margin-top:12px;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <div class="owner-note" style="margin-bottom:8px;">
-                                    Using your latest active request: #{{ active_request.id }} — {{ active_request.blood_type }}.
-                                </div>
+                                {% if active_request %}
+                                    <div class="owner-note" style="margin-bottom:8px;">
+                                        Using your latest active request: #{{ active_request.id }} — {{ active_request.blood_type }}.
+                                    </div>
+                                {% else %}
+                                    <div class="owner-note" style="margin-bottom:8px;">
+                                        Create a blood request first. After submitting it, return here to request this donor.
+                                    </div>
+                                {% endif %}
                                 <button type="submit" class="btn btn-primary">
-                                    Request This Donor
+                                    Request for Blood
                                 </button>
                             </form>
                         {% endif %}
