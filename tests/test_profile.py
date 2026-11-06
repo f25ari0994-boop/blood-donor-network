@@ -237,7 +237,7 @@ class ProfilePageRegressionTests(unittest.TestCase):
         next_response = self.client.get("/profile")
         self.assertEqual(next_response.status_code, 200)
         self.assertIn(
-            '<meta name="app-language" content="Urdu">',
+            '<meta name="app-language" content="Urdu" data-authenticated="true">',
             next_response.get_data(as_text=True),
         )
 
