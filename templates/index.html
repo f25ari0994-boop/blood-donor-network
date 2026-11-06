@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+  <meta name="app-language" content="{{ language_preference|default('English') }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#b4233b">
     <meta name="description" content="Blood Donor and Emergency Request Network connects blood donors and people seeking blood through emergency requests, matching and donation tracking.">
@@ -1512,5 +1513,6 @@
 </script>
 
 <script src="{{ url_for('static', filename='js/mobile-polish.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
