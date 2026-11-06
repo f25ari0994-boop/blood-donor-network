@@ -5244,6 +5244,18 @@ def profile():
         donation_count = cursor.fetchone()[0]
 
         # Every blood request created by this user.
+        # Count every request created by this user, regardless of status.
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM blood_requests
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        )
+        request_count = cursor.fetchone()[0]
+
+        # Keep completed and active counts separate for the history summary.
         cursor.execute(
             """
             SELECT COUNT(*)
@@ -5253,7 +5265,7 @@ def profile():
             """,
             (user_id,),
         )
-        request_count = cursor.fetchone()[0]
+        completed_request_count = cursor.fetchone()[0]
 
         cursor.execute(
             """
@@ -5288,12 +5300,12 @@ def profile():
             FROM donations AS d
             LEFT JOIN donors AS donor ON donor.id = d.donor_id
             LEFT JOIN blood_requests AS br ON br.id = d.request_id
-            WHERE (donor.user_id = ? OR br.user_id = ?)
+            WHERE donor.user_id = ?
               AND d.status = 'Confirmed'
               AND d.requester_confirmed = 1
             ORDER BY d.id DESC
             """,
-            (user_id, user_id),
+            (user_id,),
         )
         donations = cursor.fetchall()
 
@@ -5333,6 +5345,7 @@ def profile():
         donor_profiles=donor_profiles,
         donation_count=donation_count,
         request_count=request_count,
+        completed_request_count=completed_request_count,
         active_request_count=active_request_count,
         donations=donations,
         my_requests=my_requests,
