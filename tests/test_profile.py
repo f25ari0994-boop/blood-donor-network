@@ -257,10 +257,30 @@ class ProfilePageRegressionTests(unittest.TestCase):
             "about.html",
             "how_it_works.html",
             "public_explore.html",
+            "dashboard.html",
+            "donation_history.html",
+            "donor.html",
+            "donor_list.html",
+            "emergency.html",
+            "login.html",
+            "match_detail.html",
+            "notifications.html",
+            "profile.html",
+            "report_donation.html",
+            "signup.html",
         ):
             template = Path("templates", template_name).read_text(encoding="utf-8")
             self.assertIn('name="app-language"', template, template_name)
             self.assertIn("js/language.js", template, template_name)
+
+    def test_language_script_restores_browser_preference_and_translates_controls(self):
+        from pathlib import Path
+
+        script = Path("static/js/language.js").read_text(encoding="utf-8")
+        self.assertIn('localStorage.getItem("app-language")', script)
+        self.assertIn('localStorage.setItem("app-language",serverLang)', script)
+        self.assertIn('input[type="submit"],input[type="button"],input[type="reset"]', script)
+        self.assertIn('["placeholder","aria-label","alt","title"]', script)
 
     def test_translation_dictionary_covers_primary_workflows(self):
         from pathlib import Path
