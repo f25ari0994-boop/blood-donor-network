@@ -2754,142 +2754,37 @@ def donor():
 
 
 # =========================================================
-# 15. DONOR SEARCH
+# 15. LEGACY FIND-DONORS URL
 # =========================================================
-
 @app.route("/search", methods=["GET", "POST"])
 @login_required
 def search():
-    user_id = get_user_id()
-    check_donor_eligibility(user_id)
-
-    donors = []
-    selected_blood_type = ""
-    selected_location = ""
-    compatible_donor_groups = []
-
+    """
+    Keep old Find Donors links working while routing all searches
+    through the single Donor Directory page.
+    """
     if request.method == "POST":
         selected_blood_type = form_text("blood_type", 3).upper()
         selected_location = form_text("location", 150)
+    else:
+        selected_blood_type = clean_text(
+            request.args.get("blood_type", "")
+        ).upper()
+        selected_location = clean_text(
+            request.args.get("location", "")
+        )
 
-        if (
-            selected_blood_type not in BLOOD_TYPES
-            or not selected_location
-        ):
-            flash("Select a valid blood group and enter a location.", "error")
+    if selected_blood_type or selected_location:
+        return redirect(
+            url_for(
+                "donor_list",
+                blood_type=selected_blood_type,
+                location=selected_location,
+            ),
+            code=303 if request.method == "POST" else 302,
+        )
 
-        else:
-            compatible_donor_groups = get_compatible_donor_groups(
-                selected_blood_type
-            )
-            cooldown_cutoff = (
-                get_pakistan_time().date() - timedelta(days=90)
-            ).isoformat()
-
-            connection = get_db_connection()
-
-            try:
-                placeholders = ", ".join(
-                    "?" for _ in compatible_donor_groups
-                )
-
-                donor_rows = connection.execute(
-                    f"""
-                    SELECT
-                        id,
-                        name,
-                        age,
-                        contact,
-                        blood_type,
-                        location,
-                        hospital,
-                        availability,
-                        eligible,
-                        last_donation,
-                        user_id,
-                        share_contact,
-                        CASE WHEN EXISTS (
-                            SELECT 1
-                            FROM request_matches AS rm
-                            JOIN blood_requests AS br ON br.id = rm.request_id
-                            WHERE rm.donor_id = donors.id
-                              AND br.user_id = ?
-                              AND rm.requester_confirmed = 1
-                              AND rm.status IN ('Confirmed', 'Donation Reported', 'Completed')
-                        ) THEN 1 ELSE 0 END AS confirmed_match
-                    FROM donors
-                    WHERE availability = ?
-                      AND eligible = 1
-                      AND health_screening_status = ?
-                      AND (last_donation IS NULL OR last_donation <= ?)
-                      AND blood_type IN ({placeholders})
-                    ORDER BY id DESC
-                    """,
-                    (
-                        user_id,
-                        AVAILABLE,
-                        "Self-Declared Clear",
-                        cooldown_cutoff,
-                        *compatible_donor_groups,
-                    ),
-                ).fetchall()
-
-                donor_columns = (
-                    "id", "name", "age", "contact", "blood_type",
-                    "location", "hospital", "availability", "eligible",
-                    "last_donation", "user_id", "share_contact",
-                    "confirmed_match",
-                )
-
-                donors = []
-
-                for donor_row in donor_rows:
-                    donor_data = dict(zip(donor_columns, tuple(donor_row)))
-                    donor_is_owner = donor_data["user_id"] == user_id
-                    contact_is_shared = (
-                        donor_data["share_contact"] == 1
-                        and not donor_is_owner
-                        and donor_data["confirmed_match"] == 1
-                    )
-
-                    if not locations_match(
-                        selected_location,
-                        donor_data["location"],
-                    ):
-                        continue
-
-                    if not contact_is_shared:
-                        donor_data["contact"] = None
-
-                    donor_data["whatsapp"] = (
-                        normalize_whatsapp_number(donor_data["contact"])
-                        if donor_data["contact"]
-                        else ""
-                    )
-                    donor_data["is_owner"] = donor_is_owner
-                    donors.append(donor_data)
-
-            except Exception:
-                app.logger.exception("Donor search failed")
-                flash("Unable to search donors.", "error")
-
-            finally:
-                connection.close()
-
-    connection = get_db_connection()
-    try:
-        active_request = get_latest_active_request(connection, user_id)
-    finally:
-        connection.close()
-
-    return render_template(
-        "search.html",
-        donors=donors,
-        selected_blood_type=selected_blood_type,
-        selected_location=selected_location,
-        compatible_donor_groups=compatible_donor_groups,
-        active_request=active_request,
-    )
+    return redirect(url_for("donor_list"))
 
 
 # =========================================================
@@ -2898,14 +2793,39 @@ def search():
 @app.route("/donor-list")
 @login_required
 def donor_list():
-    check_donor_eligibility(get_user_id())
+    user_id = get_user_id()
+    check_donor_eligibility(user_id)
+
+    selected_blood_type = clean_text(
+        request.args.get("blood_type", "")
+    ).upper()
+    selected_location = clean_text(
+        request.args.get("location", "")
+    )
+    compatible_donor_groups = []
+    compatibility_filter_active = False
+
+    if selected_blood_type or selected_location:
+        if selected_blood_type not in BLOOD_TYPES or not selected_location:
+            flash(
+                "Select a valid blood group and enter a location.",
+                "error",
+            )
+            selected_blood_type = ""
+            selected_location = ""
+        else:
+            compatible_donor_groups = get_compatible_donor_groups(
+                selected_blood_type
+            )
+            compatibility_filter_active = True
+
     cooldown_cutoff = (
         get_pakistan_time().date() - timedelta(days=90)
     ).isoformat()
     connection = get_db_connection()
 
     try:
-        donors = connection.execute(
+        donor_rows = connection.execute(
             """
             SELECT
                 d.id,
@@ -2960,8 +2880,8 @@ def donor_list():
             ORDER BY d.id DESC
             """,
             (
-                get_user_id(),
-                get_user_id(),
+                user_id,
+                user_id,
                 AVAILABLE,
                 "Self-Declared Clear",
                 cooldown_cutoff,
@@ -2975,11 +2895,22 @@ def donor_list():
             ),
         ).fetchall()
 
-        donor_rows = donors
         donors = []
 
         for donor_row in donor_rows:
             donor_values = tuple(donor_row)
+
+            if compatibility_filter_active and (
+                donor_values[4] not in compatible_donor_groups
+                or donor_values[6] != AVAILABLE
+                or donor_values[7] != 1
+                or not locations_match(
+                    selected_location,
+                    donor_values[5],
+                )
+            ):
+                continue
+
             whatsapp_number = (
                 normalize_whatsapp_number(donor_values[3])
                 if donor_values[3]
@@ -2997,7 +2928,7 @@ def donor_list():
 
     connection = get_db_connection()
     try:
-        active_request = get_latest_active_request(connection, get_user_id())
+        active_request = get_latest_active_request(connection, user_id)
     finally:
         connection.close()
 
@@ -3005,8 +2936,13 @@ def donor_list():
         "donor_list.html",
         donors=donors,
         active_request=active_request,
+        selected_blood_type=selected_blood_type,
+        selected_location=selected_location,
+        compatible_donor_groups=compatible_donor_groups,
+        compatibility_filter_active=compatibility_filter_active,
     )
-    # =========================================================
+
+
 # DONOR AVAILABILITY TOGGLE
 # =========================================================
 
