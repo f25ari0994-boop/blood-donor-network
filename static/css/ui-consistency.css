@@ -129,3 +129,659 @@
     padding: 20px;
   }
 }
+
+
+/* =========================================================
+   MOBILE UX LAYER
+   Shared touch-friendly layout for all application pages.
+   Desktop styles are intentionally unchanged.
+========================================================= */
+
+@media (max-width: 760px) {
+  html {
+    scroll-padding-top: 88px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-width: 320px;
+    overflow-x: hidden;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  main,
+  section,
+  article,
+  form,
+  fieldset,
+  .card,
+  .panel,
+  .item-card,
+  .notification-card {
+    min-width: 0;
+  }
+
+  .dashboard-content,
+  .profile-container,
+  .emergency-container,
+  .content-container,
+  .notifications-container,
+  .simple-page,
+  .container {
+    width: calc(100% - 28px) !important;
+    max-width: 100% !important;
+  }
+
+  .dashboard-content,
+  .profile-container,
+  .container {
+    padding-top: 20px;
+    padding-bottom: 32px;
+  }
+
+  .simple-page {
+    margin: 16px auto;
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .dashboard-header,
+  .header,
+  .topbar,
+  .site-header {
+    max-width: 100%;
+  }
+
+  .dashboard-header {
+    padding: 10px 14px !important;
+    gap: 9px 10px !important;
+  }
+
+  .header-inner {
+    min-height: 66px !important;
+    padding: 9px 14px !important;
+    gap: 10px !important;
+  }
+
+  .topbar,
+  .site-nav {
+    min-height: 64px;
+    padding: 9px 14px !important;
+    gap: 10px;
+  }
+
+  .brand,
+  .site-logo {
+    min-width: 0;
+    max-width: 100%;
+    gap: 9px;
+  }
+
+  .brand img,
+  .site-logo img {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+
+  .brand strong,
+  .brand-name,
+  .brand-copy strong {
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .brand span,
+  .brand-subtitle,
+  .brand-copy span {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .menu-toggle,
+  .mobile-menu-toggle,
+  .mobile-menu-btn,
+  .mobile-notification-btn,
+  .mobile-menu summary {
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    border-radius: 10px;
+  }
+
+  .desktop-nav.open,
+  .nav.open,
+  .nav-links.open,
+  .mobile-nav.open,
+  .mobile-nav.active {
+    gap: 7px;
+  }
+
+  .desktop-nav.open a,
+  .nav.open a,
+  .nav-links.open a,
+  .mobile-nav.open a,
+  .mobile-nav.active a {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.35;
+    border-radius: 9px;
+  }
+
+  .mobile-menu-panel {
+    width: min(280px, calc(100vw - 24px));
+    padding: 8px;
+    border-radius: 13px;
+  }
+
+  .mobile-menu-panel a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .page-heading,
+  .page-header,
+  .section-heading {
+    gap: 10px;
+  }
+
+  .page-heading h1,
+  .page-header h1,
+  .hero h1,
+  .dashboard-hero h1 {
+    font-size: clamp(23px, 6vw, 29px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .page-heading p,
+  .page-header p,
+  .section-heading p,
+  .hero p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .section,
+  .panel,
+  .card,
+  .form-card,
+  .form-container,
+  .emergency-form-card,
+  .search-box,
+  .directory-panel,
+  .item-card,
+  .donor-card,
+  .notification-card,
+  .stat-card,
+  .action-card,
+  .info-card,
+  .request-card,
+  .match-card {
+    border-radius: 13px;
+  }
+
+  .panel,
+  .card,
+  .item-card,
+  .donor-card,
+  .notification-card,
+  .request-card,
+  .match-card {
+    padding: 16px !important;
+  }
+
+  .form-card,
+  .form-container,
+  .emergency-form-card,
+  .search-box,
+  .directory-panel,
+  .auth-container {
+    padding: 18px !important;
+    border-radius: 14px;
+  }
+
+  .hero,
+  .dashboard-hero {
+    padding: 23px 18px !important;
+    border-radius: 14px;
+  }
+
+  .form-grid,
+  .search-form,
+  .profile-layout,
+  .form-row,
+  .auth-layout,
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .form-grid,
+  .search-form {
+    gap: 14px;
+  }
+
+  .form-group,
+  .form-group.full,
+  .full-width {
+    min-width: 0;
+    grid-column: auto !important;
+  }
+
+  label,
+  .form-group label {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]),
+  select,
+  textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 11px 12px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  textarea {
+    min-height: 105px;
+  }
+
+  button,
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  .primary-btn,
+  .secondary-btn,
+  .btn-primary,
+  .btn-secondary,
+  .submit-btn,
+  .emergency-submit-btn,
+  .hero-button,
+  .btn,
+  .donor-action-btn,
+  .submit-button {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .form-actions,
+  .hero-actions,
+  .donor-actions,
+  .notification-actions,
+  .match-actions,
+  .button-row,
+  .action-row {
+    gap: 9px;
+  }
+
+  .form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-actions > *,
+  .form-actions button,
+  .form-actions a {
+    width: 100%;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-actions .btn,
+  .hero-actions a {
+    width: 100%;
+  }
+
+  .donor-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .donor-actions form,
+  .donor-actions a,
+  .donor-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .button-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .button-row > *,
+  .button-row form,
+  .button-row .action-form,
+  .action-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .button-row .btn,
+  .action-form .btn {
+    width: 100%;
+  }
+
+  .inline-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .inline-form .form-group {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .inline-form button,
+  .inline-form input[type="submit"] {
+    width: 100%;
+  }
+
+  .match-chat {
+    padding: 13px !important;
+    border-radius: 12px;
+  }
+
+  .chat-message-list {
+    max-height: 300px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .chat-message {
+    max-width: 92%;
+    overflow-wrap: anywhere;
+  }
+
+  .match-chat-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .match-chat-form textarea,
+  .match-chat-form button {
+    width: 100%;
+  }
+
+  .stats-grid,
+  .quick-actions-grid,
+  .action-grid,
+  .donor-list-grid,
+  .donor-grid,
+  .item-details,
+  .history-meta,
+  .history-meta-grid,
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-height: 118px;
+    padding: 13px !important;
+  }
+
+  .stat-number {
+    font-size: 25px;
+  }
+
+  .item-top,
+  .history-item-top,
+  .pending-header,
+  .toolbar,
+  .section-heading {
+    align-items: flex-start;
+  }
+
+  .item-top,
+  .history-item-top {
+    flex-wrap: wrap;
+  }
+
+  .detail,
+  .detail-row,
+  .history-meta span,
+  .donor-detail,
+  .notification-meta {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .detail strong,
+  .detail-row strong,
+  .detail-value {
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+
+  .notification-card {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .notification-content {
+    flex: 1 1 190px;
+    min-width: 0;
+  }
+
+  .notification-content h3,
+  .notification-content p {
+    overflow-wrap: anywhere;
+  }
+
+  .notification-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .notification-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .simple-table-wrap,
+  .table-responsive,
+  .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  .simple-table {
+    min-width: 640px;
+  }
+
+  table {
+    max-width: 100%;
+  }
+
+  .page-footer,
+  .site-footer,
+  footer {
+    overflow-wrap: anywhere;
+  }
+
+  .empty-state {
+    padding: 22px 15px;
+  }
+
+  .section-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .section-nav a {
+    min-width: 0;
+    min-height: 44px;
+    justify-content: flex-start;
+    padding: 9px 10px;
+    font-size: 12px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .flash-message,
+  .flash,
+  .alert,
+  .notice {
+    padding: 12px 13px;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .back-link,
+  .back-link a,
+  .simple-link,
+  a.back-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .site-footer .footer-main,
+  .footer-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .bottom-cta {
+    padding: 24px 16px;
+  }
+
+  .bottom-cta h2 {
+    font-size: 22px;
+    line-height: 1.25;
+  }
+}
+
+/* Profile is the one authenticated page without a menu toggle.
+   Give its navigation a compact two-column layout instead of
+   forcing users to horizontally scroll through the links. */
+@supports selector(body:has(.profile-container)) {
+  @media (max-width: 760px) {
+    body:has(.profile-container) .dashboard-header {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 9px;
+    }
+
+    body:has(.profile-container) .dashboard-header .desktop-nav {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      width: 100%;
+      gap: 7px;
+      overflow: visible;
+      padding: 4px 0 2px;
+    }
+
+    body:has(.profile-container) .dashboard-header .desktop-nav a {
+      min-width: 0;
+      min-height: 42px;
+      justify-content: flex-start;
+      padding: 9px 10px;
+      font-size: 12px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-content,
+  .profile-container,
+  .emergency-container,
+  .content-container,
+  .notifications-container,
+  .simple-page,
+  .container {
+    width: calc(100% - 24px) !important;
+  }
+
+  .stats-grid,
+  .donor-grid,
+  .item-details,
+  .history-meta,
+  .history-meta-grid,
+  .details-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .donor-list-grid,
+  .quick-actions-grid,
+  .action-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .donor-actions,
+  .notification-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section-nav {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section-nav a {
+    justify-content: flex-start;
+  }
+
+  .panel,
+  .card,
+  .item-card,
+  .donor-card,
+  .notification-card,
+  .request-card,
+  .match-card {
+    padding: 14px !important;
+  }
+
+  .form-card,
+  .form-container,
+  .emergency-form-card,
+  .search-box,
+  .directory-panel,
+  .auth-container {
+    padding: 15px !important;
+  }
+
+  .section-heading {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

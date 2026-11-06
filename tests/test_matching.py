@@ -1,12 +1,22 @@
+import sqlite3
 import unittest
 from datetime import datetime
 
 from app import (
+    app as flask_app,
     PAKISTAN_TZ,
+    activate_legacy_single_click_matches,
+    get_notification_target_url,
+    get_active_request_by_id,
+    donor_has_active_match,
+    donor_has_other_active_match,
+    get_active_request_count,
     calculate_request_reminder_time,
     donor_matches_request,
     get_compatible_donor_groups,
     get_notification_recipient_user_ids,
+    request_has_committed_match,
+    check_donor_eligibility,
     locations_match,
 )
 
@@ -82,26 +92,189 @@ class DonorRequestMatchingTests(unittest.TestCase):
 
 
 class BloodRequestNotificationTargetTests(unittest.TestCase):
-    def test_only_compatible_donors_in_same_city_are_notified_once(self):
-        donor_rows = [
-            (11, "A+", "Sukkur"),
-            (12, "AB+", "Sukkur"),
-            (13, "O-", "Rohri"),
-            (14, "O-", "Sukkur, Sindh"),
-            (11, "O-", "Sukkur"),
-            (15, "A+", "Sukkur"),
-            (None, "O-", "Sukkur"),
+    def test_every_registered_user_is_notified_once_except_request_creator(self):
+        registered_users = [
+            (11,),
+            (12,),
+            (13,),
+            (11,),
+            (15,),
+            (None,),
         ]
 
         self.assertEqual(
             get_notification_recipient_user_ids(
-                donor_rows,
-                "A+",
-                "Sukkur City",
+                registered_users,
                 excluded_user_id=15,
             ),
-            [11, 14],
+            [11, 12, 13],
         )
+
+    def test_registered_user_without_a_donor_profile_can_receive_alerts(self):
+        registered_users = [(21,), (22,)]
+
+        self.assertEqual(
+            get_notification_recipient_user_ids(registered_users),
+            [21, 22],
+        )
+
+
+class RequestCreationNotificationIntegrationTests(unittest.TestCase):
+    def test_new_request_notifies_every_other_registered_account(self):
+        import os
+        import tempfile
+        from datetime import timedelta
+        from unittest.mock import patch
+        from database import create_sqlite_tables, migrate_sqlite_database
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "request-notifications.db")
+            setup = sqlite3.connect(database_path)
+            setup.row_factory = sqlite3.Row
+            create_sqlite_tables(setup)
+            migrate_sqlite_database(setup)
+            setup.executemany(
+                """
+                INSERT INTO users (name, email, phone, password, cnic)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [
+                    ("Requester", "requester@example.com", "03001111111", "hash", "1111111111111"),
+                    ("Registered user", "user@example.com", "03002222222", "hash", "2222222222222"),
+                    ("No donor profile", "other@example.com", "03003333333", "hash", "3333333333333"),
+                ],
+            )
+            setup.commit()
+            setup.close()
+
+            def connect_test_database():
+                connection = sqlite3.connect(database_path, timeout=10)
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA foreign_keys = ON")
+                return connection
+
+            deadline = datetime.now(PAKISTAN_TZ) + timedelta(days=2)
+
+            with patch("app.get_db_connection", side_effect=connect_test_database):
+                client = flask_app.test_client()
+                with client.session_transaction() as session_data:
+                    session_data["user_id"] = 1
+                    session_data["_csrf_token"] = "test-csrf-token"
+
+                response = client.post(
+                    "/request",
+                    data={
+                        "csrf_token": "test-csrf-token",
+                        "blood_type": "A+",
+                        "location": "Sukkur",
+                        "hospital": "Civil Hospital",
+                        "contact": "03004444444",
+                        "requested_units": "2",
+                        "needed_by": deadline.strftime("%Y-%m-%dT%H:%M"),
+                    },
+                )
+
+            self.assertEqual(response.status_code, 302)
+            verify = sqlite3.connect(database_path)
+            alerts = verify.execute(
+                """
+                SELECT user_id, notification_type, message
+                FROM notifications
+                WHERE notification_type = 'blood_request'
+                ORDER BY user_id
+                """
+            ).fetchall()
+            verify.close()
+
+            self.assertEqual([row[0] for row in alerts], [2, 3])
+            self.assertTrue(all("A+" in row[2] for row in alerts))
+            self.assertTrue(all("2 unit(s)" in row[2] for row in alerts))
+            self.assertTrue(all("Sukkur" in row[2] for row in alerts))
+            self.assertTrue(all("Blood needed by:" in row[2] for row in alerts))
+
+
+class MatchDetailRequesterActionTests(unittest.TestCase):
+    def test_only_requester_sees_donation_report_form(self):
+        import os
+        import tempfile
+        from datetime import timedelta
+        from unittest.mock import patch
+        from database import create_sqlite_tables, migrate_sqlite_database
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "match-detail.db")
+            setup = sqlite3.connect(database_path)
+            setup.row_factory = sqlite3.Row
+            create_sqlite_tables(setup)
+            migrate_sqlite_database(setup)
+
+            setup.executemany(
+                """
+                INSERT INTO users (id, name, email, phone, password, cnic)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (1, "Requester", "requester@example.com", "03001111111", "hash", "1111111111111"),
+                    (2, "Donor", "donor@example.com", "03002222222", "hash", "2222222222222"),
+                ],
+            )
+            now = datetime.now(PAKISTAN_TZ)
+            needed_by = (now + timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+            timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
+            setup.execute(
+                """
+                INSERT INTO donors
+                    (id, name, age, contact, blood_type, location, hospital,
+                     availability, eligible, user_id, health_screening_status,
+                     share_contact)
+                VALUES (1, 'Donor profile', 25, '03002222222', 'O-', 'Sukkur',
+                        'Civil Hospital', 'Available', 1, 2, 'Self-Declared Clear', 1)
+                """
+            )
+            setup.execute(
+                """
+                INSERT INTO blood_requests
+                    (id, blood_type, urgency, location, hospital, contact,
+                     needed_by, status, user_id, requested_units, received_units,
+                     remaining_units, created_at, updated_at)
+                VALUES (1, 'A+', 'Normal', 'Sukkur', 'Civil Hospital',
+                        '03001111111', ?, 'Pending', 1, 1, 0, 1, ?, ?)
+                """,
+                (needed_by, timestamp, timestamp),
+            )
+            setup.execute(
+                """
+                INSERT INTO request_matches
+                    (id, request_id, donor_id, donor_user_id, units_pledged,
+                     status, requester_confirmed, accepted_at, confirmed_at, updated_at)
+                VALUES (1, 1, 1, 2, 1, 'Confirmed', 1, ?, ?, ?)
+                """,
+                (timestamp, timestamp, timestamp),
+            )
+            setup.commit()
+            setup.close()
+
+            def connect_test_database():
+                connection = sqlite3.connect(database_path, timeout=10)
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA foreign_keys = ON")
+                return connection
+
+            with patch("app.get_db_connection", side_effect=connect_test_database):
+                requester_client = flask_app.test_client()
+                with requester_client.session_transaction() as session_data:
+                    session_data["user_id"] = 1
+                requester_response = requester_client.get("/match/1")
+
+                donor_client = flask_app.test_client()
+                with donor_client.session_transaction() as session_data:
+                    session_data["user_id"] = 2
+                donor_response = donor_client.get("/match/1")
+
+            self.assertEqual(requester_response.status_code, 200)
+            self.assertIn(b"Report donation", requester_response.data)
+            self.assertEqual(donor_response.status_code, 200)
+            self.assertNotIn(b"Report donation", donor_response.data)
 
 
 class BloodCompatibilityTests(unittest.TestCase):
@@ -116,6 +289,421 @@ class BloodCompatibilityTests(unittest.TestCase):
             get_compatible_donor_groups("AB+"),
             ["A+", "A-", "AB+", "AB-", "B+", "B-", "O+", "O-"],
         )
+
+
+
+
+class ActiveRequestLimitTests(unittest.TestCase):
+    def test_counts_only_pending_requests_with_units_remaining(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                status TEXT,
+                remaining_units INTEGER
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests (user_id, status, remaining_units)
+            VALUES (?, ?, ?)
+            """,
+            [
+                (7, "Pending", 2),
+                (7, "Pending", 1),
+                (7, "Fulfilled", 0),
+                (7, "Cancelled", 3),
+                (7, "Pending", 0),
+                (8, "Pending", 4),
+            ],
+        )
+        self.assertEqual(get_active_request_count(connection, 7), 2)
+        self.assertEqual(get_active_request_count(connection, 8), 1)
+        connection.close()
+
+
+class RequestMatchCapacityTests(unittest.TestCase):
+    def make_connection(self):
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                remaining_units INTEGER
+            );
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                request_id INTEGER,
+                units_pledged INTEGER,
+                status TEXT
+            );
+            INSERT INTO blood_requests (id, remaining_units) VALUES (25, 3);
+            """
+        )
+        return connection
+
+    def test_partial_match_leaves_remaining_units_available_to_other_donors(self):
+        connection = self.make_connection()
+        connection.execute(
+            """
+            INSERT INTO request_matches (request_id, units_pledged, status)
+            VALUES (25, 1, 'Confirmed')
+            """
+        )
+        self.assertFalse(request_has_committed_match(connection, 25))
+        connection.close()
+
+    def test_request_is_fully_reserved_only_when_active_pledges_cover_remaining_units(self):
+        connection = self.make_connection()
+        connection.executemany(
+            """
+            INSERT INTO request_matches (request_id, units_pledged, status)
+            VALUES (25, ?, ?)
+            """,
+            [(1, "Confirmed"), (2, "Accepted")],
+        )
+        self.assertTrue(request_has_committed_match(connection, 25))
+        connection.close()
+
+    def test_completed_match_does_not_reserve_units_again(self):
+        connection = self.make_connection()
+        connection.execute(
+            """
+            INSERT INTO request_matches (request_id, units_pledged, status)
+            VALUES (25, 1, 'Completed')
+            """
+        )
+        self.assertFalse(request_has_committed_match(connection, 25))
+        connection.close()
+
+    def test_rejected_and_cancelled_matches_do_not_reserve_units(self):
+        connection = self.make_connection()
+        connection.executemany(
+            """
+            INSERT INTO request_matches (request_id, units_pledged, status)
+            VALUES (25, ?, ?)
+            """,
+            [(1, "Rejected"), (1, "Cancelled")],
+        )
+        self.assertFalse(request_has_committed_match(connection, 25))
+        connection.close()
+
+
+class DonorProfileEligibilityIsolationTests(unittest.TestCase):
+    def test_recalculating_one_profile_does_not_change_sibling_profiles(self):
+        import os
+        import tempfile
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            database_path = os.path.join(directory, "eligibility-test.db")
+            setup = sqlite3.connect(database_path)
+            setup.execute(
+                """
+                CREATE TABLE donors (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    name TEXT,
+                    last_donation TEXT,
+                    eligible INTEGER,
+                    availability TEXT,
+                    health_screening_status TEXT
+                )
+                """
+            )
+            setup.execute(
+                """
+                CREATE TABLE notifications (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    message TEXT,
+                    notification_type TEXT,
+                    created_at TEXT,
+                    related_request_id INTEGER,
+                    related_match_id INTEGER
+                )
+                """
+            )
+            setup.executemany(
+                """
+                INSERT INTO donors
+                    (id, user_id, name, last_donation, eligible,
+                     availability, health_screening_status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (101, 7, "Rizwan", None, 0, "Not Available", "Self-Declared Clear"),
+                    (102, 7, "Family member", None, 1, "Not Available", "Self-Declared Clear"),
+                    (103, 7, "Other family member", None, 0, "Not Available", "Needs Professional Review"),
+                ],
+            )
+            setup.commit()
+            setup.close()
+
+            with patch(
+                "app.get_db_connection",
+                side_effect=lambda: sqlite3.connect(database_path),
+            ):
+                check_donor_eligibility(7, donor_id=101)
+
+            verify = sqlite3.connect(database_path)
+            rows = {
+                row[0]: row[1:]
+                for row in verify.execute(
+                    """
+                    SELECT id, eligible, availability, health_screening_status
+                    FROM donors
+                    ORDER BY id
+                    """
+                ).fetchall()
+            }
+            verify.close()
+
+            self.assertEqual(rows[101], (1, "Available", "Self-Declared Clear"))
+            self.assertEqual(rows[102], (1, "Not Available", "Self-Declared Clear"))
+            self.assertEqual(rows[103], (0, "Not Available", "Needs Professional Review"))
+
+
+class DonorProfileActiveMatchTests(unittest.TestCase):
+    def test_other_active_match_is_checked_per_profile_not_account(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                status TEXT
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO request_matches (id, donor_id, donor_user_id, status)
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (1, 101, 7, "Invited"),
+                (2, 102, 7, "Confirmed"),
+            ],
+        )
+
+        self.assertFalse(donor_has_other_active_match(connection, 101, 1))
+        self.assertTrue(donor_has_other_active_match(connection, 102, 99))
+        self.assertFalse(donor_has_other_active_match(connection, 103, 99))
+        connection.close()
+
+    def test_active_match_is_scoped_to_donor_profile_not_account(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                status TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO request_matches (donor_id, donor_user_id, status)
+            VALUES (101, 7, 'Confirmed')
+            """
+        )
+        self.assertTrue(donor_has_active_match(connection, 101))
+        self.assertFalse(donor_has_active_match(connection, 102))
+        connection.close()
+
+
+class LegacySingleClickMatchTests(unittest.TestCase):
+    def make_connection(self):
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                remaining_units INTEGER,
+                status TEXT,
+                needed_by TEXT
+            );
+            CREATE TABLE request_matches (
+                id INTEGER PRIMARY KEY,
+                request_id INTEGER,
+                donor_id INTEGER,
+                donor_user_id INTEGER,
+                units_pledged INTEGER,
+                status TEXT,
+                requester_confirmed INTEGER,
+                accepted_at TEXT,
+                confirmed_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE notifications (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                message TEXT,
+                notification_type TEXT,
+                created_at TEXT,
+                related_request_id INTEGER,
+                related_match_id INTEGER
+            );
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests
+                (id, user_id, remaining_units, status, needed_by)
+            VALUES (?, ?, ?, 'Pending', '2026-11-06 12:00:00')
+            """,
+            [(1, 10, 2), (2, 20, 1)],
+        )
+        connection.executemany(
+            """
+            INSERT INTO request_matches
+                (id, request_id, donor_id, donor_user_id, units_pledged,
+                 status, requester_confirmed, accepted_at, confirmed_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 0, NULL, NULL, '2026-11-04 12:00:00')
+            """,
+            [
+                (101, 1, 501, 50, 1, "Accepted"),
+                (102, 2, 502, 51, 1, "Invited"),
+            ],
+        )
+        connection.commit()
+        return connection
+
+    def test_legacy_accepted_and_invited_matches_become_active_once(self):
+        from unittest.mock import patch
+
+        connection = self.make_connection()
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"):
+            with patch("app.is_request_expired", return_value=False):
+                activate_legacy_single_click_matches(connection)
+
+        rows = connection.execute(
+            """
+            SELECT id, status, requester_confirmed, confirmed_at
+            FROM request_matches
+            ORDER BY id
+            """
+        ).fetchall()
+        self.assertEqual([row[1] for row in rows], ["Confirmed", "Confirmed"])
+        self.assertEqual([row[2] for row in rows], [1, 1])
+        self.assertTrue(all(row[3] for row in rows))
+        self.assertEqual(
+            connection.execute("SELECT COUNT(*) FROM notifications").fetchone()[0],
+            4,
+        )
+        connection.close()
+
+    def test_legacy_matches_do_not_overbook_request_units(self):
+        from unittest.mock import patch
+
+        connection = self.make_connection()
+        connection.execute(
+            """
+            INSERT INTO request_matches
+                (id, request_id, donor_id, donor_user_id, units_pledged,
+                 status, requester_confirmed, updated_at)
+            VALUES (103, 1, 503, 53, 2, 'Invited', 0, '2026-11-04 12:00:00')
+            """
+        )
+        connection.commit()
+        with patch("app.get_current_time", return_value="2026-11-04 12:00:00"):
+            with patch("app.is_request_expired", return_value=False):
+                activate_legacy_single_click_matches(connection)
+
+        statuses = dict(
+            connection.execute(
+                "SELECT id, status FROM request_matches"
+            ).fetchall()
+        )
+        self.assertEqual(statuses[101], "Confirmed")
+        self.assertEqual(statuses[103], "Cancelled")
+        connection.close()
+
+
+class SpecificActiveRequestLookupTests(unittest.TestCase):
+    def test_returns_only_the_selected_open_request_owned_by_requester(self):
+        connection = sqlite3.connect(":memory:")
+        connection.execute(
+            """
+            CREATE TABLE blood_requests (
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER,
+                blood_type TEXT,
+                location TEXT,
+                remaining_units INTEGER,
+                needed_by TEXT,
+                status TEXT
+            )
+            """
+        )
+        connection.executemany(
+            """
+            INSERT INTO blood_requests
+                (id, user_id, blood_type, location, remaining_units, needed_by, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (1, 10, "A+", "Sukkur", 2, "2026-11-06 10:00:00", "Pending"),
+                (2, 10, "B+", "Sukkur", 1, "2026-11-06 11:00:00", "Pending"),
+                (3, 11, "O+", "Sukkur", 1, "2026-11-06 12:00:00", "Pending"),
+                (4, 10, "AB+", "Sukkur", 0, "2026-11-06 13:00:00", "Pending"),
+                (5, 10, "O-", "Sukkur", 1, "2026-11-06 14:00:00", "Cancelled"),
+            ],
+        )
+        selected = get_active_request_by_id(connection, 10, 2)
+        self.assertEqual(
+            selected,
+            {
+                "id": 2,
+                "blood_type": "B+",
+                "location": "Sukkur",
+                "remaining_units": 1,
+                "needed_by": "2026-11-06 11:00:00",
+            },
+        )
+        self.assertIsNone(get_active_request_by_id(connection, 10, 3))
+        self.assertIsNone(get_active_request_by_id(connection, 10, 4))
+        self.assertIsNone(get_active_request_by_id(connection, 10, 5))
+        connection.close()
+
+
+class NotificationDestinationTests(unittest.TestCase):
+    def test_match_notifications_prefer_potential_matches_over_request_history(self):
+        with flask_app.test_request_context():
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_confirmed", request_id=7, match_id=None
+                ),
+                "/my-matches",
+            )
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_confirmed", request_id=7, match_id=42
+                ),
+                "/my-matches#match-42",
+            )
+            self.assertEqual(
+                get_notification_target_url(
+                    "match_message", request_id=7, match_id=42
+                ),
+                "/my-matches#match-chat-42",
+            )
+            self.assertEqual(
+                get_notification_target_url("blood_request", request_id=7),
+                "/available-requests",
+            )
+            self.assertEqual(
+                get_notification_target_url("match_request_found", request_id=7),
+                "/available-requests",
+            )
 
 
 if __name__ == "__main__":

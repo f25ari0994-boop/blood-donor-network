@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#a71930">
     <title>Report Blood Donation | Blood Donor Network</title>
@@ -240,6 +241,7 @@
     </style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
 <body>
@@ -374,5 +376,6 @@
 
 </main>
 </div>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

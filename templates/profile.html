@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>My Profile | Blood Donor & Emergency Request Network</title>
@@ -494,9 +495,12 @@
     </style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
-<body>
+<body class="profile-page">
 
     <!-- =================================
          DASHBOARD STYLE HEADER
@@ -518,7 +522,18 @@
 
         </a>
 
-        <nav class="desktop-nav" aria-label="Main navigation">
+        <button
+            type="button"
+            class="menu-toggle"
+            id="profileMenuToggle"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="profileMobileNavigation"
+        >
+            <span></span><span></span><span></span>
+        </button>
+
+        <nav class="desktop-nav" id="profileMobileNavigation" aria-label="Main navigation">
 
             <a href="{{ url_for('dashboard') }}">
                 Dashboard
@@ -526,10 +541,6 @@
 
             <a href="{{ url_for('donor') }}">
                 Become a Donor
-            </a>
-
-            <a href="{{ url_for('search') }}">
-                Find Donors
             </a>
 
             <a href="{{ url_for('request_blood') }}">
@@ -544,19 +555,19 @@
             </a>
 <a
     href="{{ url_for('notifications') }}"
+    class="notification-nav-link"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
     title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
 >
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+    <svg class="notification-bell" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.8"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
         <path d="M10 21h4"/>
     </svg>
+    <span class="notification-text">Notification</span>
     {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+        <span class="notification-count-badge">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
         </span>
     {% endif %}
@@ -778,7 +789,7 @@
                     >
 
                         <span class="stat-label">
-                            Blood Requests Created
+                            Total Blood Requests
                         </span>
 
                         <span class="stat-number">
@@ -804,74 +815,37 @@
 
         <section class="panel donor-panel">
 
-            <h2>My Donor Profile</h2> {% if donor %}
-
-                <div class="donor-grid">
-
-
-                    <div class="donor-item">
-                        <small>Blood Group</small>
-                        <strong>{{ donor[3] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Age</small>
-                        <strong>{{ donor[2] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Location</small>
-                        <strong>{{ donor[4] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Availability</small>
-                        <strong>{{ donor[5] }}</strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Donation Eligibility</small>
-
-                        <strong>
-                            {{ 'Eligible' if donor[6] == 1 else 'Not Eligible' }}
-                        </strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Last Donation</small>
-
-                        <strong>
-                            {{ donor[7] or 'No previous donation recorded' }}
-                        </strong>
-                    </div>
-
-
-                    <div class="donor-item">
-                        <small>Health Screening</small>
-
-                        <strong>
-                            {{ donor[8] or 'Not Assessed' }}</strong>
-                    </div>
-
-
-                </div> {% else %}
-
+            <h2>My Donor Profiles</h2>
+            {% if donor_profiles %}
+                <div class="item-list">
+                    {% for donor in donor_profiles %}
+                        <article class="history-item">
+                            <div class="history-item-top">
+                                <strong>{{ donor[1] }} — {{ donor[3] }}</strong>
+                                <span class="status {{ 'completed' if donor[6] == 1 else 'pending' }}">
+                                    {{ 'Eligible' if donor[6] == 1 else 'Not Eligible' }}
+                                </span>
+                            </div>
+                            <div class="donor-grid">
+                                <div class="donor-item"><small>Age</small><strong>{{ donor[2] }}</strong></div>
+                                <div class="donor-item"><small>Blood Group</small><strong>{{ donor[3] }}</strong></div>
+                                <div class="donor-item"><small>Location</small><strong>{{ donor[4] }}</strong></div>
+                                <div class="donor-item"><small>Availability</small><strong>{{ donor[5] }}</strong></div>
+                                <div class="donor-item"><small>Last Donation</small><strong>{{ donor[7] or 'No previous donation recorded' }}</strong></div>
+                                <div class="donor-item"><small>Health Screening</small><strong>{{ donor[8] or 'Not Assessed' }}</strong></div>
+                            </div>
+                            <a class="edit-button" href="{{ url_for('donor', edit_id=donor[0]) }}">Edit This Donor Profile</a>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
                 <div class="empty-state">
-
                     You have not registered as a blood donor yet.
-
                     <br><br>
-
-                    <a href="{{ url_for('donor') }}">
-                        Create your donor profile
-                    </a>
-
-                </div> {% endif %}</section>
+                    <a href="{{ url_for('donor') }}">Create your donor profile</a>
+                </div>
+            {% endif %}
+        </section>
 
 
 
@@ -886,7 +860,7 @@
 
             <div class="history-heading">
 
-                <h2>My Donation History</h2>
+                <h2>Completed Donations</h2>
 
                 <button
                     type="button"
@@ -934,6 +908,12 @@
                                 <span>
                                     Request ID: {{ donation[7] or 'Not linked' }}
                                 </span>
+                                <span>
+                                    Donor Profile: {{ donation[9] or 'Unknown' }} ({{ donation[10] or 'N/A' }})
+                                </span>
+                                <span>
+                                    Your role: {{ 'Donor' if donation[11] == current_user_id else 'Requester' }}
+                                </span>
 
                                 <span>
                                     Receipt:
@@ -958,7 +938,7 @@
 
             <div class="history-heading">
 
-                <h2>My Blood Request History</h2>
+                <h2>Request History</h2>
 
                 <button
                     type="button"
@@ -968,7 +948,18 @@
                     Close
                 </button>
 
-            </div> {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
+            </div>
+            <div class="stats-grid" style="margin-bottom:18px;">
+                <div class="stat-card" style="min-height:auto;cursor:default;">
+                    <span class="stat-label">Active Requests</span>
+                    <span class="stat-number">{{ active_request_count }}</span>
+                </div>
+                <div class="stat-card" style="min-height:auto;cursor:default;">
+                    <span class="stat-label">Completed Requests</span>
+                    <span class="stat-number">{{ completed_request_count }}</span>
+                </div>
+            </div>
+            {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
 
                         <article class="history-item">
 
@@ -1069,5 +1060,41 @@
 
     </script>
 
+
+<script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
+
+<script>
+(function () {
+    const button = document.getElementById("profileMenuToggle");
+    const navigation = document.getElementById("profileMobileNavigation");
+    if (!button || !navigation) return;
+
+    function closeMenu() {
+        navigation.classList.remove("open");
+        button.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-label", "Open navigation menu");
+    }
+
+    button.addEventListener("click", function () {
+        const isOpen = navigation.classList.toggle("open");
+        button.setAttribute("aria-expanded", String(isOpen));
+        button.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+    });
+
+    navigation.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", closeMenu);
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeMenu();
+    });
+
+    window.addEventListener("resize", function () {
+        if (window.innerWidth > 760) closeMenu();
+    });
+})();
+</script>
+
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

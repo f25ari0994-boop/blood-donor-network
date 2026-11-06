@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergency Blood Requests | Blood Donor Network</title>
 
@@ -155,30 +156,58 @@
             padding: 32px 0 65px;
         }
 
+        /* HERO — MATCH THE BECOME A DONOR PAGE */
         .hero {
-            background: linear-gradient(115deg, #861332, #a82449);
+            position: relative;
+            overflow: hidden;
+            padding: 42px 30px;
+            border-radius: 20px;
+            background: linear-gradient(115deg, #650019, #800020 60%, #a32643);
             color: white;
-            padding: 34px 38px;
-            border-radius: 16px;
-            margin-bottom: 25px;
+            box-shadow: 0 12px 30px rgba(128,0,32,.13);
+            text-align: center;
+            margin-bottom: 24px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 25px;
-            box-shadow: var(--shadow);
+            justify-content: center;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            right: -70px;
+            top: -90px;
+            border: 28px solid rgba(255,255,255,.10);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero > div:first-child {
+            position: relative;
+            z-index: 1;
+            width: 100%;
         }
 
         .hero h1 {
             color: #ffffff !important;
-            font-size: 29px;
-            line-height: 1.3;
-            margin-bottom: 9px;
+            font-size: clamp(28px, 4vw, 38px);
+            font-weight: 750;
+            line-height: 1.25;
+            margin: 0 0 14px;
         }
 
         .hero p {
-            color: rgba(255,255,255,0.88);
-            max-width: 690px;
+            color: #fff3f5;
+            max-width: 650px;
+            margin: 0 auto;
             font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .hero-icon {
+            display: none;
         }
 
         .hero-icon {
@@ -394,7 +423,13 @@
 
         /* BUTTONS */
 
-        .btn {
+    .btn-accept {
+        min-height: 38px;
+        padding: 9px 15px;
+        font-size: 12px;
+    }
+
+    .btn {
             min-height: 40px;
             display: inline-flex;
             justify-content: center;
@@ -864,20 +899,16 @@
             }
 
             .hero {
-                padding: 25px 22px;
+                padding: 28px 23px;
+                border-radius: 16px;
             }
 
             .hero h1 {
-                font-size: 23px;
+                font-size: 28px;
             }
 
             .hero p {
-                font-size: 13px;
-            }
-
-            .hero-icon {
-                width: 55px;
-                height: 55px;
+                font-size: 12px;
             }
 
             .hero-icon svg {
@@ -965,6 +996,9 @@
     </style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
 <body>
@@ -1001,25 +1035,24 @@
         <nav class="nav" id="mainNavigation">
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
             <a href="{{ url_for('donor') }}">Become a Donor</a>
-            <a href="{{ url_for('search') }}">Find Donors</a>
             <a href="{{ url_for('request_blood') }}" class="active">Emergency Request</a>
             <a href="{{ url_for('donor_list') }}">Donor Directory</a>
 <a href="{{ url_for('profile') }}">Profile</a>
 <a
     href="{{ url_for('notifications') }}"
+    class="notification-nav-link"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
     title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
 >
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+    <svg class="notification-bell" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.8"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
         <path d="M10 21h4"/>
     </svg>
+    <span class="notification-text">Notification</span>
     {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+        <span class="notification-count-badge">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
         </span>
     {% endif %}
@@ -1096,16 +1129,16 @@
                 <path d="M3 20c0-4 2-6 6-6M21 20c0-4-2-6-6-6"/>
                 <path d="m10 17 2 2 4-4"/>
             </svg>
-            My Matches
+            Potential Matches
         </a>
 
-        <a href="{{ url_for('donation_progress') }}" class="{% if page_view == 'donation_progress' %}active{% endif %}">
+        <a href="{{ url_for('available_requests') }}" class="{% if page_view == 'find' %}active{% endif %}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round">
-                <path d="M4 19V5M4 19h17"/>
-                <path d="m7 15 4-4 3 2 6-7"/>
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-4-4"/>
             </svg>
-            Donation Progress
+            Available Requests
         </a>
 
     </nav>
@@ -1279,14 +1312,15 @@
          2. AVAILABLE BLOOD REQUESTS
     ====================================================== -->
 
-    <section class="section" id="available-requests">
+    <section class="section" id="available-requests"
+             data-notification-cursor="{{ notification_cursor }}">
 
         <div class="section-heading">
             <div>
                 <h2>Available Blood Requests</h2>
                 <p>
-                    Requests compatible with your available donor profiles.
-                    You can accept a request if you meet the eligibility rules.
+                    All active blood requests posted by other users. Accept a request
+                    when one of your donor profiles is compatible and eligible.
                 </p>
             </div>
 
@@ -1404,6 +1438,18 @@
                                 <input type="hidden" name="csrf_token"
                                        value="{{ csrf_token() }}">
 
+                                {% set profile_options = matching_donor_profiles_by_request.get(req[0], []) %}
+                                {% if profile_options %}
+                                    <div class="form-group">
+                                        <label for="donor-profile-{{ req[0] }}">Select donor profile</label>
+                                        <select id="donor-profile-{{ req[0] }}" name="donor_id" required>
+                                            <option value="">Choose a donor profile</option>
+                                            {% for profile in profile_options %}
+                                                <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endif %}
                                 <div class="form-group">
                                     <label for="units-{{ req[0] }}">
                                         Units you can donate
@@ -1420,7 +1466,8 @@
                                     >
                                 </div>
 
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary btn-accept"
+                                        {% if not profile_options %}disabled{% endif %}>
                                     Accept This Request
                                 </button>
                             </form>
@@ -1428,10 +1475,10 @@
                         </div>
 
                         <p class="form-help" style="margin-top: 12px;">
-                            Your acceptance will be sent to the requester.
-                            The match becomes confirmed only after the requester
-                            approves it. Your active match must be completed or
-                            cancelled before accepting another request.
+                            Accepting this request starts the match immediately. The requester does not
+                            need to approve it again. Your private chat becomes available
+                            as soon as the match is active. Each donor profile can have
+                            only one active match at a time.
                         </p>
 
                     </article>
@@ -1643,14 +1690,15 @@
          4. MY MATCHES
     ====================================================== -->
 
-    <section class="section" id="my-matches">
+    <section class="section" id="my-matches"
+             data-notification-cursor="{{ notification_cursor }}">
 
         <div class="section-heading">
             <div>
                 <h2>My Matches</h2>
                 <p>
-                    View compatible donors and requests, pending responses,
-                    accepted matches, and confirmed donations.
+                    Compatible donors, accepted matches, private chat, and the complete
+                    donation coordination process are managed here.
                 </p>
             </div>
 
@@ -1665,11 +1713,6 @@
             <div class="item-list">
 
                 {% if potential_matches %}
-                    <div class="section-subheading">
-                        <h3>Potential Matches</h3>
-                        <p>These requests and donors match your blood group and city. They are not confirmed yet.</p>
-                    </div>
-
                     {% for potential in potential_matches %}
 
                         <article class="item-card">
@@ -1755,11 +1798,21 @@
                             {% if potential.my_role == "Requester" %}
 
                                 <div class="privacy-note">
-                                    A compatible, eligible donor is available in your city.
-                                    The donor has not accepted your request yet, so this is
-                                    a potential match—not a confirmed donation. You will be
-                                    asked to confirm after a donor accepts.
+                                    This donor is compatible and eligible for your request.
+                                    Accept once to activate the match. The donor will see the
+                                    same active match and can coordinate with you in this chat.
                                 </div>
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('request_donor', donor_id=potential.candidate_donor_id) }}"
+                                    class="button-row"
+                                >
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="request_id" value="{{ potential.request_id }}">
+                                    <button type="submit" class="btn btn-primary">
+                                        Accept This Donor &amp; Start Match
+                                    </button>
+                                </form>
 
                             {% else %}
 
@@ -1777,6 +1830,18 @@
                                     <input type="hidden" name="csrf_token"
                                            value="{{ csrf_token() }}">
 
+                                    {% set profile_options = matching_donor_profiles_by_request.get(potential.request_id, []) %}
+                                    {% if profile_options %}
+                                        <div class="form-group">
+                                            <label for="potential-donor-profile-{{ potential.request_id }}">Select donor profile</label>
+                                            <select id="potential-donor-profile-{{ potential.request_id }}" name="donor_id" required>
+                                                <option value="">Choose a donor profile</option>
+                                                {% for profile in profile_options %}
+                                                    <option value="{{ profile.id }}">{{ profile.name }} — {{ profile.blood_type }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    {% endif %}
                                     <div class="form-group">
                                         <label for="potential-units-{{ potential.request_id }}">
                                             Units you can donate
@@ -1793,7 +1858,8 @@
                                         >
                                     </div>
 
-                                    <button type="submit" class="btn btn-primary">
+                                    <button type="submit" class="btn btn-primary"
+                                            {% if not profile_options %}disabled{% endif %}>
                                         Accept & Start Match
                                     </button>
                                 </form>
@@ -1810,7 +1876,7 @@
                     {% set status_class = (match.status or "pending")|lower|replace(" ", "-") %}
                     {% set confirmed_contact = match_contacts.get(match.id, {}) %}
 
-                    <article class="item-card">
+                    <article class="item-card" id="match-{{ match.id }}">
 
                         <div class="item-top">
 
@@ -1988,8 +2054,8 @@
                               and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
 
                             <div class="privacy-note">
-                                <strong>Match confirmed.</strong>
-                                Contact actions are now available to the matched parties.
+                                <strong>Match active.</strong>
+                                Contact actions are available according to the donor's contact-sharing setting.
                             </div>
 
                             {% if match.my_role == "Requester" and confirmed_contact.phone %}
@@ -2058,7 +2124,7 @@
                         {% endif %}
 
 
-                        {% if match.status in ["Accepted", "Confirmed", "Donation Reported", "Completed"] %}
+                        {% if match.requester_confirmed == 1 and match.status in ["Confirmed", "Donation Reported", "Completed"] %}
 
                             <section class="match-chat" id="match-chat-{{ match.id }}"
                                      data-poll-url="{{ url_for('get_match_messages', match_id=match.id) }}">
@@ -2230,196 +2296,7 @@
 
     {% endif %}
 
-{% if page_view == 'donation_progress' %}
-<!-- =====================================================
-         5. DONATION AND RECEIPT PROGRESS
-    ====================================================== -->
 
-    <section class="section" id="donation-progress">
-
-        <div class="section-heading">
-            <div>
-                <h2>Donation and Receipt Progress</h2>
-                <p>
-                    Review reported donations and confirm the units
-                    you have received.
-                </p>
-            </div>
-
-            <span class="section-count">
-                {{ donations|length }}
-            </span>
-        </div>
-
-
-        {% if donations %}
-
-            <div class="item-list">
-
-                {% for donation in donations %}
-
-                    {% set donation_status = (donation[5] or "pending")|lower|replace(" ", "-") %}
-
-                    <article class="item-card">
-
-                        <div class="item-top">
-
-                            <div class="blood-heading">
-
-                                <div class="blood-icon">
-                                    {{ donation[10] }}
-                                </div>
-
-                                <div>
-                                    <h3>Donation #{{ donation[0] }}</h3>
-                                    <p>
-                                        {% if donation[9] %}
-                                            Donor: {{ donation[9] }}
-                                        {% else %}
-                                            Donation record
-                                        {% endif %}
-                                    </p>
-                                </div>
-
-                            </div>
-
-                            <span class="status {{ donation_status }}">
-                                {{ donation[5] }}
-                            </span>
-
-                        </div>
-
-
-                        <div class="item-details">
-
-                            <div class="detail">
-                                <strong>Blood Group</strong>
-                                {{ donation[10] }}
-                            </div>
-
-                            <div class="detail">
-                                <strong>Units Donated</strong>
-                                {{ donation[4] }}
-                            </div>
-
-                            <div class="detail">
-                                <strong>Donation Date</strong>
-                                {{ donation[1] }}
-                            </div>
-
-                            <div class="detail">
-                                <strong>Hospital</strong>
-                                {{ donation[2] }}
-                            </div>
-
-                            <div class="detail">
-                                <strong>Location</strong>
-                                {{ donation[3] }}
-                            </div>
-
-                            <div class="detail">
-                                <strong>Request ID</strong>
-                                {{ donation[7] or "Not linked" }}
-                            </div>
-
-                        </div>
-
-
-                        {% if donation[5] == "Reported"
-                              and donation[6] == 0 %}
-
-                            {% set donation_match_role = namespace(value="") %}
-
-                            {% for item in matches %}
-                                {% if item.id == donation[8] %}
-                                    {% set donation_match_role.value = item.my_role %}
-                                {% endif %}
-                            {% endfor %}
-
-
-                            {% if donation_match_role.value == "Requester" %}
-
-                                <div class="privacy-note">
-                                    The donor has reported this donation.
-                                    Confirm the number of units you actually received.
-                                </div>
-
-                                <form
-                                    method="POST"
-                                    action="{{ url_for('confirm_receipt', donation_id=donation[0]) }}"
-                                    class="inline-form"
-                                >
-
-                                    <input type="hidden" name="csrf_token"
-                                           value="{{ csrf_token() }}">
-
-                                    <div class="form-group">
-                                        <label for="received-units-{{ donation[0] }}">
-                                            Units Actually Received
-                                        </label>
-
-                                        <input
-                                            id="received-units-{{ donation[0] }}"
-                                            type="number"
-                                            name="received_units"
-                                            min="1"
-                                            max="{{ [8, donation[4]|int]|min }}"
-                                            value="{{ donation[4] }}"
-                                            required
-                                        >
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success">
-                                        Confirm Receipt
-                                    </button>
-
-                                </form>
-
-                            {% else %}
-
-                                <div class="privacy-note">
-                                    Waiting for the requester to confirm receipt.
-                                </div>
-
-                            {% endif %}
-
-                        {% elif donation[5] == "Confirmed" %}
-
-                            <div class="privacy-note">
-                                <strong>Receipt confirmed.</strong>
-                                This donation has been completed.
-                            </div>
-
-                        {% endif %}
-
-                    </article>
-
-                {% endfor %}
-
-            </div>
-
-        {% else %}
-
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                     stroke-width="1.6" stroke-linecap="round">
-                    <path d="M4 19V5M4 19h17"/>
-                    <path d="m7 15 4-4 3 2 6-7"/>
-                </svg>
-
-                <h3>No donation records yet</h3>
-
-                <p>
-                    Requester-recorded donations and completed receipt records will appear here.
-                </p>
-            </div>
-
-        {% endif %}
-
-    </section>
-
-
-{% endif %}
 
     <div class="page-footer">
         Blood Donor &amp; Emergency Request Network
@@ -2614,5 +2491,7 @@
     }
 </script>
 
+<script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

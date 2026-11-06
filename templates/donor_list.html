@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#800020">
     <meta name="description" content="Browse registered blood donors and check their availability.">
@@ -290,6 +291,70 @@
             font-size: 11px;
         }.filter-status strong {
             color: var(--red);
+        }.compatibility-filter {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto;
+            align-items: end;
+            gap: 12px;
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: #fbfcfe;
+        }.filter-field {
+            min-width: 0;
+        }.filter-field label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 700;
+        }.filter-field input,
+        .filter-field select {
+            width: 100%;
+            min-height: 42px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            color: var(--ink);
+            font-size: 13px;
+        }.compatibility-submit,
+        .clear-filter {
+            min-height: 42px;
+            padding: 10px 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            background: var(--red);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }.clear-filter {
+            border-color: var(--border);
+            background: white;
+            color: var(--ink);
+        }.compatibility-results {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }.compatibility-results strong {
+            color: var(--ink);
+        }.compatibility-chip {
+            padding: 5px 9px;
+            border-radius: 20px;
+            background: var(--red-light);
+            color: var(--red);
+            font-weight: 700;
         }/* DONOR CARDS */
 
         .donor-grid {
@@ -609,6 +674,12 @@
                 gap: 16px;
             }.search-box {
                 width: 100%;
+            }.compatibility-filter {
+                grid-template-columns: 1fr;
+                padding: 14px;
+            }.compatibility-submit,
+            .clear-filter {
+                width: 100%;
             }.donor-grid {
                 grid-template-columns: 1fr;
                 gap: 13px;
@@ -648,6 +719,9 @@
     </style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
 <body>
@@ -731,10 +805,6 @@
                 Become a Donor
             </a>
 
-            <a href="{{ url_for('search') }}">
-                Find Donors
-            </a>
-
             <a href="{{ url_for('request_blood') }}">
                 Emergency Request
             </a>
@@ -749,19 +819,19 @@
             </a>
 <a
     href="{{ url_for('notifications') }}"
+    class="notification-nav-link"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
     title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
 >
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+    <svg class="notification-bell" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.8"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
         <path d="M10 21h4"/>
     </svg>
+    <span class="notification-text">Notification</span>
     {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+        <span class="notification-count-badge">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
         </span>
     {% endif %}
@@ -846,6 +916,52 @@
                     </div>
 
                 </div>
+
+                <form
+                    method="GET"
+                    action="{{ url_for('donor_list') }}"
+                    class="compatibility-filter"
+                    aria-label="Find compatible blood donors"
+                >
+                    <div class="filter-field">
+                        <label for="requiredBloodType">Patient's Blood Group</label>
+                        <select id="requiredBloodType" name="blood_type" required>
+                            <option value="">Select blood group</option>
+                            {% for group in blood_types %}
+                                <option value="{{ group }}" {% if selected_blood_type == group %}selected{% endif %}>{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label for="requiredDonorLocation">City / Area</label>
+                        <input
+                            type="text"
+                            id="requiredDonorLocation"
+                            name="location"
+                            value="{{ selected_location or '' }}"
+                            maxlength="150"
+                            placeholder="Enter city or area"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="compatibility-submit">
+                        Search Compatible Donors
+                    </button>
+
+                    {% if compatibility_filter_active %}
+                        <a href="{{ url_for('donor_list') }}" class="clear-filter">
+                            Clear Filters
+                        </a>
+                        <div class="compatibility-results" aria-live="polite">
+                            <strong>Compatible donor groups:</strong>
+                            {% for group in compatible_donor_groups %}
+                                <span class="compatibility-chip">{{ group }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </form>
 
                 <p class="filter-status" id="filterStatus" aria-live="polite">
                     Showing <strong>{{ donors|length }}</strong> donor(s)
@@ -994,16 +1110,22 @@
 
                         {% endif %}
 
-                        {% if active_request and donor[9] != current_user_id and donor[6] == "Available" and donor[7] == 1 %}
+                        {% if donor[9] and donor[9] != current_user_id and donor[6] == "Available" and donor[7] == 1 %}
                             <form method="POST"
                                   action="{{ url_for('request_donor', donor_id=donor[0]) }}"
                                   style="margin-top:12px;">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <div class="owner-note" style="margin-bottom:8px;">
-                                    Using your latest active request: #{{ active_request.id }} — {{ active_request.blood_type }}.
-                                </div>
+                                {% if active_request %}
+                                    <div class="owner-note" style="margin-bottom:8px;">
+                                        Using your latest active request: #{{ active_request.id }} — {{ active_request.blood_type }}.
+                                    </div>
+                                {% else %}
+                                    <div class="owner-note" style="margin-bottom:8px;">
+                                        Create a blood request first. After submitting it, return here to request this donor.
+                                    </div>
+                                {% endif %}
                                 <button type="submit" class="btn btn-primary">
-                                    Request This Donor
+                                    Request for Blood
                                 </button>
                             </form>
                         {% endif %}
@@ -1148,5 +1270,7 @@
     }
 </script>
 
+<script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

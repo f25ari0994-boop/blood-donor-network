@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#800020">
   <title>Donation History | Blood Donor Network</title>
@@ -9,6 +10,7 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/simple-pages.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 <body>
   <main class="simple-page">
@@ -21,5 +23,6 @@
         </table>
       </div> {% else %}<p>No donation records are available yet.</p> {% endif %}
   </main>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#800020">
     <meta name="description" content="Register as a blood donor.">
@@ -473,6 +474,9 @@
     </style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
 <body>
@@ -518,10 +522,6 @@
             Become a Donor
         </a>
 
-        <a href="{{ url_for('search') }}">
-            Find Donors
-        </a>
-
         <a href="{{ url_for('request_blood') }}">
             Emergency Request
         </a>
@@ -534,19 +534,19 @@
         </a>
 <a
     href="{{ url_for('notifications') }}"
+    class="notification-nav-link"
     aria-label="Notifications{% if notification_unread_count %}, {{ notification_unread_count }} unread{% endif %}"
     title="Notifications{% if notification_unread_count %} ({{ notification_unread_count }} unread){% endif %}"
-    style="position:relative; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; margin-left:8px; vertical-align:middle;"
 >
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+    <svg class="notification-bell" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" stroke-width="1.8"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
         <path d="M10 21h4"/>
     </svg>
+    <span class="notification-text">Notification</span>
     {% if notification_unread_count > 0 %}
-        <span style="position:absolute; top:-3px; right:-4px; min-width:18px; height:18px; padding:0 3px; display:flex; align-items:center; justify-content:center; border-radius:999px; background:#dc2626; color:#fff; font-size:10px; line-height:1; font-weight:800; border:2px solid #fff;">
+        <span class="notification-count-badge">
             {{ notification_unread_count if notification_unread_count < 100 else '99+' }}
         </span>
     {% endif %}
@@ -591,6 +591,9 @@
                     name="csrf_token"
                     value="{{ csrf_token() }}"
                 >
+                {% if donor_form and donor_form.id %}
+                    <input type="hidden" name="donor_id" value="{{ donor_form.id }}">
+                {% endif %}
 
                 <div class="form-grid">
 
@@ -662,7 +665,7 @@
                                 <strong>Allow other registered users to contact me directly</strong>
                                 <small>
                                     When enabled, other users can see my phone and WhatsApp buttons
-                                    in Find Donors and Donor Directory. Your own profile will not
+                                    in the Donor Directory. Your own profile will not
                                     show contact buttons to you. You can change this setting later.
                                 </small>
                             </span>
@@ -1164,5 +1167,7 @@
     });
 </script>
 
+<script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>

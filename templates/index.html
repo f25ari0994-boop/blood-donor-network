@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+  <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#b4233b">
     <meta name="description" content="Blood Donor and Emergency Request Network connects blood donors and people seeking blood through emergency requests, matching and donation tracking.">
@@ -899,9 +900,48 @@
                 animation-duration: .01ms !important;
             }
         }
-    </style>
+            .community-subheading {
+            margin: 10px 0 8px;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+</style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
+    <style>
+        .donor-public-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .donor-public-grid .donor-stat-card {
+            min-width: 0;
+            min-height: 120px;
+            padding: 20px;
+            text-align: left;
+        }
+        .donor-public-grid .donor-stat-card strong {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--ink, #20242c);
+            font-size: 17px;
+            overflow-wrap: anywhere;
+        }
+        .donor-public-grid .donor-stat-label {
+            display: inline-flex;
+            width: fit-content;
+            padding: 6px 10px;
+            border-radius: 7px;
+            background: #fff0f3;
+            color: #800020;
+            font-weight: 700;
+        }
+    </style>
+
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-polish.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
 
 <body>
@@ -947,14 +987,6 @@
 
     <li>
         <a href="#explore">Find Blood Donors</a>
-    </li>
-
-    <li>
-        <a href="{{ url_for('login') }}">Login</a>
-    </li>
-
-    <li>
-        <a href="{{ url_for('signup') }}">Sign Up</a>
     </li>
 
 </ul>    </nav>
@@ -1301,48 +1333,53 @@
     </section>
 
 
-    <!-- DONOR STATISTICS -->
-
-    <section class="section">
-
+    <!-- PUBLIC DONOR AND REQUEST DISCOVERY -->
+    <section class="section section-white">
         <div class="container">
-
             <div class="section-heading">
-
                 <span class="eyebrow">OUR COMMUNITY</span>
-
-                <h2>Growing through generosity</h2>
-
-                <p>
-                    Every registered donor represents someone willing
-                    to become part of a supportive community.
-                </p>
-
+                <h2>Growing with generosity</h2>
+                <h3 class="community-subheading">Registered Donors</h3>
+                <p>Meet the people who have joined our blood donor network. Names and blood groups are shown to help visitors explore the community; personal contact details remain private.</p>
             </div>
-
-
-            <div class="donor-stat-card">
-
-                <div class="donor-stat-number">
-                    {{ donor_count|default(0, true) }}
+            {% if public_donors %}
+                <div class="donor-public-grid">
+                    {% for donor in public_donors %}
+                        <article class="donor-stat-card">
+                            <strong>{{ donor[0] }}</strong>
+                            <span class="donor-stat-label">{{ donor[1] }}</span>
+                        </article>
+                    {% endfor %}
                 </div>
-
-                <div class="donor-stat-label">
-                    Registered Donor Profiles
-                </div>
-
-                <div class="stat-divider"></div>
-
-                <p class="donor-stat-description">
-                    Total number of donor profiles registered in the network.
-                </p>
-
-            </div>
-
+            {% else %}
+                <p class="donor-stat-description">No donor profiles have been registered yet.</p>
+            {% endif %}
         </div>
-
     </section>
 
+    <section class="section">
+        <div class="container">
+            <div class="section-heading">
+                <span class="eyebrow">OPEN REQUESTS</span>
+                <h2>Active Blood Requests</h2>
+                <p>Current requests that still need blood donations.</p>
+            </div>
+            {% if public_requests %}
+                <div class="donor-public-grid">
+                    {% for item in public_requests %}
+                        <article class="donor-stat-card">
+                            <strong>{{ item[0] }} Blood Required</strong>
+                            <span class="donor-stat-label">{{ item[2] }} · {{ item[5] }} unit(s) remaining</span>
+                            <p class="donor-stat-description">{{ item[1] }} · {{ item[3] }} unit(s) requested</p>
+                            <p class="donor-stat-description">Needed by: {{ item[6] }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="donor-stat-description">There are no active blood requests at the moment.</p>
+            {% endif %}
+        </div>
+    </section>
 
     <!-- MEDICAL SAFETY INFORMATION -->
 
@@ -1415,78 +1452,6 @@
 </main>
 
 
-<!-- FOOTER -->
-
-<footer class="site-footer">
-
-    <div class="container">
-
-        <div class="footer-main">
-
-            <div class="footer-brand">
-
-                <h3>Blood Donor &amp; Emergency Request Network</h3>
-
-                <p>
-                    Connecting potential blood donors and people seeking blood
-                    through a coordinated digital platform.
-                </p>
-
-            </div>
-
-
-            <div class="footer-nav">
-
-                <h4>Navigation</h4>
-
-                <div class="footer-links">
-
-                    <a href="{{ url_for('home') }}">Home</a>
-
-                    <a href="#about">About</a>
-
-                    <a href="#how-it-works">How It Works</a>
-
-                    <a href="#explore">Find Blood Donors</a>
-
-                </div>
-
-            </div>
-
-
-            <div class="footer-nav">
-
-                <h4>Account</h4>
-
-                <div class="footer-links">
-
-                    <a href="{{ url_for('login') }}">Login</a>
-
-                    <a href="{{ url_for('signup') }}">Register</a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="footer-bottom">
-
-            <span>
-                &copy; {{ current_year|default(2026, true) }}
-                Blood Donor &amp; Emergency Request Network.
-            </span>
-
-            <span>Every Drop Matters.</span>
-
-        </div>
-
-    </div>
-
-</footer>
-
-
 <!-- MOBILE NAVIGATION -->
 
 <script>
@@ -1547,5 +1512,7 @@
     })();
 </script>
 
+<script src="{{ url_for('static', filename='js/mobile-polish.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
