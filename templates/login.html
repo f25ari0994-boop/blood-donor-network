@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#b4233b">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
 
     <title>Login | Blood Donor &amp; Emergency Request Network</title>
 
@@ -784,6 +785,8 @@
         toggleButton.setAttribute("aria-pressed", String(isHidden));
     });
 </script>
+
+<script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 
 </body>
 </html>
