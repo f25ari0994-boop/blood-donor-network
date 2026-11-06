@@ -173,13 +173,13 @@ class ProfilePageRegressionTests(unittest.TestCase):
 
         self.assertRegex(
             html,
-            r"Total Blood Requests</span>\s*"
-            r"<span class=\"stat-number\">\s*3\s*</span>",
+            r'<span class="stat-label">\s*Total Blood Requests\s*</span>\s*'
+            r'<span class="stat-number">\s*3\s*</span>',
         )
         self.assertRegex(
             html,
-            r"Completed Requests</span>\s*"
-            r"<span class=\"stat-number\">\s*1\s*</span>",
+            r'<span class="stat-label">Completed Requests</span>\s*'
+            r'<span class="stat-number">\s*1\s*</span>',
         )
         self.assertIn("Active Requests", html)
         self.assertIn("Request #1", html)
