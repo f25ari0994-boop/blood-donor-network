@@ -249,7 +249,7 @@ class ProfilePageRegressionTests(unittest.TestCase):
         verify.close()
         self.assertEqual(preference, "Urdu")
 
-    def test_saved_language_is_available_on_public_information_pages(self):
+    def test_language_script_is_loaded_on_all_pages(self):
         from pathlib import Path
 
         for template_name in (
@@ -271,6 +271,7 @@ class ProfilePageRegressionTests(unittest.TestCase):
         ):
             template = Path("templates", template_name).read_text(encoding="utf-8")
             self.assertIn('name="app-language"', template, template_name)
+            self.assertIn("data-authenticated=", template, template_name)
             self.assertIn("js/language.js", template, template_name)
 
     def test_language_script_restores_browser_preference_and_translates_controls(self):
