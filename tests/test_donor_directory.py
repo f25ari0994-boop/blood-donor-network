@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
-from app import app as flask_app, PAKISTAN_TZ
+from app import app as flask_app, PAKISTAN_TZ, get_latest_active_request
 from database import create_sqlite_tables, migrate_sqlite_database
 
 
@@ -179,6 +179,91 @@ class DonorDirectoryCompatibilitySearchTests(unittest.TestCase):
         self.assertIn("/donor-list?", response.headers["Location"])
         self.assertIn("blood_type=A%2B", response.headers["Location"])
         self.assertIn("location=Sukkur", response.headers["Location"])
+
+    def test_request_for_blood_action_is_visible_for_eligible_other_donors(self):
+        response = self.client.get("/donor-list")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+
+        # Four available, eligible donor profiles belong to another account.
+        self.assertEqual(html.count("Request for Blood"), 4)
+        self.assertIn("Create a blood request first.", html)
+
+    def test_request_for_blood_action_redirects_to_request_creation_when_needed(self):
+        with self.client.session_transaction() as session_data:
+            session_data["_csrf_token"] = "request-for-blood-csrf"
+
+        response = self.client.post(
+            "/request-donor/1",
+            data={"csrf_token": "request-for-blood-csrf"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/request"))
+
+    def test_request_for_blood_creates_confirmed_match_and_notifies_both_parties(self):
+        connection = self.connect_test_database()
+        needed_by = (
+            datetime.now(PAKISTAN_TZ) + timedelta(days=2)
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        connection.execute(
+            """
+            INSERT INTO blood_requests (
+                blood_type, urgency, needed_by, location, hospital, contact,
+                status, user_id, requested_units, received_units, remaining_units
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, 0, ?)
+            """,
+            (
+                "A+", "Normal", needed_by, "Sukkur", "Civil Hospital",
+                "03001111111", 1, 2, 2,
+            ),
+        )
+        connection.commit()
+        connection.close()
+
+        self.active_request_patch.stop()
+        with patch(
+            "app.get_latest_active_request",
+            side_effect=get_latest_active_request,
+        ):
+            with self.client.session_transaction() as session_data:
+                session_data["_csrf_token"] = "request-for-blood-csrf"
+
+            response = self.client.post(
+                "/request-donor/1",
+                data={"csrf_token": "request-for-blood-csrf"},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/my-matches#match-", response.headers["Location"])
+
+        verify = self.connect_test_database()
+        match = verify.execute(
+            """
+            SELECT request_id, donor_id, donor_user_id, status,
+                   requester_confirmed
+            FROM request_matches
+            """
+        ).fetchone()
+        notifications = verify.execute(
+            """
+            SELECT user_id, notification_type
+            FROM notifications
+            WHERE notification_type = 'match_confirmed'
+            ORDER BY user_id
+            """
+        ).fetchall()
+        verify.close()
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match[0], 1)
+        self.assertEqual(match[1], 1)
+        self.assertEqual(match[2], 2)
+        self.assertEqual(match[3], "Confirmed")
+        self.assertEqual(match[4], 1)
+        self.assertEqual([row[0] for row in notifications], [1, 2])
 
     def test_find_donors_navigation_and_duplicate_dashboard_action_are_removed(self):
         active_templates = (
