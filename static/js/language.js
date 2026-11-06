@@ -236,7 +236,10 @@ const EXTRA = [
 ["Search Compatible Donors","موزوں عطیہ دہندگان تلاش کریں","مناسب عطيو ڏيندڙ ڳوليو"],
 ["Clear Filters","فلٹر صاف کریں","فلٽر صاف ڪريو"],
 ["Enter city or area","شہر یا علاقہ درج کریں","شهر يا علائقو داخل ڪريو"],
-["Find compatible blood donors","مطابقت رکھنے والے خون کے عطیہ دہندگان تلاش کریں","مطابقت رکندڙ رت جا عطيو ڏيندڙ ڳوليو"]
+["Find compatible blood donors","مطابقت رکھنے والے خون کے عطیہ دہندگان تلاش کریں","مطابقت رکندڙ رت جا عطيو ڏيندڙ ڳوليو"],
+["Request for Blood","خون کی درخواست کریں","رت لاءِ درخواست ڪريو"],
+["Create a blood request first. After submitting it, return here to request this donor.","پہلے خون کی درخواست بنائیں۔ اسے جمع کرنے کے بعد یہاں واپس آ کر اس عطیہ دہندہ سے درخواست کریں۔","پهرين رت جي درخواست ٺاهيو. اها جمع ڪرڻ کان پوءِ هتي واپس اچي هن عطيو ڏيندڙ کي درخواست موڪليو."],
+["Create an active blood request first, then return to the donor directory to request this donor.","پہلے ایک فعال خون کی درخواست بنائیں، پھر اس عطیہ دہندہ سے درخواست کرنے کے لیے ڈونر ڈائریکٹری میں واپس آئیں۔","پهرين فعال رت جي درخواست ٺاهيو، پوءِ هن عطيو ڏيندڙ کي درخواست ڪرڻ لاءِ ڊونر ڊائريڪٽري ڏانهن واپس اچو."]
 ];
 for (const [key, urdu, sindhi] of EXTRA) {
   D.Urdu[key] = urdu;
