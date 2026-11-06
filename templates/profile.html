@@ -793,7 +793,7 @@
                     >
 
                         <span class="stat-label">
-                            Completed Blood Requests
+                            Total Blood Requests
                         </span>
 
                         <span class="stat-number">
@@ -960,7 +960,7 @@
                 </div>
                 <div class="stat-card" style="min-height:auto;cursor:default;">
                     <span class="stat-label">Completed Requests</span>
-                    <span class="stat-number">{{ request_count }}</span>
+                    <span class="stat-number">{{ completed_request_count }}</span>
                 </div>
             </div>
             {% if my_requests %}<div class="history-list"> {% for item in my_requests %}
@@ -1064,16 +1064,6 @@
 
     </script>
 
-    <div class="profile-container" style="padding-top:0;">
-        <form method="POST" action="{{ url_for('logout') }}"
-              onsubmit="return confirm('Are you sure you want to log out?');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-danger"
-                    style="min-height:44px;padding:11px 22px;">
-                Logout
-            </button>
-        </form>
-    </div>
 
 <script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
 
