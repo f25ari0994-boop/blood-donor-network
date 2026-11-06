@@ -3678,8 +3678,11 @@ def request_donor(donor_id):
             blood_request = get_latest_active_request(connection, user_id)
 
         if not blood_request or is_request_expired(blood_request["needed_by"]):
-            flash("Create or select an active blood request before requesting a donor.", "warning")
-            return redirect(request.referrer or url_for("donor_list"))
+            flash(
+                "Create an active blood request first, then return to the donor directory to request this donor.",
+                "warning",
+            )
+            return redirect(url_for("request_blood"))
 
         donor = connection.execute(
             """
