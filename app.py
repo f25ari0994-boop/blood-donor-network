@@ -5279,8 +5279,7 @@ def profile():
         )
         active_request_count = cursor.fetchone()[0]
 
-        # This user's complete donation history, including donations
-        # made through any donor profile and donations received as requester.
+        # This user's completed donations made through any of their donor profiles.
         cursor.execute(
             """
             SELECT
@@ -5295,11 +5294,9 @@ def profile():
                 donor.id,
                 donor.name,
                 donor.blood_type,
-                donor.user_id,
-                br.user_id
+                donor.user_id
             FROM donations AS d
-            LEFT JOIN donors AS donor ON donor.id = d.donor_id
-            LEFT JOIN blood_requests AS br ON br.id = d.request_id
+            JOIN donors AS donor ON donor.id = d.donor_id
             WHERE donor.user_id = ?
               AND d.status = 'Confirmed'
               AND d.requester_confirmed = 1
