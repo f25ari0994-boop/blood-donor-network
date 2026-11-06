@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-    <meta name="app-language" content="{{ language_preference|default('English') }}"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Match Details | Blood Donor Network"><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Match Details | Blood Donor Network"><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/blood-logo.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-consistency.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop-consistency.css') }}">
 </head>
