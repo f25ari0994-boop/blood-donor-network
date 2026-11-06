@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="app-language" content="{{ language_preference|default('English') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#800020">
   <title>About | Blood Donor Network</title>
@@ -19,5 +20,6 @@
     <p>The platform supports donor registration, blood request matching, secure communication after match confirmation, and donation receipt tracking.</p>
     <p>Contact details are kept private until a match is confirmed by the requester.</p>
   </main>
+  <script src="{{ url_for('static', filename='js/language.js') }}" defer></script>
 </body>
 </html>
