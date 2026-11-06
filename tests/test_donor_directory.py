@@ -2,10 +2,11 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
-from app import app as flask_app
+from app import app as flask_app, PAKISTAN_TZ
 from database import create_sqlite_tables, migrate_sqlite_database
 
 
@@ -34,6 +35,10 @@ class DonorDirectoryCompatibilitySearchTests(unittest.TestCase):
             ],
         )
 
+        recent_donation_date = (
+            datetime.now(PAKISTAN_TZ).date() - timedelta(days=10)
+        ).isoformat()
+
         donor_rows = [
             # Compatible blood group and matching city.
             ("Compatible Sukkur O Negative", 24, "03003333333", "O-",
@@ -61,7 +66,7 @@ class DonorDirectoryCompatibilitySearchTests(unittest.TestCase):
              "Not Assessed", 0),
             # Compatible group and city, but donation was too recent.
             ("Recent Donation O Negative", 33, "03009999999", "O-",
-             "Sukkur", "Available", "2026-11-01", 1, 2,
+             "Sukkur", "Available", recent_donation_date, 1, 2,
              "Self-Declared Clear", 0),
             # The logged-in user's own compatible donor profile remains visible.
             ("Own A Positive Profile", 25, "03001010101", "A+",
