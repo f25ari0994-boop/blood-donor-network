@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-language" content="{{ language_preference|default('English') }}">
+    <meta name="app-language" content="{{ language_preference|default('English') }}" data-authenticated="{{ 'true' if current_user_id else 'false' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#800020">
     <meta name="description" content="Browse registered blood donors and check their availability.">
