@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -209,6 +210,72 @@ class ProfilePageRegressionTests(unittest.TestCase):
         self.assertIn("own@example.com", html)
         self.assertNotIn("Other User", html)
         self.assertNotIn("other@example.com", html)
+
+    def test_profile_language_preference_is_saved_and_used_on_next_page_load(self):
+        first_response = self.client.get("/profile")
+        self.assertEqual(first_response.status_code, 200)
+
+        csrf_match = re.search(
+            r'name="csrf_token"\s+value="([^"]+)"',
+            first_response.get_data(as_text=True),
+        )
+        self.assertIsNotNone(csrf_match)
+
+        update_response = self.client.post(
+            "/profile",
+            data={
+                "csrf_token": csrf_match.group(1),
+                "name": "Own User",
+                "email": "own@example.com",
+                "phone": "03001111111",
+                "cnic": "1111111111111",
+                "language_preference": "Urdu",
+            },
+        )
+        self.assertEqual(update_response.status_code, 302)
+
+        next_response = self.client.get("/profile")
+        self.assertEqual(next_response.status_code, 200)
+        self.assertIn(
+            '<meta name="app-language" content="Urdu">',
+            next_response.get_data(as_text=True),
+        )
+
+        verify = self.connect_test_database()
+        preference = verify.execute(
+            "SELECT language_preference FROM users WHERE id = ?",
+            (1,),
+        ).fetchone()[0]
+        verify.close()
+        self.assertEqual(preference, "Urdu")
+
+    def test_saved_language_is_available_on_public_information_pages(self):
+        from pathlib import Path
+
+        for template_name in (
+            "index.html",
+            "about.html",
+            "how_it_works.html",
+            "public_explore.html",
+        ):
+            template = Path("templates", template_name).read_text(encoding="utf-8")
+            self.assertIn('name="app-language"', template, template_name)
+            self.assertIn("js/language.js", template, template_name)
+
+    def test_translation_dictionary_covers_primary_workflows(self):
+        from pathlib import Path
+
+        script = Path("static/js/language.js").read_text(encoding="utf-8")
+        for phrase in (
+            "Emergency Blood Requests",
+            "Donor Registration",
+            "Blood Donor Directory",
+            "Total Blood Requests",
+            "Private Match Chat",
+            "Submit Blood Request",
+            "Notifications",
+        ):
+            self.assertIn(phrase, script)
 
     def test_profile_page_does_not_repeat_logout_action(self):
         response = self.client.get("/profile")
