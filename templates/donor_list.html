@@ -291,6 +291,70 @@
             font-size: 11px;
         }.filter-status strong {
             color: var(--red);
+        }.compatibility-filter {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto;
+            align-items: end;
+            gap: 12px;
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: #fbfcfe;
+        }.filter-field {
+            min-width: 0;
+        }.filter-field label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 700;
+        }.filter-field input,
+        .filter-field select {
+            width: 100%;
+            min-height: 42px;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            color: var(--ink);
+            font-size: 13px;
+        }.compatibility-submit,
+        .clear-filter {
+            min-height: 42px;
+            padding: 10px 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--red);
+            border-radius: 8px;
+            background: var(--red);
+            color: white;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }.clear-filter {
+            border-color: var(--border);
+            background: white;
+            color: var(--ink);
+        }.compatibility-results {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 12px;
+        }.compatibility-results strong {
+            color: var(--ink);
+        }.compatibility-chip {
+            padding: 5px 9px;
+            border-radius: 20px;
+            background: var(--red-light);
+            color: var(--red);
+            font-weight: 700;
         }/* DONOR CARDS */
 
         .donor-grid {
@@ -610,6 +674,12 @@
                 gap: 16px;
             }.search-box {
                 width: 100%;
+            }.compatibility-filter {
+                grid-template-columns: 1fr;
+                padding: 14px;
+            }.compatibility-submit,
+            .clear-filter {
+                width: 100%;
             }.donor-grid {
                 grid-template-columns: 1fr;
                 gap: 13px;
@@ -735,10 +805,6 @@
                 Become a Donor
             </a>
 
-            <a href="{{ url_for('search') }}">
-                Find Donors
-            </a>
-
             <a href="{{ url_for('request_blood') }}">
                 Emergency Request
             </a>
@@ -850,6 +916,52 @@
                     </div>
 
                 </div>
+
+                <form
+                    method="GET"
+                    action="{{ url_for('donor_list') }}"
+                    class="compatibility-filter"
+                    aria-label="Find compatible blood donors"
+                >
+                    <div class="filter-field">
+                        <label for="requiredBloodType">Patient's Blood Group</label>
+                        <select id="requiredBloodType" name="blood_type" required>
+                            <option value="">Select blood group</option>
+                            {% for group in blood_types %}
+                                <option value="{{ group }}" {% if selected_blood_type == group %}selected{% endif %}>{{ group }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label for="requiredDonorLocation">City / Area</label>
+                        <input
+                            type="text"
+                            id="requiredDonorLocation"
+                            name="location"
+                            value="{{ selected_location or '' }}"
+                            maxlength="150"
+                            placeholder="Enter city or area"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="compatibility-submit">
+                        Search Compatible Donors
+                    </button>
+
+                    {% if compatibility_filter_active %}
+                        <a href="{{ url_for('donor_list') }}" class="clear-filter">
+                            Clear Filters
+                        </a>
+                        <div class="compatibility-results" aria-live="polite">
+                            <strong>Compatible donor groups:</strong>
+                            {% for group in compatible_donor_groups %}
+                                <span class="compatibility-chip">{{ group }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </form>
 
                 <p class="filter-status" id="filterStatus" aria-live="polite">
                     Showing <strong>{{ donors|length }}</strong> donor(s)
