@@ -2936,6 +2936,7 @@ def donor_list():
         "donor_list.html",
         donors=donors,
         active_request=active_request,
+        blood_types=BLOOD_TYPES,
         selected_blood_type=selected_blood_type,
         selected_location=selected_location,
         compatible_donor_groups=compatible_donor_groups,
