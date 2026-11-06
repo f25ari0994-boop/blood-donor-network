@@ -1,6 +1,17 @@
 (function(){
 "use strict";
-const m=document.querySelector('meta[name="app-language"]'),lang=m?m.content:"English";
+const m=document.querySelector('meta[name="app-language"]');
+const serverLang=m?m.content:"English";
+const authenticated=!!(m&&m.dataset.authenticated==="true");
+let lang=serverLang;
+try{
+  const saved=localStorage.getItem("app-language");
+  if(authenticated){
+    localStorage.setItem("app-language",serverLang);
+  }else if(saved==="Urdu"||saved==="Sindhi"||saved==="English"){
+    lang=saved;
+  }
+}catch(error){}
 if(lang!=="Urdu"&&lang!=="Sindhi")return;
 const D={
 Urdu:{"Dashboard":"ڈیش بورڈ","Become a Donor":"خون کا عطیہ دہندہ بنیں","Find Donors":"عطیہ دہندگان تلاش کریں","Emergency Request":"ہنگامی درخواست","Donor Directory":"عطیہ دہندگان کی فہرست","Profile":"پروفائل","My Profile":"میری پروفائل","Notifications":"اطلاعات","Notification":"اطلاع","Logout":"لاگ آؤٹ","Log out":"لاگ آؤٹ","Home":"ہوم","About":"تعارف","How It Works":"طریقۂ کار","Login":"لاگ اِن","Signup":"سائن اَپ","My Matches":"میرے میچز","Available Blood Requests":"دستیاب خون کی درخواستیں","My Blood Requests":"میری خون کی درخواستیں","Create Blood Request":"خون کی درخواست بنائیں","Emergency Blood Requests":"ہنگامی خون کی درخواستیں","Edit Profile":"پروفائل میں ترمیم","My Donor Profiles":"میرے عطیہ دہندگان کے پروفائل","Language Preference":"زبان کی ترجیح","Save Changes":"تبدیلیاں محفوظ کریں","Update Profile":"پروفائل اپ ڈیٹ کریں","Cancel":"منسوخ کریں","Save":"محفوظ کریں","Submit":"جمع کریں","Search":"تلاش کریں","Filter":"فلٹر","Clear":"صاف کریں","View":"دیکھیں","View Donor Profile":"عطیہ دہندہ کی پروفائل دیکھیں","Open Dashboard":"ڈیش بورڈ کھولیں","Back to Dashboard":"ڈیش بورڈ پر واپس جائیں","Call":"کال کریں","WhatsApp":"واٹس ایپ","Chat":"چیٹ","Send":"بھیجیں","Close":"بند کریں","Name":"نام","Email":"ای میل","Phone":"فون","Location":"مقام","Hospital":"ہسپتال","Blood Group":"بلڈ گروپ","Units":"یونٹس","Units Needed":"درکار یونٹس","Units Received":"موصولہ یونٹس","Units Remaining":"باقی یونٹس","Urgency":"فوری نوعیت","Emergency":"ہنگامی","Normal":"عام","Status":"حیثیت","Date":"تاریخ","Time":"وقت","Deadline":"آخری وقت","Donation Date":"عطیہ کی تاریخ","Donation History":"عطیہ کی تاریخ","Report Donation":"عطیہ رپورٹ کریں","Confirm":"تصدیق کریں","Reject":"مسترد کریں","Accept":"قبول کریں","Available":"دستیاب","Not Available":"دستیاب نہیں","No Notifications Yet":"ابھی کوئی اطلاع نہیں","Contact details":"رابطے کی تفصیلات","Create your donor profile":"اپنا عطیہ دہندہ پروفائل بنائیں","Unknown":"نامعلوم","Blood Donor":"خون کا عطیہ دہندہ","Requester":"درخواست گزار","Donor":"عطیہ دہندہ","Required":"ضروری","Optional":"اختیاری","Loading...":"لوڈ ہو رہا ہے","No results found":"کوئی نتیجہ نہیں ملا","Please wait":"براہ کرم انتظار کریں","Personal Information":"ذاتی معلومات","Account Information":"اکاؤنٹ کی معلومات","Change Password":"پاس ورڈ تبدیل کریں","Password":"پاس ورڈ","Age":"عمر","Address":"پتہ","City":"شہر","Select":"منتخب کریں","No records found":"کوئی ریکارڈ نہیں ملا","No requests found":"کوئی درخواست نہیں ملی","No donors found":"کوئی عطیہ دہندہ نہیں ملا","My Requests":"میری درخواستیں","My Donations":"میرے عطیات","Donation":"عطیہ","Request":"درخواست","Requests":"درخواستیں","Donations":"عطیات","Receipt":"وصولی","Report":"رپورٹ","Today":"آج","All":"تمام","Unread":"غیر پڑھی ہوئی","Read":"پڑھی ہوئی","Send Message":"پیغام بھیجیں","Message":"پیغام","Messages":"پیغامات","Create Request":"درخواست بنائیں","Find Blood":"خون تلاش کریں","Donor Details":"عطیہ دہندہ کی تفصیلات","Request Details":"درخواست کی تفصیلات","Match Details":"میچ کی تفصیلات"},
@@ -241,6 +252,22 @@ const EXTRA = [
 ["Create a blood request first. After submitting it, return here to request this donor.","پہلے خون کی درخواست بنائیں۔ اسے جمع کرنے کے بعد یہاں واپس آ کر اس عطیہ دہندہ سے درخواست کریں۔","پهرين رت جي درخواست ٺاهيو. اها جمع ڪرڻ کان پوءِ هتي واپس اچي هن عطيو ڏيندڙ کي درخواست موڪليو."],
 ["Create an active blood request first, then return to the donor directory to request this donor.","پہلے ایک فعال خون کی درخواست بنائیں، پھر اس عطیہ دہندہ سے درخواست کرنے کے لیے ڈونر ڈائریکٹری میں واپس آئیں۔","پهرين فعال رت جي درخواست ٺاهيو، پوءِ هن عطيو ڏيندڙ کي درخواست ڪرڻ لاءِ ڊونر ڊائريڪٽري ڏانهن واپس اچو."]
 ];
+D.Urdu["Sign In"]="سائن اِن";
+D.Sindhi["Sign In"]="سائن اِن";
+D.Urdu["Sign Up"]="سائن اَپ";
+D.Sindhi["Sign Up"]="سائن اپ";
+D.Urdu["Create Account"]="اکاؤنٹ بنائیں";
+D.Sindhi["Create Account"]="اڪائونٽ ٺاهيو";
+D.Urdu["Show"]="دکھائیں";
+D.Sindhi["Show"]="ڏيکاريو";
+D.Urdu["Hide"]="چھپائیں";
+D.Sindhi["Hide"]="لڪايو";
+D.Urdu["Already have an account?"]="کیا آپ کا پہلے سے اکاؤنٹ ہے؟";
+D.Sindhi["Already have an account?"]="ڇا توهان وٽ اڳ ۾ اڪائونٽ آهي؟";
+D.Urdu["Your account access is protected."]="آپ کے اکاؤنٹ تک رسائی محفوظ ہے۔";
+D.Sindhi["Your account access is protected."]="توهان جي اڪائونٽ تائين رسائي محفوظ آهي.";
+D.Urdu["Your CNIC and account credentials are private."]="آپ کا CNIC اور اکاؤنٹ کی معلومات نجی ہیں۔";
+D.Sindhi["Your CNIC and account credentials are private."]="توهان جو CNIC ۽ اڪائونٽ جا تفصيل ذاتي آهن.";
 for (const [key, urdu, sindhi] of EXTRA) {
   D.Urdu[key] = urdu;
   D.Sindhi[key] = sindhi;
@@ -251,7 +278,8 @@ function scan(root){
 const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];
 while(w.nextNode())a.push(w.currentNode);
 a.forEach(n=>{if(n.parentElement&&!n.parentElement.closest("script,style,noscript,textarea,code,pre,[data-no-translate]"))n.nodeValue=tr(n.nodeValue);});
-root.querySelectorAll("input[placeholder],button[aria-label],a[aria-label],img[alt],title").forEach(e=>{["placeholder","aria-label","alt"].forEach(k=>{if(e.hasAttribute(k))e.setAttribute(k,tr(e.getAttribute(k)));});if(e.tagName==="TITLE")e.textContent=tr(e.textContent);});
+root.querySelectorAll("input[placeholder],button[aria-label],a[aria-label],img[alt],[title],title").forEach(e=>{["placeholder","aria-label","alt","title"].forEach(k=>{if(e.hasAttribute(k))e.setAttribute(k,tr(e.getAttribute(k)));});if(e.tagName==="TITLE")e.textContent=tr(e.textContent);});
+root.querySelectorAll('input[type="submit"],input[type="button"],input[type="reset"]').forEach(e=>{e.value=tr(e.value);});
 }
 document.documentElement.lang=lang==="Urdu"?"ur":"sd";document.documentElement.dir="rtl";
 const style=document.createElement("style");style.textContent='html[dir="rtl"] body{direction:rtl;font-family:Tahoma,Arial,sans-serif}html[dir="rtl"] input,html[dir="rtl"] textarea,html[dir="rtl"] select{text-align:right}html[dir="rtl"] .dashboard-header,html[dir="rtl"] .header,html[dir="rtl"] .page-header,html[dir="rtl"] .desktop-nav,html[dir="rtl"] .nav,html[dir="rtl"] .brand,html[dir="rtl"] .notification-card{direction:rtl}html[dir="rtl"] input[type="tel"],html[dir="rtl"] input[type="email"],html[dir="rtl"] input[type="date"],html[dir="rtl"] input[type="number"]{direction:ltr;text-align:left}';document.head.appendChild(style);
